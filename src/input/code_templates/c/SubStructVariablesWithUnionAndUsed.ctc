@@ -1,0 +1,8 @@
+    union {
+        {%- for type, name in elements.items() %}
+        struct {{ type }} {{ name }};
+        {%- endfor %}
+    };
+    {%- for name in elements.values() %}
+    unsigned int {{ name }}_isUsed:1;
+    {%- endfor %}

@@ -1,0 +1,2 @@
+    {{ variable_comment }}
+    {{ variable_type }} {{ variable_name }};

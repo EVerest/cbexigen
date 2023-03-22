@@ -1,0 +1,49 @@
+{{ indent * level }}{{ decode_comment }}
+{{ indent * level }}error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
+{{ indent * level }}if (error == 0)
+{{ indent * level }}{
+{{ indent * (level + 1) }}if (eventCode == 0)
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}error = exi_basetypes_decoder_uint_16(stream, &{{ type_length }});
+{{ indent * (level + 2) }}if (error == 0)
+{{ indent * (level + 2) }}{
+{{ indent * (level + 3) }}if ({{ type_length }} >= 2)
+{{ indent * (level + 3) }}{
+{{ indent * (level + 4) }}// string tables and table partitions are not supported, so the length has to be decremented by 2
+{{ indent * (level + 4) }}{{ type_length }} -= 2;
+{{ indent * (level + 4) }}error = exi_basetypes_decoder_characters(stream, {{ type_length }}, {{ type_chars }}, {{ type_chars_size }});
+{{ indent * (level + 3) }}}
+{{ indent * (level + 3) }}else
+{{ indent * (level + 3) }}{
+{{ indent * (level + 4) }}// the string seems to be in the table, but this is not supported
+{{ indent * (level + 4) }}error = EXI_ERROR__STRINGVALUES_NOT_SUPPORTED;
+{{ indent * (level + 3) }}}
+{{ indent * (level + 2) }}}
+{{ indent * (level + 1) }}}
+{{ indent * (level + 1) }}else
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}// second level event is not supported
+{{ indent * (level + 2) }}error = EXI_ERROR__UNSUPPORTED_SUB_EVENT;
+{{ indent * (level + 1) }}}
+{{ indent * level }}}
+
+{{ indent * level }}// if nothing went wrong, the error of exi_basetypes_decoder_characters is evaluated here
+{{ indent * level }}if (error == 0)
+{{ indent * level }}{
+{{ indent * (level + 1) }}// END Element for simple type
+{{ indent * (level + 1) }}error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
+{{ indent * (level + 1) }}if (error == 0)
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}if (eventCode == 0)
+{{ indent * (level + 2) }}{
+{%- if type_option == 1 %}
+{{ indent * (level + 3) }}{{ type_value }}_isUsed = 1u;
+{%- endif %}
+{{ indent * (level + 3) }}grammar_id = {{ next_grammar_id }};
+{{ indent * (level + 2) }}}
+{{ indent * (level + 2) }}else
+{{ indent * (level + 2) }}{
+{{ indent * (level + 3) }}error = EXI_ERROR__DEVIANTS_NOT_SUPPORTED;
+{{ indent * (level + 2) }}}
+{{ indent * (level + 1) }}}
+{{ indent * level }}}

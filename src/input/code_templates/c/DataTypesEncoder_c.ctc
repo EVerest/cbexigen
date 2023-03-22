@@ -1,0 +1,7 @@
+{% extends "BaseCode.ctc" %}
+{% block includes %}
+{{ includes_code }}
+{% endblock %}
+{% block content %}
+{{ code }}
+{% endblock %}

@@ -1,0 +1,386 @@
+{% extends "BaseCode.ctc" %}
+{% block includes %}
+
+#include "exi_basetypes.h"
+#include "exi_basetypes_decoder.h"
+#include "exi_bitstream.h"
+#include "exi_error_codes.h"
+{% endblock %}
+
+{% block content %}
+/*****************************************************************************
+ * local functions
+ *****************************************************************************/
+static int exi_basetypes_decoder_read_unsigned(exi_bitstream_t* stream, exi_unsigned_t* exi_unsigned)
+{
+    const uint8_t MSB = (1u << 7);
+    int error;
+
+    int found_sequence_end = 0;
+    uint8_t* current_octet = exi_unsigned->octets;
+    exi_unsigned->octets_count = 0;
+
+    while (exi_unsigned->octets_count < EXI_BASETYPES_MAX_OCTETS_SUPPORTED)
+    {
+        error = exi_bitstream_read_octet(stream, current_octet);
+        if (error != EXI_ERROR__NO_ERROR)
+        {
+            return error;
+        }
+
+        exi_unsigned->octets_count++;
+
+        if ((*current_octet & MSB) == 0)
+        {
+            found_sequence_end = 1;
+            break;
+        }
+
+        current_octet++;
+    }
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BASETYPES_DECODE_UNSIGNED, 0, exi_unsigned->octets_count, 0);
+    }
+{%- endif %}
+
+    return (found_sequence_end) ? EXI_ERROR__NO_ERROR : EXI_ERROR__SUPPORTED_MAX_OCTETS_OVERRUN;
+}
+
+
+/*****************************************************************************
+ * interface functions - bool
+ *****************************************************************************/
+int exi_basetypes_decoder_bool(exi_bitstream_t* stream, int* value)
+{
+    int error;
+    uint32_t bit;
+
+    error = exi_bitstream_read_bits(stream, 1, &bit);
+    if (error == EXI_ERROR__NO_ERROR)
+    {
+        *value = (bit) ? 1 : 0;
+    }
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BASETYPES_DECODE_BOOL, 0, (int)*value, 0);
+    }
+{%- endif %}
+
+    return error;
+}
+
+/*****************************************************************************
+ * interface functions - bytes, binary
+ *****************************************************************************/
+int exi_basetypes_decoder_bytes(exi_bitstream_t* stream, size_t bytes_len, uint8_t* bytes, size_t bytes_size)
+{
+    int error;
+
+    if (bytes_len > bytes_size)
+    {
+        return EXI_ERROR__BYTE_BUFFER_TOO_SMALL;
+    }
+
+    uint8_t* current_byte = bytes;
+
+    for (size_t n = 0; n < bytes_len; n++)
+    {
+        error = exi_bitstream_read_octet(stream, current_byte);
+        if (error != EXI_ERROR__NO_ERROR)
+        {
+            return error;
+        }
+
+        current_byte++;
+    }
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BASETYPES_DECODE_BYTES, 0, bytes_len, bytes_size);
+    }
+{%- endif %}
+
+    return EXI_ERROR__NO_ERROR;
+}
+
+/*****************************************************************************
+ * interface functions - unsigned integer
+ *****************************************************************************/
+int exi_basetypes_decoder_nbit_uint(exi_bitstream_t* stream, size_t bit_count, uint32_t* value)
+{
+    return exi_bitstream_read_bits(stream, bit_count, value);
+}
+
+int exi_basetypes_decoder_uint_8(exi_bitstream_t* stream, uint8_t* value)
+{
+    int error;
+    exi_unsigned_t exi_unsigned;
+    uint32_t result;
+
+    error = exi_basetypes_decoder_read_unsigned(stream, &exi_unsigned);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    error = exi_basetypes_convert_from_unsigned(&exi_unsigned, &result, EXI_BASETYPES_UINT8_MAX_OCTETS);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    *value = (uint8_t)result;
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BASETYPES_DECODE_UINT_8, 0, (int)*value, 0);
+    }
+{%- endif %}
+
+    return EXI_ERROR__NO_ERROR;
+}
+
+int exi_basetypes_decoder_uint_16(exi_bitstream_t* stream, uint16_t* value)
+{
+    int error;
+    exi_unsigned_t exi_unsigned;
+    uint32_t result;
+
+    error = exi_basetypes_decoder_read_unsigned(stream, &exi_unsigned);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    error = exi_basetypes_convert_from_unsigned(&exi_unsigned, &result, EXI_BASETYPES_UINT16_MAX_OCTETS);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    *value = (uint16_t)result;
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BASETYPES_DECODE_UINT_16, 0, (int)*value, 0);
+    }
+{%- endif %}
+
+    return EXI_ERROR__NO_ERROR;
+}
+
+int exi_basetypes_decoder_uint_32(exi_bitstream_t* stream, uint32_t* value)
+{
+    int error;
+    exi_unsigned_t exi_unsigned;
+
+    error = exi_basetypes_decoder_read_unsigned(stream, &exi_unsigned);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    error = exi_basetypes_convert_from_unsigned(&exi_unsigned, value, EXI_BASETYPES_UINT32_MAX_OCTETS);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BASETYPES_DECODE_UINT_32, 0, (int)*value, 0);
+    }
+{%- endif %}
+
+    return EXI_ERROR__NO_ERROR;
+}
+
+int exi_basetypes_decoder_uint_64(exi_bitstream_t* stream, uint64_t* value)
+{
+    int error;
+    exi_unsigned_t exi_unsigned;
+
+    error = exi_basetypes_decoder_read_unsigned(stream, &exi_unsigned);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    error = exi_basetypes_convert_64_from_unsigned(&exi_unsigned, value);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    return EXI_ERROR__NO_ERROR;
+}
+
+/*****************************************************************************
+ * interface functions - integer
+ *****************************************************************************/
+int exi_basetypes_decoder_integer_8(exi_bitstream_t* stream, int8_t* value)
+{
+    int sign;
+    int error;
+
+    error = exi_basetypes_decoder_bool(stream, &sign);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    error = exi_basetypes_decoder_uint_8(stream, (uint8_t*)value);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    if (sign)
+    {
+        *value = -(*value + 1);
+    }
+
+    return error;
+}
+
+int exi_basetypes_decoder_integer_16(exi_bitstream_t* stream, int16_t* value)
+{
+    int sign;
+    int error;
+
+    error = exi_basetypes_decoder_bool(stream, &sign);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    error = exi_basetypes_decoder_uint_16(stream, (uint16_t*)value);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    if (sign)
+    {
+        *value = -(*value + 1);
+    }
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BASETYPES_DECODE_INT_16, 0, (int)*value, 0);
+    }
+{%- endif %}
+
+    return error;
+}
+
+int exi_basetypes_decoder_integer_32(exi_bitstream_t* stream, int32_t* value)
+{
+    int sign;
+    int error;
+
+    error = exi_basetypes_decoder_bool(stream, &sign);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    error = exi_basetypes_decoder_uint_32(stream, (uint32_t*)value);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    if (sign)
+    {
+        *value = -(*value + 1);
+    }
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BASETYPES_DECODE_INT_32, 0, (int)*value, 0);
+    }
+{%- endif %}
+
+    return error;
+}
+
+int exi_basetypes_decoder_integer_64(exi_bitstream_t* stream, int64_t* value)
+{
+    int sign;
+    int error;
+
+    error = exi_basetypes_decoder_bool(stream, &sign);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    error = exi_basetypes_decoder_uint_64(stream, (uint64_t*)value);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    if (sign)
+    {
+        *value = -(*value + 1);
+    }
+
+    return error;
+}
+
+/*****************************************************************************
+ * interface functions - characters, string
+ *****************************************************************************/
+int exi_basetypes_decoder_characters(exi_bitstream_t* stream, size_t characters_len, exi_character_t* characters, size_t characters_size)
+{
+    const uint8_t ASCII_MAX_VALUE = 127;
+    int error;
+
+    if (characters_len + EXTRA_CHAR > characters_size)
+    {
+        return EXI_ERROR__CHARACTER_BUFFER_TOO_SMALL;
+    }
+
+    uint8_t* current_char = (uint8_t*)characters;
+
+    for (size_t n = 0; n < characters_len; n++)
+    {
+        error = exi_bitstream_read_octet(stream, current_char);
+        if (error != EXI_ERROR__NO_ERROR)
+        {
+            return error;
+        }
+
+        if (*current_char > ASCII_MAX_VALUE)
+        {
+            return EXI_ERROR__UNSUPPORTED_CHARACTER_VALUE;
+        }
+
+        current_char++;
+    }
+
+    *current_char = ASCII_CHAR_TERMINATOR;
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BASETYPES_DECODE_CHARACTERS, 0, characters_len, characters_size);
+    }
+{%- endif %}
+
+    return EXI_ERROR__NO_ERROR;
+}
+{% endblock %}

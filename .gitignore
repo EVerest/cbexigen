@@ -1,0 +1,7 @@
+.idea/*
+__pycache__
+output
+schemas
+venv
+*~
+test/*

@@ -1,0 +1,3 @@
+{%- for key, value in defines.items() %}
+#define {{ key }} {{ value }}
+{%- endfor %}

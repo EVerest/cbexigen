@@ -1,0 +1,148 @@
+{% extends "BaseCode.ctc" %}
+{% block includes %}
+
+#include "exi_basetypes.h"
+#include "exi_basetypes_decoder.h"
+#include "exi_bitstream.h"
+#include "exi_error_codes.h"
+#include "exi_types_decoder.h"
+{% endblock %}
+
+{% block content %}
+// *********
+// HexBinary
+// *********
+int decode_exi_type_hex_binary(exi_bitstream_t* stream, uint16_t* value_len, uint8_t* value_buffer, size_t value_buffer_size)
+{
+    uint32_t eventCode;
+    int error;
+
+    error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
+    if (error == 0)
+    {
+        if (eventCode == 0)
+        {
+            error = exi_basetypes_decoder_uint_16(stream, value_len);
+            if (error == 0)
+            {
+                error = exi_basetypes_decoder_bytes(stream, *value_len, value_buffer, value_buffer_size);
+            }
+        }
+        else
+        {
+            // Second level event is not supported
+            error = EXI_ERROR__UNSUPPORTED_SUB_EVENT;
+        }
+    }
+
+    // if nothing went wrong, the error of last decoding is evaluated here
+    if (error == 0)
+    {
+        // test EE for simple element
+        error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
+        if (error == 0)
+        {
+            if (eventCode != 0)
+            {
+                // deviants are not supported or also typecast and nillable
+                error = EXI_ERROR__DEVIANTS_NOT_SUPPORTED;
+            }
+        }
+    }
+
+    return error;
+}
+
+// *********
+// integers
+// *********
+#ifndef BUILD_DECODE_EXI_TYPE_INTEGER_N
+#define BUILD_DECODE_EXI_TYPE_INTEGER_N(bitwidth) \
+int decode_exi_type_integer##bitwidth(exi_bitstream_t* stream, int##bitwidth##_t* value) \
+{ \
+    uint32_t eventCode; \
+    int error; \
+\
+    error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode); \
+    if (error == 0) \
+    { \
+        if (eventCode == 0) \
+        { \
+            error = exi_basetypes_decoder_integer_##bitwidth(stream, value); \
+        } \
+        else \
+        { \
+            /* Second level event is not supported */ \
+            error = EXI_ERROR__UNSUPPORTED_SUB_EVENT; \
+        } \
+    } \
+\
+    /* if nothing went wrong, the error of last decoding is evaluated here */ \
+    if (error == 0) \
+    { \
+        /* test EE for simple element */ \
+        error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode); \
+        if (error == 0) \
+        { \
+            if(eventCode != 0) \
+            { \
+                /* deviants are not supported or also typecast and nillable */ \
+                error = EXI_ERROR__DEVIANTS_NOT_SUPPORTED; \
+            } \
+        } \
+    } \
+\
+    return error; \
+}
+#endif /* BUILD_DECODE_EXI_TYPE_INTEGER_N */
+
+BUILD_DECODE_EXI_TYPE_INTEGER_N(8)
+BUILD_DECODE_EXI_TYPE_INTEGER_N(16)
+BUILD_DECODE_EXI_TYPE_INTEGER_N(32)
+BUILD_DECODE_EXI_TYPE_INTEGER_N(64)
+
+#ifndef BUILD_DECODE_EXI_TYPE_UINT_N
+#define BUILD_DECODE_EXI_TYPE_UINT_N(bitwidth) \
+int decode_exi_type_uint##bitwidth(exi_bitstream_t* stream, uint##bitwidth##_t* value) \
+{ \
+    uint32_t eventCode; \
+    int error; \
+\
+    error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode); \
+    if (error == 0) \
+    { \
+        if (eventCode == 0) \
+        { \
+            error = exi_basetypes_decoder_uint_##bitwidth(stream, value); \
+        } \
+        else \
+        { \
+            /* Second level event is not supported */ \
+            error = EXI_ERROR__UNSUPPORTED_SUB_EVENT; \
+        } \
+    } \
+\
+    /* if nothing went wrong, the error of last decoding is evaluated here */ \
+    if (error == 0) \
+    { \
+        /* test EE for simple element */ \
+        error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode); \
+        if (error == 0) \
+        { \
+            if (eventCode != 0) \
+            { \
+                /* deviants are not supported or also typecast and nillable */ \
+                error = EXI_ERROR__DEVIANTS_NOT_SUPPORTED; \
+            } \
+        } \
+    } \
+\
+    return error; \
+}
+#endif /* BUILD_DECODE_EXI_TYPE_UINT_N */
+
+BUILD_DECODE_EXI_TYPE_UINT_N(8)
+BUILD_DECODE_EXI_TYPE_UINT_N(16)
+BUILD_DECODE_EXI_TYPE_UINT_N(32)
+BUILD_DECODE_EXI_TYPE_UINT_N(64)
+{% endblock %}

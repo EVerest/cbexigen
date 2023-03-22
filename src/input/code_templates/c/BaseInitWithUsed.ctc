@@ -1,0 +1,9 @@
+{{ element_comment }}
+void {{ function_name }}(struct {{ struct_type }}* {{ parameter_name }}) {
+    {%- if not elements %}
+    (void) {{ parameter_name }};
+    {%- endif %}
+    {%- for name in elements %}
+    {{ parameter_name }}->{{ name }}_isUsed = 0u;
+    {%- endfor %}
+};

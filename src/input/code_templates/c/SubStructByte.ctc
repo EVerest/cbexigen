@@ -1,0 +1,6 @@
+{{ indent * level }}{{ variable_comment }}
+{{ indent * level }}struct {
+{{ indent * (level + 1) }}{{ struct_type }} bytes[{{ type_def }}];
+{{ indent * (level + 1) }}uint16_t bytesLen;
+{{ indent * level }}} {{ struct_name }};
+

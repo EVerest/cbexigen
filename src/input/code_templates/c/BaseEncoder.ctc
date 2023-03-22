@@ -1,0 +1,20 @@
+{% extends "CommonFileHeader.ctc" %}
+{%-block file_content %}
+
+#ifndef {{filekey}}
+#define {{filekey}}
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+{% block includes %}{% endblock %}
+{%- block content %}{% endblock %}
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* {{filekey}} */
+
+{% endblock %}

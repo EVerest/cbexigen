@@ -1,0 +1,209 @@
+{% extends "BaseCode.ctc" %}
+{% block includes %}
+
+#include "exi_bitstream.h"
+#include "exi_error_codes.h"
+{% endblock %}
+
+{% block content %}
+/*****************************************************************************
+ * local functions
+ *****************************************************************************/
+static int exi_bitstream_has_overflow(exi_bitstream_t* stream)
+{
+    if (stream->bit_count == EXI_BITSTREAM_MAX_BIT_COUNT)
+    {
+        if (stream->byte_pos < stream->data_size)
+        {
+            stream->byte_pos++;
+            stream->bit_count = 0;
+{%- if add_debug_code == 1 %}
+
+            if (stream->status_callback)
+            {
+                stream->status_callback(EXI_DEBUG__BITSTREAM_BYTE_POS_CHANGED, 0, stream->byte_pos, 0);
+            }
+{%- endif %}
+        }
+        else
+        {
+            return EXI_ERROR__BITSTREAM_OVERFLOW;
+        }
+    }
+
+    return EXI_ERROR__NO_ERROR;
+}
+
+static int exi_bitstream_write_bit(exi_bitstream_t* stream, uint8_t bit)
+{
+    // check whether the bit to be written is within the stream capacity
+    if (exi_bitstream_has_overflow(stream))
+    {
+        return EXI_ERROR__BITSTREAM_OVERFLOW;
+    }
+
+    // point to current byte
+    uint8_t* current_byte = stream->data + stream->byte_pos;
+
+    if (stream->bit_count == 0)
+    {
+        // clear everything if at the beginning of a new byte
+        *current_byte = 0;
+    }
+
+    if (bit)
+    {
+        *current_byte = *current_byte | (1u << (EXI_BITSTREAM_MAX_BIT_COUNT - (stream->bit_count + 1u)));
+    }
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BITSTREAM_WRITE_BIT, *current_byte, (1u << (EXI_BITSTREAM_MAX_BIT_COUNT - (stream->bit_count + 1u))), bit);
+    }
+{%- endif %}
+
+    stream->bit_count++;
+
+    return EXI_ERROR__NO_ERROR;
+}
+
+static int exi_bitstream_read_bit(exi_bitstream_t* stream, uint8_t* bit)
+{
+    // check whether the bit to be read is within the stream capacity
+    if (exi_bitstream_has_overflow(stream))
+    {
+        return EXI_ERROR__BITSTREAM_OVERFLOW;
+    }
+
+    uint8_t current_bit = *(stream->data + stream->byte_pos) >> (EXI_BITSTREAM_MAX_BIT_COUNT - (stream->bit_count + 1u));
+    *bit = (current_bit & 1u) ? 1 : 0;
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BITSTREAM_READ_BIT, *(stream->data + stream->byte_pos), (1u << (EXI_BITSTREAM_MAX_BIT_COUNT - (stream->bit_count + 1u))), (int)*bit);
+    }
+{%- endif %}
+
+    stream->bit_count++;
+
+    return EXI_ERROR__NO_ERROR;
+}
+
+/*****************************************************************************
+ * interface functions
+ *****************************************************************************/
+void exi_bitstream_init(exi_bitstream_t* stream, uint8_t* data, size_t data_size, size_t data_offset, exi_status_callback status_callback)
+{
+    stream->byte_pos = data_offset;
+    stream->bit_count = 0;
+
+    stream->data = data;
+    stream->data_size = data_size;
+
+    stream->status_callback = status_callback;
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BITSTREAM_INIT, 0, stream->byte_pos, 0);
+    }
+{%- endif %}
+}
+
+int exi_bitstream_write_bits(exi_bitstream_t* stream, size_t bit_count, uint32_t value)
+{
+{%- if add_debug_code == 1 %}
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BITSTREAM_WRITE_BITS, 0, bit_count, value);
+    }
+
+{% endif %}
+    if (bit_count > 32)
+    {
+        return EXI_ERROR__BIT_COUNT_LARGER_THAN_TYPE_SIZE;
+    }
+
+    uint8_t bit;
+    int error = EXI_ERROR__NO_ERROR;
+
+    for (size_t n = 0; n < bit_count; n++)
+    {
+        bit = (value & (1u << (bit_count - n - 1))) > 0;
+
+        error = exi_bitstream_write_bit(stream, bit);
+        if (error != EXI_ERROR__NO_ERROR)
+        {
+            break;
+        }
+    }
+
+    return error;
+}
+
+int exi_bitstream_write_octet(exi_bitstream_t* stream, uint8_t value)
+{
+    return exi_bitstream_write_bits(stream, 8, (uint32_t)value);
+}
+
+int exi_bitstream_read_bits(exi_bitstream_t* stream, size_t bit_count, uint32_t* value)
+{
+    *value = 0;
+
+    if (bit_count > 32)
+    {
+        return EXI_ERROR__BIT_COUNT_LARGER_THAN_TYPE_SIZE;
+    }
+
+    uint8_t bit;
+    int error = EXI_ERROR__NO_ERROR;
+
+    for (size_t n = 0; n < bit_count; n++)
+    {
+        error = exi_bitstream_read_bit(stream, &bit);
+        if (error != EXI_ERROR__NO_ERROR)
+        {
+            break;
+        }
+
+        *value = (*value << 1u) | bit;
+    }
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BITSTREAM_READ_BITS, 0, bit_count, *value);
+    }
+{% endif %}
+    return error;
+}
+
+int exi_bitstream_read_octet(exi_bitstream_t* stream, uint8_t* value)
+{
+    *value = 0;
+
+    uint8_t bit;
+    int error = EXI_ERROR__NO_ERROR;
+
+    for (int n = 0; n < 8; n++)
+    {
+        error = exi_bitstream_read_bit(stream, &bit);
+        if (error != EXI_ERROR__NO_ERROR)
+        {
+            break;
+        }
+
+        *value = (*value << 1u) | bit;
+    }
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BITSTREAM_READ_BITS, 0, 8, *value);
+    }
+{% endif %}
+    return error;
+}
+{% endblock %}

@@ -1,0 +1,4 @@
+{{ indent * level }}else
+{{ indent * level }}{
+{{ indent * (level + 1) }}error = EXI_ERROR__UNKNOWN_EVENT_FOR_ENCODING;
+{{ indent * level }}}

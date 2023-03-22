@@ -1,0 +1,11 @@
+{{ indent * level }}case {{ event_id }}:
+{{ indent * (level + 1) }}{{ event_id_comment }}
+{% if add_debug_code == 1 -%}
+{{ indent * (level + 1) }}if (stream->status_callback)
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}stream->status_callback({{ type_parameter|upper }}, 0, 0, 0);
+{{ indent * (level + 1) }}}
+
+{% endif -%}
+{{ type_content }}
+{{ indent * (level + 1) }}break;

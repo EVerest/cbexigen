@@ -1,0 +1,2 @@
+{{ indent * level }}done = 1;
+{{ indent * level }}grammar_id = {{ next_grammar }};

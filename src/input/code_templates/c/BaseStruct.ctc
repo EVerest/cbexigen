@@ -1,0 +1,6 @@
+{{ element_comment }}
+struct {{ struct_name }} {
+    {%- for type, name in elements.items() %}
+    struct {{ type }} {{ name }};
+    {%- endfor %}
+};

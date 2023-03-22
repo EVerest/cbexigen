@@ -1,0 +1,30 @@
+{{ function_comment }}
+int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ parameter_name }})
+{
+{{ indent }}int error = exi_header_write(stream);
+
+{{ indent }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent }}{
+{%- for function, parameter in encode_functions %}
+{%- if loop.first %}
+{{ indent * 2 }}if ({{ parameter }}_isUsed == 1)
+{%- else %}
+{{ indent * 2 }}else if ({{ parameter }}_isUsed == 1)
+{%- endif %}
+{{ indent * 2 }}{
+{{ indent * 3 }}// encode event {{ loop.index0 }}
+{{ indent * 3 }}error = exi_basetypes_encoder_nbit_uint(stream, {{ bits_to_encode }}, {{ loop.index0 }});
+{{ indent * 3 }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * 3 }}{
+{{ indent * 4 }}error = {{ function }}(stream, &{{ parameter }});
+{{ indent * 3 }}}
+{{ indent * 2 }}}
+{%- endfor %}
+{{ indent * 2 }}else
+{{ indent * 2 }}{
+{{ indent * 3 }}error = EXI_ERROR__UNKNOWN_EVENT_FOR_ENCODING;
+{{ indent * 2 }}}
+{{ indent }}}
+
+{{ indent }}return error;
+}

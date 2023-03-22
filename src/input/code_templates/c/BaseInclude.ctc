@@ -1,0 +1,8 @@
+{%- if std_lib_items %}
+{%- for item in std_lib_items %}
+#include <{{ item }}>
+{%- endfor %}
+{% endif %}
+{%- for name in elements %}
+#include "{{ name }}"
+{%- endfor %}

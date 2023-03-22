@@ -1,0 +1,17 @@
+{{ function_comment }}
+int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ parameter_name }})
+{
+{{ indent }}int error = exi_header_write(stream);
+
+{{ indent }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent }}{
+{{ indent * 2 }}// encode event {{ parameter }} with index {{ parameter_index }}
+{{ indent * 2 }}error = exi_basetypes_encoder_nbit_uint(stream, {{ bits_to_encode }}, {{ parameter_index }});
+{{ indent * 2 }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * 2 }}{
+{{ indent * 3 }}error = {{ function }}(stream, &{{ parameter }});
+{{ indent * 2 }}}
+{{ indent }}}
+
+{{ indent }}return error;
+}

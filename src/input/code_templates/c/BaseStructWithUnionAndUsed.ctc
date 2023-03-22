@@ -1,0 +1,11 @@
+{{ element_comment }}
+struct {{ struct_name }} {
+    union {
+        {%- for type, name in elements.items() %}
+        struct {{ type }} {{ name }};
+        {%- endfor %}
+    };
+    {%- for type, name in elements.items() %}
+    unsigned int {{ name }}_isUsed:1;
+    {%- endfor %}
+};

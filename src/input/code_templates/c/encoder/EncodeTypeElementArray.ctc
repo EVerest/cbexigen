@@ -1,0 +1,5 @@
+{{ indent * level }}error = {{ type_parameter }}(stream, &{{ value_parameter }}[{{ index_parameter }}++]);
+{{ indent * level }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * level }}{
+{{ indent * (level + 1) }}grammar_id = {{ next_grammar }};
+{{ indent * level }}}

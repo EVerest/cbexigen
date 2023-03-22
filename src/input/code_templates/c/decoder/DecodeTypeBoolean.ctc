@@ -1,0 +1,40 @@
+{{ indent * level }}{{ decode_comment }}
+{{ indent * level }}error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
+{{ indent * level }}if (error == 0)
+{{ indent * level }}{
+{{ indent * (level + 1) }}if (eventCode == 0)
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}uint32_t value;
+{{ indent * (level + 2) }}error = exi_basetypes_decoder_nbit_uint(stream, {{ bits_to_decode }}, &value);
+{{ indent * (level + 2) }}if (error == 0)
+{{ indent * (level + 2) }}{
+{{ indent * (level + 3) }}{{ type_value }} = value;
+{%- if type_option == 1 %}
+{{ indent * (level + 3) }}{{ type_value }}_isUsed = 1u;
+{%- endif %}
+{{ indent * (level + 2) }}}
+{{ indent * (level + 1) }}}
+{{ indent * (level + 1) }}else
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}// second level event is not supported
+{{ indent * (level + 2) }}error = EXI_ERROR__UNSUPPORTED_SUB_EVENT;
+{{ indent * (level + 1) }}}
+{{ indent * level }}}
+
+{{ indent * level }}// if nothing went wrong, the error of exi_basetypes_decoder_nbit_uint is evaluated here
+{{ indent * level }}if (error == 0)
+{{ indent * level }}{
+{{ indent * (level + 1) }}// END Element for simple type
+{{ indent * (level + 1) }}error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
+{{ indent * (level + 1) }}if (error == 0)
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}if (eventCode == 0)
+{{ indent * (level + 2) }}{
+{{ indent * (level + 3) }}grammar_id = {{ next_grammar_id }};
+{{ indent * (level + 2) }}}
+{{ indent * (level + 2) }}else
+{{ indent * (level + 2) }}{
+{{ indent * (level + 3) }}error = EXI_ERROR__DEVIANTS_NOT_SUPPORTED;
+{{ indent * (level + 2) }}}
+{{ indent * (level + 1) }}}
+{{ indent * level }}}

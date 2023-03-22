@@ -1,0 +1,34 @@
+{{ element_comment }}
+{{ particle_comment }}
+static int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ parameter_name }}) {
+{{ indent * level }}int grammar_id = {{ start_grammar_id }};
+{{ indent * level }}int done = 0;
+{{ indent * level }}uint32_t eventCode;
+{{ indent * level }}int error;
+
+{{ indent * level }}{{ init_function }}({{ parameter_name }});
+{%- if add_debug_code == 1 %}
+
+{{ indent * level }}if (stream->status_callback)
+{{ indent * level }}{
+{{ indent * (level + 1) }}stream->status_callback({{ function_name|upper }}, 0, 0, 0);
+{{ indent * level }}}
+{%- endif %}
+
+{{ indent * level }}while(!done)
+{{ indent * level }}{
+{{ indent * (level + 1) }}switch(grammar_id)
+{{ indent * (level + 1) }}{
+{{ grammar_content }}
+{{ indent * (level + 1) }}default:
+{{ indent * (level + 2) }}error = EXI_ERROR__UNKNOWN_GRAMMAR_ID;
+{{ indent * (level + 2) }}break;
+{{ indent * (level + 1) }}}
+
+{{ indent * (level + 1) }}if (error)
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}done = 1;
+{{ indent * (level + 1) }}}
+{{ indent * level }}}
+{{ indent * level }}return error;
+}

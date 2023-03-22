@@ -1,0 +1,5 @@
+    {{ variable_comment }}
+    struct {
+        {{ struct_type }} array[{{ type_def }}];
+        uint16_t arrayLen;
+    } {{ struct_name }};

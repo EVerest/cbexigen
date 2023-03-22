@@ -1,0 +1,7 @@
+{% extends "BaseDecoder.ctc" %}
+{%- block includes %}
+{{ include_content }}
+{%- endblock %}
+{%- block content %}
+{{ code_content }}
+{%- endblock %}

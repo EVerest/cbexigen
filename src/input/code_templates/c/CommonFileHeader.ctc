@@ -1,0 +1,22 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * Copyright (C) 2022-2023 chargebyte GmbH
+ * Copyright (C) 2022-2023 Contributors to EVerest
+ */
+
+/*****************************************************
+ *
+ * @author
+ * @version
+ *
+ * The Code is generated! Changes may be overwritten.
+ *
+ *****************************************************/
+
+/**
+  * @file {{ filename }}
+  * @brief Description goes here
+  *
+  **/
+
+{%- block file_content %}{% endblock %}

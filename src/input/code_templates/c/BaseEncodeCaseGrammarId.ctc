@@ -1,0 +1,4 @@
+{{ indent * level }}case {{ grammar_id }}:
+{{ indent * (level + 1) }}{{ grammar_id_comment }}
+{{ event_content }}
+{{ indent * (level + 1) }}break;

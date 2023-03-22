@@ -1,0 +1,22 @@
+{%- if option == 0 %}
+{{ indent * level }}if ({{ parameter }}_isUsed == 1u)
+{%- elif option > 0 %}
+{{ indent * level }}else if ({{ parameter }}_isUsed == 1u)
+{%- else %}
+{{ indent * level }}else
+{%- endif %}
+{{ indent * level }}{
+{% if add_debug_code == 1 -%}
+{{ indent * (level + 1) }}if (stream->status_callback)
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}stream->status_callback({{ type_parameter|upper }}, 0, 0, 0);
+{{ indent * (level + 1) }}}
+
+{% endif -%}
+{{ indent * (level + 1) }}error = exi_basetypes_encoder_nbit_uint(stream, {{ bits_to_write }}, {{ value_to_write }});
+{{ indent * (level + 1) }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}{{ event_comment }}
+{{ type_content }}
+{{ indent * (level + 1) }}}
+{{ indent * level }}}

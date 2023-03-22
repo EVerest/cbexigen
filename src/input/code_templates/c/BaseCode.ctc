@@ -1,0 +1,5 @@
+{% extends "CommonFileHeader.ctc" %}
+{%- block file_content %}
+{%- block includes %}{% endblock %}
+{% block content %}{% endblock %}
+{% endblock %}

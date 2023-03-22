@@ -1,0 +1,14 @@
+{{ indent * level }}error = exi_basetypes_encoder_nbit_uint(stream, 1, 0);
+{{ indent * level }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * level }}{
+{{ indent * (level + 1) }}error = exi_basetypes_encoder_uint_32(stream, {{ value_parameter }});
+{{ indent * (level + 1) }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}// encode END Element
+{{ indent * (level + 2) }}error = exi_basetypes_encoder_nbit_uint(stream, 1, 0);
+{{ indent * (level + 2) }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * (level + 2) }}{
+{{ indent * (level + 3) }}grammar_id = {{ next_grammar }};
+{{ indent * (level + 2) }}}
+{{ indent * (level + 1) }}}
+{{ indent * level }}}

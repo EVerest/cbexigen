@@ -1,0 +1,16 @@
+{% extends "BaseHeader.ctc" %}
+{% block includes %}
+{{include}}
+{% endblock %}
+{% block defines %}
+{{defines}}
+{% endblock %}
+{% block function_enum %}
+{{enum_code}}
+{% endblock %}
+{% block content %}
+{{code}}
+{% endblock %}
+{% block prototypes %}
+{{prototype}}
+{% endblock %}

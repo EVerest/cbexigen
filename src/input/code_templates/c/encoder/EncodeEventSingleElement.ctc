@@ -1,0 +1,13 @@
+{% if add_debug_code == 1 -%}
+{{ indent * level }}if (stream->status_callback)
+{{ indent * level }}{
+{{ indent * (level + 1) }}stream->status_callback({{ type_parameter|upper }}, 0, 0, 0);
+{{ indent * level }}}
+
+{% endif -%}
+{{ indent * level }}error = exi_basetypes_encoder_nbit_uint(stream, {{ bits_to_write }}, {{ value_to_write }});
+{{ indent * level }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * level }}{
+{{ indent * (level + 1) }}{{ event_comment }}
+{{ type_content }}
+{{ indent * level }}}

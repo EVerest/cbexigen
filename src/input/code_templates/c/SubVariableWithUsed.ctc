@@ -1,0 +1,4 @@
+    {{ variable_comment }}
+    {{ variable_type }} {{ variable_name }};
+    unsigned int {{ variable_name}}_isUsed:1;
+

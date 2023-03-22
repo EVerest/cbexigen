@@ -1,0 +1,7 @@
+    {{ variable_comment }}
+    struct {
+        {{ struct_type }} characters[{{ type_def }}];
+        uint16_t charactersLen;
+    } {{ struct_name }};
+    unsigned int {{ struct_name }}_isUsed:1;
+

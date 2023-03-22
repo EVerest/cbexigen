@@ -1,0 +1,17 @@
+{% extends "BaseHeader.ctc" %}
+{% block includes -%}
+{%- endblock %}
+
+{% block content %}
+/*****************************************************************************
+ * general IDs for callback
+ *****************************************************************************/
+{%- for key, value in general_defines.items() %}
+#define {{ key }} {{ value[0] }}
+{%- endfor %}
+
+/*****************************************************************************
+ * interface
+ *****************************************************************************/
+void {{ callback_prefix }}status_callback(int message_id, int status_code, int value_1, int value_2);
+{% endblock %}

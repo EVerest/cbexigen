@@ -1,0 +1,4 @@
+{{ indent * level }}{{ sequence_comment }}
+{{ indent * level }}struct {
+{{ sequence_content }}
+{{ indent * level }}} {{ sequence_name }};

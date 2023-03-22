@@ -1,0 +1,131 @@
+{% extends "BaseHeader.ctc" %}
+{% block includes %}
+
+#include <stddef.h>
+#include <stdint.h>
+{% endblock %}
+
+{% block content %}
+{%- if add_debug_code == 1 %}
+/*****************************************************************************
+ * internal IDs for callback
+ *****************************************************************************/
+#define EXI_DEBUG__BITSTREAM_INIT -1
+#define EXI_DEBUG__BITSTREAM_BYTE_POS_CHANGED -2
+#define EXI_DEBUG__BITSTREAM_WRITE_BIT -3
+#define EXI_DEBUG__BITSTREAM_READ_BIT -4
+
+#define EXI_DEBUG__BITSTREAM_WRITE_BITS -10
+#define EXI_DEBUG__BITSTREAM_READ_BITS -11
+
+#define EXI_DEBUG__BASETYPES_ENCODE_UNSIGNED -20
+#define EXI_DEBUG__BASETYPES_ENCODE_BOOL -21
+#define EXI_DEBUG__BASETYPES_ENCODE_BYTES -22
+#define EXI_DEBUG__BASETYPES_ENCODE_UINT_8 -23
+#define EXI_DEBUG__BASETYPES_ENCODE_UINT_16 -24
+#define EXI_DEBUG__BASETYPES_ENCODE_UINT_32 -25
+#define EXI_DEBUG__BASETYPES_ENCODE_UINT_64 -26
+#define EXI_DEBUG__BASETYPES_ENCODE_INT_8 -27
+#define EXI_DEBUG__BASETYPES_ENCODE_INT_16 -28
+#define EXI_DEBUG__BASETYPES_ENCODE_INT_32 -29
+#define EXI_DEBUG__BASETYPES_ENCODE_INT_64 -30
+#define EXI_DEBUG__BASETYPES_ENCODE_CHARACTERS -31
+
+#define EXI_DEBUG__BASETYPES_DECODE_UNSIGNED -50
+#define EXI_DEBUG__BASETYPES_DECODE_BOOL -51
+#define EXI_DEBUG__BASETYPES_DECODE_BYTES -52
+#define EXI_DEBUG__BASETYPES_DECODE_UINT_8 -53
+#define EXI_DEBUG__BASETYPES_DECODE_UINT_16 -54
+#define EXI_DEBUG__BASETYPES_DECODE_UINT_32 -55
+#define EXI_DEBUG__BASETYPES_DECODE_UINT_64 -56
+#define EXI_DEBUG__BASETYPES_DECODE_INT_8 -57
+#define EXI_DEBUG__BASETYPES_DECODE_INT_16 -58
+#define EXI_DEBUG__BASETYPES_DECODE_INT_32 -59
+#define EXI_DEBUG__BASETYPES_DECODE_INT_64 -60
+#define EXI_DEBUG__BASETYPES_DECODE_CHARACTERS -61
+{%- endif %}
+
+
+#define EXI_BITSTREAM_MAX_BIT_COUNT 8
+
+
+typedef void (*exi_status_callback)(int message_id, int status_code, int value_1, int value_2);
+
+typedef struct {
+    /* byte array size and data */
+    uint8_t* data;
+    size_t data_size;
+
+    /* byte array current byte and bit position in array */
+    uint8_t bit_count;
+    size_t byte_pos;
+
+    /* Pointer to callback for reporting errors or logging if assigned */
+    exi_status_callback status_callback;
+} exi_bitstream_t;
+
+
+/**
+ * \brief       bitstream init
+ *
+ *              Initializes the exi bitstream with the given parameters.
+ *
+ * \param       stream              input or output stream
+ * \param       data                pointer to EXI data
+ * \param       data_size           size of EXI data
+ * \param       data_offset         start of payload inside EXI data
+ * \param       status_callback     pointer to callback function for error reporting or logging
+ *
+ */
+void exi_bitstream_init(exi_bitstream_t* stream, uint8_t* data, size_t data_size, size_t data_offset, exi_status_callback status_callback);
+
+/**
+ * \brief       bitstream write bits
+ *
+ *              Write the bit_count bits of value to the stream.
+ *
+ * \param       stream          output Stream
+ * \param       bit_count       number of bits to write
+ * \param       value           value to write
+ * \return                      NO_ERROR or error code
+ *
+ */
+int exi_bitstream_write_bits(exi_bitstream_t* stream, size_t bit_count, uint32_t value);
+
+/**
+ * \brief       bitstream write octet
+ *
+ *              write an octet to the stream.
+ *
+ * \param       stream          output Stream
+ * \param       value           write octet value
+ * \return                      NO_ERROR or error code
+ *
+ */
+int exi_bitstream_write_octet(exi_bitstream_t* stream, uint8_t value);
+
+/**
+ * \brief       bitstream read bits
+ *
+ *              read the bit_count bits from the stream and return the result.
+ *
+ * \param       stream          input Stream
+ * \param       bit_count       number of bits to read
+ * \param       value           read value
+ * \return                      NO_ERROR or error code
+ *
+ */
+int exi_bitstream_read_bits(exi_bitstream_t* stream, size_t bit_count, uint32_t* value);
+
+/**
+ * \brief       bitstream read octet
+ *
+ *              read an octet from the stream and return the result.
+ *
+ * \param       stream          input Stream
+ * \param       value           read octet value
+ * \return                      NO_ERROR or error code
+ *
+ */
+int exi_bitstream_read_octet(exi_bitstream_t* stream, uint8_t* value);
+{% endblock %}

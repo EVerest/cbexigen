@@ -1,0 +1,9 @@
+{{ indent * level }}{{ decode_comment }}
+{{ indent * level }}error = {{ decode_fn }}(stream, &{{ type_value }});
+{{ indent * level }}if (error == 0)
+{{ indent * level }}{
+{%- if type_option == 1 %}
+{{ indent * (level + 1) }}{{ type_value }}_isUsed = 1u;
+{%- endif %}
+{{ indent * (level + 1) }}grammar_id = {{ next_grammar_id }};
+{{ indent * level }}}

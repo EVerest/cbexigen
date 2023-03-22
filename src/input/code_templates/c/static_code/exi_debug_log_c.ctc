@@ -1,0 +1,156 @@
+{% extends "BaseCode.ctc" %}
+{% block includes %}
+
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "{{ include_name }}"
+#include "exi_bitstream.h"
+{% endblock %}
+
+{% block content %}
+#define EXI_STATUS_LOG_FILENAME "{{ status_log_name }}"
+
+/*****************************************************************************
+ * local functions
+ *****************************************************************************/
+static void status_internal(int message_id, int status_code, int value_1, int value_2)
+{
+    FILE *logfile = fopen(EXI_STATUS_LOG_FILENAME, "at");
+
+    switch (message_id)
+    {
+    case EXI_DEBUG__BITSTREAM_INIT:
+        fprintf(logfile, "\n********************************************************************************\n");
+        fprintf(logfile, "exi_bitstream_t - init: byte_pos = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BITSTREAM_BYTE_POS_CHANGED:
+        fprintf(logfile, "exi_bitstream_t - byte_pos changed: byte_pos = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BITSTREAM_WRITE_BIT:
+        fprintf(logfile, "exi_bitstream_t - write_bit: byte_pos value = 0x%02X; bit pos value = 0x%02X; bit value = %d\n", status_code, value_1, value_2);
+        break;
+    case EXI_DEBUG__BITSTREAM_READ_BIT:
+        fprintf(logfile, "exi_bitstream_t - read_bit: byte_pos value = 0x%02X; bit pos value = 0x%02X; bit value = %d\n", status_code, value_1, value_2);
+        break;
+    case EXI_DEBUG__BITSTREAM_WRITE_BITS:
+        if (value_2 > 31 && value_2 < 128)
+        {
+            fprintf(logfile, "exi_bitstream_t - write_bits: bit_count = %d; value = %d = '%c'\n", value_1, value_2, value_2);
+        }
+        else
+        {
+            fprintf(logfile, "exi_bitstream_t - write_bits: bit_count = %d; value = %d\n", value_1, value_2);
+        }
+        break;
+    case EXI_DEBUG__BITSTREAM_READ_BITS:
+        if (value_2 > 31 && value_2 < 128)
+        {
+            fprintf(logfile, "exi_bitstream_t - read_bits: bit_count = %d; value = %d = '%c'\n", value_1, value_2, value_2);
+        }
+        else
+        {
+            fprintf(logfile, "exi_bitstream_t - read_bits: bit_count = %d; value = %d\n", value_1, value_2);
+        }
+        break;
+    // *** basetypes encoder ***
+    case EXI_DEBUG__BASETYPES_ENCODE_UNSIGNED:
+        fprintf(logfile, "exi_basetypes - encode unsigned: octets_count = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_ENCODE_BOOL:
+        fprintf(logfile, "exi_basetypes - encode bool: value = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_ENCODE_BYTES:
+        fprintf(logfile, "exi_basetypes - encode bytes: bytes_len = %d; bytes_size = %d\n", value_1, value_2);
+        break;
+    case EXI_DEBUG__BASETYPES_ENCODE_UINT_8:
+        fprintf(logfile, "exi_basetypes - encode uint_8: value = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_ENCODE_UINT_16:
+        fprintf(logfile, "exi_basetypes - encode uint_16: value = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_ENCODE_UINT_32:
+        fprintf(logfile, "exi_basetypes - encode uint_32: value = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_ENCODE_INT_8:
+        fprintf(logfile, "exi_basetypes - encode int_8: value = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_ENCODE_INT_16:
+        fprintf(logfile, "exi_basetypes - encode int_16: value = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_ENCODE_INT_32:
+        fprintf(logfile, "exi_basetypes - encode int_32: value = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_ENCODE_CHARACTERS:
+        fprintf(logfile, "exi_basetypes - encode bytes: characters_len = %d; characters_size = %d\n", value_1, value_2);
+        break;
+    // *** basetypes decoder ***
+    case EXI_DEBUG__BASETYPES_DECODE_UNSIGNED:
+        fprintf(logfile, "exi_basetypes - decode unsigned: octets_count = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_DECODE_BOOL:
+        fprintf(logfile, "exi_basetypes - decode bool: value = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_DECODE_BYTES:
+        fprintf(logfile, "exi_basetypes - decode bytes: bytes_len = %d; bytes_size = %d\n", value_1, value_2);
+        break;
+    case EXI_DEBUG__BASETYPES_DECODE_UINT_8:
+        fprintf(logfile, "exi_basetypes - decode uint_8: value = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_DECODE_UINT_16:
+        fprintf(logfile, "exi_basetypes - decode uint_16: value = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_DECODE_UINT_32:
+        fprintf(logfile, "exi_basetypes - decode uint_32: value = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_DECODE_INT_16:
+        fprintf(logfile, "exi_basetypes - decode int_16: value = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_DECODE_INT_32:
+        fprintf(logfile, "exi_basetypes - decode int_32: value = %d\n", value_1);
+        break;
+    case EXI_DEBUG__BASETYPES_DECODE_CHARACTERS:
+        fprintf(logfile, "exi_basetypes - decode bytes: characters_len = %d; characters_size = %d\n", value_1, value_2);
+        break;
+
+    default:
+        fprintf(logfile, "MessageID: %d; Status: %d; Value 1: %d; Value 2: %d\n", message_id, status_code, value_1, value_2);
+    }
+
+    fclose(logfile);
+}
+
+static void status_general(int message_id, int status_code, int value_1, int value_2)
+{
+    FILE *logfile = fopen(EXI_STATUS_LOG_FILENAME, "at");
+
+    switch (message_id)
+    {
+{%- for key, value in general_defines.items() %}
+        case {{ key }}:
+            fprintf(logfile, "\n{{ value[1] }}\n");
+            break;
+{%- endfor %}
+    default:
+        fprintf(logfile, "MessageID: %d; Status: %d; Value 1: %d; Value 2: %d\n", message_id, status_code, value_1, value_2);
+    }
+
+    fclose(logfile);
+}
+
+/*****************************************************************************
+ * interface functions
+ *****************************************************************************/
+void {{ callback_prefix }}status_callback(int message_id, int status_code, int value_1, int value_2)
+{
+    if (message_id < 0)
+    {
+        status_internal(message_id, status_code, value_1, value_2);
+    }
+    else
+    {
+        status_general(message_id, status_code, value_1, value_2);
+    }
+}
+{% endblock %}

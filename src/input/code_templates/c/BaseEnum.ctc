@@ -1,0 +1,6 @@
+{{ element_comment }}
+typedef enum {
+{%- for value in list %}
+    {{value}} = {{loop.index0}}{%- if not loop.last %},{%- endif %}
+{%- endfor %}
+} {{enum_type}};
