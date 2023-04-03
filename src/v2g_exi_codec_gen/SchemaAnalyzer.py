@@ -1034,81 +1034,115 @@ class SchemaAnalyzer(object):
         return parents
 
     @staticmethod
-    def __copy_particles_from_empty_content_elements(element, parents):
+    def __replace_particle_list_in_parent(parent_element: ElementData, particle_list: list, replacement_list: list):
+        """
+        Drop the particles in particle_list from parent, and replace them (in place)
+        with the sorted particles from replacement_list.
+        """
+        # the replacements need to be sorted alphabetically
+        replacement_list.sort(key=lambda particle_key: particle_key.name)
+
+        # the particles need to be sorted by index, for proper removal
+        particle_list.sort(key=lambda x: x[0])
+
+        # sanity-check the particle list for contiguity
+        for i, pi in enumerate(particle_list):
+            if i > 0 and particle_list[i][0] != (particle_list[i-1][0] + 1):
+                log_write(f"particle indices are not contiguous for '{parent_element.name_short}' at {i}: " +
+                          f"{particle_list[i][1].name}, index {particle_list[i][0]} after " +
+                          f"{particle_list[i-1][1].name} index {particle_list[i-1][0]}")
+
+        # drop all the particles listed in particle_list
+        p_index: int
+        for p_index, p in reversed(particle_list):
+            if parent_element.particles[p_index] != p:
+                log_write(f"particle '{p.name}' not found in '{parent_element.name_short}'")
+            del parent_element.particles[p_index]
+
+        # insert the replacements at the original position, assuming the lowest original particle
+        # index is now the correct one
+        parent_particles_old_hi = parent_element.particles[p_index:]
+        parent_element.particles = parent_element.particles[:p_index]
+        abstract_seq = []
+        for part in replacement_list:
+            log_write(f'    Add particle from list {part.name}.')
+            parent_element.particles.append(part)
+            abstract_seq.append(part.name)
+        parent_element.particles.extend(parent_particles_old_hi)
+
+        parent_element.has_abstract_sequence = True
+        # FIXME abstract_seq may need to inherit min/max_occurs(_old)
+        parent_element.abstract_sequences.append(abstract_seq)
+
+    def __copy_particles_from_empty_content_elements(self, element: ElementData, parents):
+        parent: ElementData
         for parent in parents:
-            re_list = []
+            replacement_list = []
             log_write(f'  Copying particle(s) of {element.name_short} to {parent.name_short}.')
+            particles_to_remove = []  # list of tuples (index within parent, particle)
+            particle: Particle
             for particle in element.particles:
                 exist = [x for x in parent.particles if x.name == particle.name]
                 if len(exist) == 0:
                     log_write(f'    Add to list and set substitute to false {particle.name}.')
+                    # FIXME abstract_seq may need to inherit min/max_occurs(_old)
                     particle.min_occurs = 0
                     particle.is_substitute = False
-                    re_list.append(particle)
+                    replacement_list.append(particle)
                 else:
                     log_write(f'    Add to list and remove particle {particle.name}.')
-                    re_list.append(particle)
-                    parent.particles.remove(particle)
+                    replacement_list.append(particle)
+                    if particle in parent.particles:
+                        particles_to_remove.append((parent.particles.index(particle), particle))
 
             for particle in parent.particles:
                 if particle.name == element.name_short:
                     log_write(f'    Add to list and remove particle {particle.name}.')
                     particle.min_occurs = 0
-                    re_list.append(particle)
-                    parent.particles.remove(particle)
+                    replacement_list.append(particle)
+                    particles_to_remove.append((parent.particles.index(particle), particle))
 
-            if len(re_list) > 0:
-                re_list.sort(key=lambda particle_key: particle_key.name)
-                abstract_seq = []
-                for particle in re_list:
-                    log_write(f'    Add particle from list {particle.name}.')
-                    parent.particles.append(particle)
-                    abstract_seq.append(particle.name)
+            if len(replacement_list) > 0:
+                self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list)
 
-                parent.has_abstract_sequence = True
-                parent.abstract_sequences.append(abstract_seq)
-
-    def __copy_particles_from_empty_content_elements_particle(self, element, parents):
+    def __copy_particles_from_empty_content_elements_particle(self, element: ElementData, parents):
+        parent: ElementData
         for parent in parents:
             if parent.name_short != element.name_short:
-                re_list = []
+                replacement_list = []
+                particles_to_remove = []  # list of tuples (index within parent, particle)
                 log_write(f'  Copying particle(s) of {element.name_short} to {parent.name_short}.')
+                part_index: int
                 for p in element.particles:
-                    for part in parent.particles:
+                    part: Particle
+                    for part_index, part in enumerate(parent.particles):
                         if part.name == p.name:
                             log_write(f'    Add to list and remove particle {part.name}.')
+                            # FIXME abstract_seq may need to inherit min/max_occurs(_old)
                             part.min_occurs = 0
                             part.is_substitute = False
-                            re_list.append(part)
-                            parent.particles.remove(part)
+                            particles_to_remove.append((part_index, part))
+                            replacement_list.append(part)
                             break
 
+                # finally, also add the original, abstract particle to the replacements
                 log_write(f'    Add new particle to list {element.name_short}.')
-                part = Particle(prefix=self.__schema_prefix,
-                                name=element.name_short,
-                                base_type=element.base_type,
-                                type=element.type,
-                                type_short=element.type_short,
-                                min_occurs=0,
-                                max_occurs=1)
-                re_list.append(part)
+                part_new = Particle(prefix=self.__schema_prefix,
+                                    name=element.name_short,
+                                    base_type=element.base_type,
+                                    type=element.type,
+                                    type_short=element.type_short,
+                                    min_occurs=0,
+                                    max_occurs=1)
+                replacement_list.append(part_new)
 
-                if len(re_list) > 0:
-                    re_list.sort(key=lambda particle_key: particle_key.name)
-                    abstract_seq = []
-                    for part in re_list:
-                        log_write(f'    Add particle from list {part.name}.')
-                        parent.particles.append(part)
-                        abstract_seq.append(part.name)
-
-                    parent.has_abstract_sequence = True
-                    parent.abstract_sequences.append(abstract_seq)
+                self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list)
 
     def __scan_elements_for_empty_content(self):
         """
             This function scans the list of elements to generate for content_type=empty.
             If such an element is found, but it has particles, these particles are copied
-            to the elements having the empty one. afterwards the particle list of the
+            to the elements having the empty one. Afterwards the particle list of the
             empty element is cleared.
             This helps to avoid generating types and code that is not used and
             bloats the generated code.
@@ -1120,9 +1154,10 @@ class SchemaAnalyzer(object):
 
             Caution!
             Deleting the empty element from the parent element is not a good idea,
-            because it deletes also this empty elements, which are necessary for numbering
+            because it also deletes these empty elements, which are necessary for enumerating
             and generating IDs or codes.
         """
+        element: ElementData
         for element in self.__generate_elements:
             if element.content_type == 'empty':
                 log_write('')
@@ -1142,11 +1177,12 @@ class SchemaAnalyzer(object):
                 log_write('')
                 log_write(f'{element.name_short} ({element.type_short}) is abstract and has a reference.')
                 search_list = []
+                particle: Particle
                 for particle in element.particles:
                     if particle.base_type == element.type_short:
                         search_list.append(particle.name)
 
-                if len(search_list) > 0:
+                if search_list:
                     parents = self.__get_parent_elements_with_search_list_particles(search_list, element.name_short)
                     for parent in parents:
                         found = False
@@ -1159,6 +1195,7 @@ class SchemaAnalyzer(object):
                             re_list = []
                             log_write(f'  Copying particle(s) of {element.name_short} to {parent.name_short}.')
                             for name in search_list:
+                                part: Particle
                                 for part in parent.particles:
                                     if part.name == name:
                                         log_write(f'    Add to list and remove particle {part.name}.')
