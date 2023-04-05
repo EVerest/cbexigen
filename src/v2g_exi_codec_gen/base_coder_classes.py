@@ -369,8 +369,14 @@ class ExiBaseCoderCode:
         # _debug_element_particle_properties(element)
 
         grammar = self.create_empty_grammar()
-        for particle_index, particle in enumerate(element.particles):
+
+        def _add_subsequent_grammar_details(element: ElementData, particle: Particle,
+                                            grammar: ElementGrammar,
+                                            particle_index: int, index_last_nonoptional_particle: int,
+                                            particle_is_part_of_sequence: bool):
             if particle_index > index_last_nonoptional_particle:
+                # all the following particles are optional, so END needs to be an expected event
+                # at the beginning of the event/grammar detail list
                 if not particle_is_part_of_sequence:
                     grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.END))
                 else:
@@ -393,30 +399,36 @@ class ExiBaseCoderCode:
                                 if part.min_occurs_old == 1 or (n == len(element.particles) - 1):
                                     self.append_to_element_grammars(grammar, element.typename)
                                     grammar = self.create_empty_grammar()
-                                    break
+                                    break  # end of grammar for current particle
                     else:
                         if not part.parent_has_sequence:
                             grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=part))
                             particle_is_part_of_sequence = False
                         else:
                             if str(part.parent_sequence[0]) == part.name:
+                                # not-optional or last particle in element: end of grammar list
                                 if part.min_occurs_old == 1 or (n == len(element.particles) - 1):
                                     grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=part))
                                     self.append_to_element_grammars(grammar, element.typename)
                                     grammar = self.create_empty_grammar()
-                                    break
+                                    break  # end of grammar for current particle
 
                     # not-optional or last particle in element: end of grammar list
                     if part.min_occurs == 1 or (n == len(element.particles) - 1):
                         self.append_to_element_grammars(grammar, element.typename)
                         grammar = self.create_empty_grammar()
-                        break
+                        break  # end of grammar for current particle
                 elif part.max_occurs > 1:
+                    # FIXME we need a special case for particles whose max_occurs was
+                    # artificially changed to 1, breaking the repeat grammar
                     if part.max_occurs < 25:
                         for m in range(0, part.max_occurs):
-                            if m >= part.min_occurs and m > 0:  # grammar 0 already contains END
-                                grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.END))
+                            if m >= part.min_occurs and m > 0:  # optional, and grammar 0 already contains END
+                                _add_subsequent_grammar_details(element, particle, grammar, n + 1,
+                                                                index_last_nonoptional_particle,
+                                                                particle_is_part_of_sequence)
 
+                            # FIXME this may have to be further up, but AFTER the GrammarFlag.END
                             grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START,
                                                                         particle=part,
                                                                         array_index=(m + 1)))
@@ -424,6 +436,7 @@ class ExiBaseCoderCode:
                             grammar = self.create_empty_grammar()
                     else:
                         for m in [0, 1]:
+                            # FIXME fix this to correspond to the above - as yet unused
                             if m >= part.min_occurs and m > 0:  # grammar 0 already contains END
                                 grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.END))
 
@@ -435,12 +448,17 @@ class ExiBaseCoderCode:
                             self.append_to_element_grammars(grammar, element.typename)
                             grammar = self.create_empty_grammar()
 
-                    break
+                    break  # why?
                 else:
                     log_write_error('missing handling of unexpected case min_occurs = ' +
                                     f'{part.min_occurs}: {part.name}')
 
             element.particles_next_grammar_ids[particle_index] = self.grammar_id
+
+        for particle_index, particle in enumerate(element.particles):
+            _add_subsequent_grammar_details(element, particle, grammar, particle_index,
+                                            index_last_nonoptional_particle, particle_is_part_of_sequence)
+            grammar = self.create_empty_grammar()
 
     def generate_event_info(self, grammars: List[ElementGrammar], element: ElementData):
         len_grammars = len(grammars)
