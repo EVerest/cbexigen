@@ -478,6 +478,9 @@ class DatatypeHeader:
             else:
                 define_list = self.__get_define_list(element)
                 struct_content = self.__get_struct_content(element)
+                # avoid empty structs
+                if struct_content == '':
+                    struct_content += '    int _unused;'
 
                 temp = self.generator.get_template('BaseStructWithDefine.ctc')
                 content += temp.render(defines=define_list,
