@@ -291,7 +291,10 @@ class ExiBaseCoderCode:
         index_last_nonoptional_particle = -1
         particle: Particle  # type hint
         for particle_index, particle in enumerate(element.particles):
-            if particle.min_occurs == 1:
+            # FIXME this could be done backwards with a "break"
+            choices = self._get_choice_options(element, particle)
+            combined_min_occurs_from_choice = choices[2] if choices else particle.min_occurs
+            if combined_min_occurs_from_choice == 1:
                 index_last_nonoptional_particle = particle_index
 
         def _particle_is_in_choice(element: ElementData, particle: Particle):
@@ -340,6 +343,7 @@ class ExiBaseCoderCode:
             return []
 
         def _debug_element_particle_properties(element: ElementData):
+            particle: Particle
             for particle in element.particles:
                 log_write_error(f"Investigating particle '{particle.name}'")
                 log_write_error(f"\tmin_occurs: {particle.min_occurs}")
@@ -383,6 +387,19 @@ class ExiBaseCoderCode:
                     if str(particle.parent_sequence[0]) == particle.name:
                         grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.END))
 
+            def _add_particle_or_choice_list_to_details(element, grammar, particle, previous_choice_list):
+                choice_list = self._get_choice_options(element, particle)
+                if choice_list:
+                    if choice_list[1] != previous_choice_list:
+                        for choice in choice_list[0]:
+                            grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=choice))
+                        previous_choice_list.extend(choice_list[1])
+                else:
+                    grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=part))
+                    previous_choice_list.clear()
+
+            previous_choice_list = []  # to check whether this choice has already been handled
+
             # for the current particle, check all successors in the particle list
             for n, part in enumerate(element.particles[particle_index:], start=particle_index):
                 if part.max_occurs == 1:
@@ -390,7 +407,7 @@ class ExiBaseCoderCode:
                         particle_is_part_of_sequence = True
 
                     if not particle_is_part_of_sequence or n == particle_index:
-                        grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=part))
+                        _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list)
 
                         if n < len(element.particles) - 1:
                             if not element.particles[n + 1].parent_has_sequence:
@@ -408,13 +425,16 @@ class ExiBaseCoderCode:
                             if str(part.parent_sequence[0]) == part.name:
                                 # not-optional or last particle in element: end of grammar list
                                 if part.min_occurs_old == 1 or (n == len(element.particles) - 1):
-                                    grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=part))
+                                    _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list)
                                     self.append_to_element_grammars(grammar, element.typename)
                                     grammar = self.create_empty_grammar()
                                     break  # end of grammar for current particle
 
                     # not-optional or last particle in element: end of grammar list
-                    if part.min_occurs == 1 or (n == len(element.particles) - 1):
+                    choice_for_part = self._get_choice_options(element, part)
+                    part_min = choice_for_part[2] if choice_for_part else 0
+                    # FIXME: do these need to be >= 1?
+                    if part.min_occurs == 1 or part_min == 1 or (n == len(element.particles) - 1):
                         self.append_to_element_grammars(grammar, element.typename)
                         grammar = self.create_empty_grammar()
                         break  # end of grammar for current particle
@@ -428,15 +448,13 @@ class ExiBaseCoderCode:
                                                                 index_last_nonoptional_particle,
                                                                 particle_is_part_of_sequence)
 
-                            # FIXME this may have to be further up, but AFTER the GrammarFlag.END
-                            grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START,
-                                                                        particle=part,
-                                                                        array_index=(m + 1)))
+                            _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list)
                             self.append_to_element_grammars(grammar, element.typename)
                             grammar = self.create_empty_grammar()
                     else:
                         for m in [0, 1]:
-                            # FIXME fix this to correspond to the above - as yet unused
+                            # FIXME: LOOP not implemented
+                            # FIXME: fix this to correspond to the above - as yet unused
                             if m >= part.min_occurs and m > 0:  # grammar 0 already contains END
                                 grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.END))
 
@@ -455,7 +473,18 @@ class ExiBaseCoderCode:
 
             element.particles_next_grammar_ids[particle_index] = self.grammar_id
 
+        previous_choice_list = []
         for particle_index, particle in enumerate(element.particles):
+            choice_list = self._get_choice_options(element, particle)
+            if choice_list and choice_list[1] == previous_choice_list:
+                # skip if particle in same choice group as a previously processed one
+                element.particles_next_grammar_ids[particle_index] = self.grammar_id
+                continue
+            else:
+                previous_choice_list.clear()
+                if choice_list:
+                    previous_choice_list.extend(choice_list[1])
+
             _add_subsequent_grammar_details(element, particle, grammar, particle_index,
                                             index_last_nonoptional_particle, particle_is_part_of_sequence)
             grammar = self.create_empty_grammar()
@@ -506,7 +535,17 @@ class ExiBaseCoderCode:
                                         break
 
                                 if part_index is not None:
-                                    if part_index == len(element.particles) - 1:
+                                    def _is_final_particle(element: ElementData, pindex: int) -> bool:
+                                        # particle is the last one, or is in the same choice group as the last one
+                                        if pindex == len(element.particles) - 1:
+                                            return True
+                                        choice_group = self._get_choice_options(element, element.particles[-1])
+                                        if choice_group and choice_group[0]:
+                                            if element.particles[pindex] in choice_group[0]:
+                                                return True
+                                        return False
+
+                                    if _is_final_particle(element, part_index):
                                         # next grammar is always END for the final particle
                                         grammar_detail.next_grammar = grammars[-2].grammar_id
                                     else:
@@ -515,11 +554,13 @@ class ExiBaseCoderCode:
                                     log_write_error("Failed to find element particle for " +
                                                     f"{grammar_detail.particle.name}")
 
+                        ptname = grammar_detail.particle.typename if grammar_detail.particle is not None else '(None)'
+                        pname = grammar_detail.particle.name if grammar_detail.particle is not None else ''
                         self.log(', '.join([
                                          f'Grammar ID={grammar.grammar_id}',
                                          f'eventCode={grammar_detail.event_index}',
-                                         f'decode={grammar_detail.particle.typename} ' +
-                                         f"(Particle '{grammar_detail.particle.name}')",
+                                         f'decode={ptname} ' +
+                                         f"(Particle '{pname}')",
                                          f'next ID={grammar_detail.next_grammar}',
                                     ]))
                         event_code += 1
