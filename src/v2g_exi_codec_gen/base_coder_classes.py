@@ -402,7 +402,7 @@ class ExiBaseCoderCode:
 
             # for the current particle, check all successors in the particle list
             for n, part in enumerate(element.particles[particle_index:], start=particle_index):
-                if part.max_occurs == 1:
+                if part.max_occurs == 1 and not part.max_occurs_changed:
                     if part.parent_has_sequence:
                         particle_is_part_of_sequence = True
 
@@ -438,11 +438,16 @@ class ExiBaseCoderCode:
                         self.append_to_element_grammars(grammar, element.typename)
                         grammar = self.create_empty_grammar()
                         break  # end of grammar for current particle
-                elif part.max_occurs > 1:
-                    # FIXME we need a special case for particles whose max_occurs was
-                    # artificially changed to 1, breaking the repeat grammar
+                elif part.max_occurs > 1 or part.max_occurs_changed:
                     if part.max_occurs < 25:
-                        for m in range(0, part.max_occurs):
+                        _max = part.max_occurs
+                        # if max_occurs was reduced to 1, make sure to create the proper grammar after the one occurence
+                        # This should be done only if the caller is not the encoder
+                        if self.__class__.__name__ != 'ExiEncoderCode':
+                            # FIXME: should also apply to max_occurs > 1?
+                            if part.max_occurs == 1 and part.max_occurs_changed:
+                                _max += 1
+                        for m in range(0, _max):
                             if m >= part.min_occurs and m > 0:  # optional, and grammar 0 already contains END
                                 _add_subsequent_grammar_details(element, particle, grammar, n + 1,
                                                                 index_last_nonoptional_particle,
