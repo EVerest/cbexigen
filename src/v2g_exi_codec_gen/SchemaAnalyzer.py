@@ -3,7 +3,7 @@
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 
 from xmlschema import XMLSchema11, XsdElement, XsdType, XsdAttribute
-from xmlschema.validators import XsdSimpleType, XsdComplexType
+from xmlschema.validators import XsdSimpleType, XsdComplexType, XsdGroup
 
 from v2g_exi_codec_gen import tools
 from v2g_exi_codec_gen.typeDefinitions import AnalyzerData, OCCURRENCE_LIMITS_CORRECTED
@@ -546,9 +546,44 @@ class SchemaAnalyzer(object):
 
     @staticmethod
     def __add_choice_info_if_exists(element: XsdElement, elem_data: ElementData):
+        def sub_manipulate_element_data(model_group: XsdGroup):
+            elem_data.has_choice = True
+
+            choice = Choice()
+            for index, group in enumerate(model_group.iter_model()):
+                if hasattr(group, "model"):
+                    if group.model == 'sequence':
+                        current = []
+                        for seq_item in group.iter_model():
+                            name = seq_item.local_name if seq_item.local_name is not None else 'other'
+                            current.append([name, index + 1])
+
+                        choice.choice_sequences.append(current)
+                else:
+                    name = group.local_name if group.local_name is not None else 'other'
+                    choice.choice_items.append([name, index + 1])
+
+            choice.min_occurs = model_group.min_occurs
+            choice.multi_choice_max = 1
+            if model_group.max_occurs is None:
+                choice.is_multi_choice = True
+            else:
+                if model_group.max_occurs > 1:
+                    choice.is_multi_choice = True
+                    choice.multi_choice_max = model_group.max_occurs
+
+            elem_data.choices.append(choice)
+        # END of SubFunction
+
         if hasattr(element.type, "content"):
             if hasattr(element.type.content, "model"):
-                if element.type.content.model == 'choice':
+                if element.type.content.model == 'sequence':
+                    for element_model in element.type.content.iter_model():
+                        if hasattr(element_model, "model"):
+                            if element_model.model == "choice":
+                                sub_manipulate_element_data(element_model)
+
+                elif element.type.content.model == 'choice':
                     elem_data.has_choice = True
                     # todo: remove next lines if decoder is adjusted
                     # START remove lines
@@ -583,28 +618,7 @@ class SchemaAnalyzer(object):
                         elem_data.has_sequence = True
                     # END remove lines
 
-                    choice = Choice()
-                    for index, group in enumerate(element.type.content.iter_model()):
-                        if hasattr(group, "model"):
-                            if group.model == 'sequence':
-                                current = []
-                                for seq_item in group.iter_model():
-                                    name = seq_item.local_name if seq_item.local_name is not None else 'other'
-                                    current.append([name, index + 1])
-
-                                choice.choice_sequences.append(current)
-                        else:
-                            name = group.local_name if group.local_name is not None else 'other'
-                            choice.choice_items.append([name, index + 1])
-
-                    if element.type.content.max_occurs is None:
-                        choice.is_multi_choice = True
-                    else:
-                        if element.type.content.max_occurs > 1:
-                            choice.is_multi_choice = True
-                            choice.multi_choice_max = element.type.content.max_occurs
-
-                    elem_data.choices.append(choice)
+                    sub_manipulate_element_data(element.type.content)
 
     def __get_element_data_from_enum_attribute(self, attribute: XsdAttribute):
         element_data = ElementData(prefix=self.__schema_prefix)
