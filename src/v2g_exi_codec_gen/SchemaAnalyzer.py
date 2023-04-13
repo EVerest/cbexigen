@@ -876,6 +876,9 @@ class SchemaAnalyzer(object):
         self.__scan_elements_for_empty_content()
         self.__scan_particles_for_empty_parent_type()
 
+        # Adjust min_occurs for elements in choices
+        self.__adjust_choice_elements()
+
         # Check memory option and make optimization
         if self.config['apply_optimizations'] == 1:
             self.__apply_array_optimizations()
@@ -1171,6 +1174,23 @@ class SchemaAnalyzer(object):
 
                                 parent.has_abstract_sequence = True
                                 parent.abstract_sequences.append(abstract_seq)
+
+    def __adjust_choice_elements(self):
+        log_write('')
+        log_write('Adjusting choice elements')
+        for element in self.__generate_elements:
+            if element.has_choice:
+                choice_list = []
+                for choice in element.choices:
+                    for item in choice.choice_items:
+                        choice_list.append(item[0])
+
+                for particle in element.particles:
+                    if particle.name in choice_list:
+                        log_write(f'    Setting min_occurs of {particle.name} to 0.')
+                        particle.content_model_changed_restrictions = True
+                        particle.min_occurs_old = particle.min_occurs
+                        particle.min_occurs = 0
 
     def __apply_array_optimizations(self):
         config_module = get_config_module()

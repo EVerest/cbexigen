@@ -29,6 +29,8 @@ class Particle:
     is_attribute: bool = False
     is_simple_content: bool = False
     enum_count: int = -1
+    # additional flag if content model is choice and changed min occurrence
+    content_model_changed_restrictions: bool = False
     # additional flag if parent content model is sequence and changed occurrence
     parent_model_changed_restrictions: bool = False
     parent_has_sequence: bool = False
