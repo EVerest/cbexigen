@@ -53,4 +53,5 @@ OCCURRENCE_LIMITS_CORRECTED: Dict[str, int] = {
     "PaymentOption": 2,  # DIN schema uses unbounded, but restricts it to 2 [V2G-DC-634]
     "ProfileEntry": 24,  # DIN schema uses unbounded, but restricts it to 24 [V2G-DC-307]
     "SelectedService": 16,  # DIN schema uses unbounded, but restricts it to 1 [V2G-DC-635], ISO-2 uses 16
+    "SAScheduleTuple": 5,  # DIN schema uses unbounded, but restricts it to 5
 }
