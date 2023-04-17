@@ -4,7 +4,7 @@
 
 from typing import List
 from v2g_exi_codec_gen import tools_generator, tools
-from v2g_exi_codec_gen.elementData import Particle, ElementData
+from v2g_exi_codec_gen.elementData import Particle, ElementData, Choice
 from v2g_exi_codec_gen.elementGrammar import GrammarFlag, ElementGrammar, ElementGrammarDetail
 from v2g_exi_codec_gen.tools_config import CONFIG_PARAMS
 from v2g_exi_codec_gen.tools_logging import log_write_error, log_init_logger, log_write_logger, \
@@ -226,6 +226,31 @@ class ExiBaseCoderCode:
 
         return result
 
+    def _get_choice_options(self, element: ElementData, particle: Particle):
+        """
+        Return a list containing:
+        - an ordered list of all particles (proper or abstract) belonging to the same choice
+            group as the given particle.
+        - a list of the choice group item names (for comparison)
+        - the min_occurs of this particle group
+        - the max_occurs of this particle group
+        """
+        if element.has_choice:
+            element_choice: Choice
+            for element_choice in element.choices:  # choice object from list of choice objects
+                for choice_item in element_choice.choice_items:  # list of choice names from choice object
+                    if particle.name == choice_item[0]:  # first element is name, second element is index
+                        li: list[Particle] = [element.particle_from_name(x[0]) for x in element_choice.choice_items]
+                        return [li, element_choice.choice_items, element_choice.min_occurs, element_choice.multi_choice_max]  # FIXME choice occurrences
+        elif element.has_abstract_sequence:
+            for abstract_choice_list, min_occurs, max_occurs in element.abstract_sequences:
+                for choice_item in abstract_choice_list:
+                    if particle.name == choice_item:
+                        li: list[Particle] = [element.particle_from_name(x) for x in abstract_choice_list]
+                        return [li, abstract_choice_list, min_occurs, max_occurs]
+        # particle is not a choice, or fallback on failure to find
+        return []
+
     def append_end_and_unknown_grammars(self, typename):
         grammar = self.create_empty_grammar()
         grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.END))
@@ -268,6 +293,80 @@ class ExiBaseCoderCode:
         for particle_index, particle in enumerate(element.particles):
             if particle.min_occurs == 1:
                 index_last_nonoptional_particle = particle_index
+
+        def _particle_is_in_choice(element: ElementData, particle: Particle):
+            """
+            Return True if the given particle is part of (any) choice group in the
+            given element.
+            Else return False.
+            """
+            if not element.has_choice:
+                return False
+            for element_choice in element.choices:
+                for choice_item in element_choice.choice_items:
+                    if particle.name == choice_item[0]:
+                        return True
+            return False
+
+        def _particle_is_in_abstract_choice(element: ElementData, particle: Particle):
+            """
+            Return True if the given particle is part of (any) abstract "sequence" choice
+            group in the given element.
+            Else return False.
+            """
+            if not element.has_abstract_sequence:
+                return False
+            for abstract_choice_list, min_occurs, max_occurs in element.abstract_sequences:
+                for choice_item in abstract_choice_list:
+                    if particle.name == choice_item:
+                        return True
+            return False
+
+        def _get_choice_sequence(element: ElementData, particle: Particle) -> []:
+            """
+            Return an ordered list of all particles belonging to the same choice sequence as
+            the given particle.
+            """
+            if particle.parent_has_choice_sequence:
+                for choice_obj in element.choices:
+                    choice_sequence = choice_obj.choice_sequences[particle.parent_choice_sequence_number - 1]  # list of [name, index] list
+                    for choice_item in choice_sequence:
+                        if particle.name == choice_item[0]:  # first element is name, second element is index
+                            li: list[Particle] = [element.particle_from_name(x[0]) for x in choice_sequence]
+                            return li
+                log_write_error(f"failed to find choice sequence for of {particle.name}")
+
+            # particle is not in a choice sequence, or fallback on failure to find
+            return []
+
+        def _debug_element_particle_properties(element: ElementData):
+            for particle in element.particles:
+                log_write_error(f"Investigating particle '{particle.name}'")
+                log_write_error(f"\tmin_occurs: {particle.min_occurs}")
+                log_write_error(f"\tmax_occurs: {particle.max_occurs}")
+                if particle.min_occurs_old != -1 and not particle.parent_has_sequence:
+                    log_write_error(f"\tpeculiar: min_occurs_old: {particle.min_occurs_old}")
+                if particle.max_occurs_old != -1 and not particle.parent_has_sequence:
+                    log_write_error(f"\tpeculiar: max_occurs_old: {particle.max_occurs_old}")
+                if _particle_is_in_choice(element, particle):
+                    group = []
+                    group, choice_name_list, min_o, max_o = self._get_choice_options(element, particle)
+                    log_write_error(f"\tis in a choice group, min_occurs = {min_o}, max_occurs = {max_o}")
+                    log_write_error([x.name if x is not None else '' for x in group])
+                if _particle_is_in_abstract_choice(element, particle):
+                    group = []
+                    group, choice_name_list, min_o, max_o = self._get_choice_options(element, particle)
+                    log_write_error(f"\tis in an abstract choice group, min_occurs = {min_o}, max_occurs = {max_o}")
+                    log_write_error([x.name if x is not None else '' for x in group])
+                if particle.parent_has_sequence:
+                    log_write_error("\tis in a sequence")
+                    log_write_error(f"\tmin_occurs_old: {particle.min_occurs_old}")
+                    log_write_error(f"\tmax_occurs_old: {particle.max_occurs_old}")
+                if particle.parent_has_choice_sequence:
+                    log_write_error(f"\tparent is in a sequence which is choice, number {particle.parent_choice_sequence_number}")
+                    log_write_error([x.name if x is not None else '' for x in _get_choice_sequence(element, particle)])
+
+        # _debug_element_particle_properties(element)
 
         grammar = self.create_empty_grammar()
         for particle_index, particle in enumerate(element.particles):
