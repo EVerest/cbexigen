@@ -1260,6 +1260,8 @@ class SchemaAnalyzer(object):
                         particle.content_model_changed_restrictions = True
                         particle.min_occurs_old = particle.min_occurs
                         particle.min_occurs = 0
+                        # we may need to force this to avoid peculiar choice particle properties
+                        # particle.max_occurs = 1
 
     def __apply_array_optimizations(self):
         config_module = get_config_module()
@@ -1271,7 +1273,8 @@ class SchemaAnalyzer(object):
 
         for element in self.__generate_elements:
             for particle in element.particles:
-                if particle.type_short in optimizations.keys():
+                if (particle.type_short in optimizations.keys()
+                    and particle.max_occurs > optimizations[particle.type_short]):
                     particle.max_occurs = optimizations[particle.type_short]
 
     def __prepare_for_type_generation(self):
