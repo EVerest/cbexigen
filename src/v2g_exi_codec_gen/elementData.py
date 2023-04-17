@@ -378,3 +378,9 @@ class ElementData:
         if comment_parts:
             comment += ';'
         return comment
+
+    def particle_from_name(self, particle_name: str) -> Particle:
+        for particle in self.particles:
+            if particle.name == particle_name:
+                return particle
+        return None
