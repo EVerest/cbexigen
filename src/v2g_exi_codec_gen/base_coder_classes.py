@@ -375,9 +375,9 @@ class ExiBaseCoderCode:
         grammar = self.create_empty_grammar()
 
         def _add_subsequent_grammar_details(element: ElementData, particle: Particle,
-                                            grammar: ElementGrammar,
                                             particle_index: int, index_last_nonoptional_particle: int,
                                             particle_is_part_of_sequence: bool):
+            nonlocal grammar
             if particle_index > index_last_nonoptional_particle:
                 # all the following particles are optional, so END needs to be an expected event
                 # at the beginning of the event/grammar detail list
@@ -449,7 +449,7 @@ class ExiBaseCoderCode:
                                 _max += 1
                         for m in range(0, _max):
                             if m >= part.min_occurs and m > 0:  # optional, and grammar 0 already contains END
-                                _add_subsequent_grammar_details(element, particle, grammar, n + 1,
+                                _add_subsequent_grammar_details(element, particle, n + 1,
                                                                 index_last_nonoptional_particle,
                                                                 particle_is_part_of_sequence)
 
@@ -490,7 +490,7 @@ class ExiBaseCoderCode:
                 if choice_list:
                     previous_choice_list.extend(choice_list[1])
 
-            _add_subsequent_grammar_details(element, particle, grammar, particle_index,
+            _add_subsequent_grammar_details(element, particle, particle_index,
                                             index_last_nonoptional_particle, particle_is_part_of_sequence)
             grammar = self.create_empty_grammar()
 
