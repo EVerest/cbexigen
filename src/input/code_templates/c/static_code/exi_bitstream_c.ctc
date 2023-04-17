@@ -112,6 +112,42 @@ void exi_bitstream_init(exi_bitstream_t* stream, uint8_t* data, size_t data_size
 {%- endif %}
 }
 
+void exi_bitstream_reset(exi_bitstream_t* stream)
+{
+    if (stream->_init_called)
+    {
+        stream->byte_pos = stream->_flag_byte_pos;
+    }
+    else
+    {
+        stream->byte_pos = 0;
+    }
+
+    stream->bit_count = 0;
+
+{%- if add_debug_code == 1 %}
+
+    if (stream->status_callback)
+    {
+        stream->status_callback(EXI_DEBUG__BITSTREAM_RESET, 0, stream->byte_pos, 0);
+    }
+{%- endif %}
+}
+
+size_t exi_bitstream_get_length(exi_bitstream_t* stream)
+{
+    size_t length = stream->byte_pos;
+
+    if (stream->_init_called && (stream->_flag_byte_pos > 0))
+    {
+        length -= stream->_flag_byte_pos;
+    }
+
+    length += stream->bit_count > 0u ? 1u : 0u;
+
+    return length;
+}
+
 int exi_bitstream_write_bits(exi_bitstream_t* stream, size_t bit_count, uint32_t value)
 {
 {%- if add_debug_code == 1 %}
