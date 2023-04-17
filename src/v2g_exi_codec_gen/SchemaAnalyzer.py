@@ -1034,7 +1034,9 @@ class SchemaAnalyzer(object):
         return parents
 
     @staticmethod
-    def __replace_particle_list_in_parent(parent_element: ElementData, particle_list: list, replacement_list: list):
+    def __replace_particle_list_in_parent(parent_element: ElementData, particle_list: list,
+                                          replacement_list: list,
+                                          min_occurs: int, max_occurs: int):
         """
         Drop the particles in particle_list from parent, and replace them (in place)
         with the sorted particles from replacement_list.
@@ -1072,7 +1074,7 @@ class SchemaAnalyzer(object):
 
         parent_element.has_abstract_sequence = True
         # FIXME abstract_seq may need to inherit min/max_occurs(_old)
-        parent_element.abstract_sequences.append(abstract_seq)
+        parent_element.abstract_sequences.append((abstract_seq, min_occurs, max_occurs))
 
     def __copy_particles_from_empty_content_elements(self, element: ElementData, parents):
         parent: ElementData
@@ -1081,11 +1083,15 @@ class SchemaAnalyzer(object):
             log_write(f'  Copying particle(s) of {element.name_short} to {parent.name_short}.')
             particles_to_remove = []  # list of tuples (index within parent, particle)
             particle: Particle
+            p_min_occurs: int = None
+            p_max_occurs: int = None
             for particle in element.particles:
                 exist = [x for x in parent.particles if x.name == particle.name]
                 if len(exist) == 0:
                     log_write(f'    Add to list and set substitute to false {particle.name}.')
                     # FIXME abstract_seq may need to inherit min/max_occurs(_old)
+                    p_min_occurs = particle.min_occurs
+                    p_max_occurs = particle.max_occurs
                     particle.min_occurs = 0
                     particle.is_substitute = False
                     replacement_list.append(particle)
@@ -1098,12 +1104,15 @@ class SchemaAnalyzer(object):
             for particle in parent.particles:
                 if particle.name == element.name_short:
                     log_write(f'    Add to list and remove particle {particle.name}.')
+                    p_min_occurs = particle.min_occurs
+                    p_max_occurs = particle.max_occurs
                     particle.min_occurs = 0
                     replacement_list.append(particle)
                     particles_to_remove.append((parent.particles.index(particle), particle))
 
             if len(replacement_list) > 0:
-                self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list)
+                self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list,
+                                                       p_min_occurs, p_max_occurs)
 
     def __copy_particles_from_empty_content_elements_particle(self, element: ElementData, parents):
         parent: ElementData
@@ -1113,12 +1122,16 @@ class SchemaAnalyzer(object):
                 particles_to_remove = []  # list of tuples (index within parent, particle)
                 log_write(f'  Copying particle(s) of {element.name_short} to {parent.name_short}.')
                 part_index: int
+                p_min_occurs: int = None
+                p_max_occurs: int = None
                 for p in element.particles:
                     part: Particle
                     for part_index, part in enumerate(parent.particles):
                         if part.name == p.name:
                             log_write(f'    Add to list and remove particle {part.name}.')
                             # FIXME abstract_seq may need to inherit min/max_occurs(_old)
+                            p_min_occurs = part.min_occurs
+                            p_max_occurs = part.max_occurs
                             part.min_occurs = 0
                             part.is_substitute = False
                             particles_to_remove.append((part_index, part))
@@ -1136,7 +1149,8 @@ class SchemaAnalyzer(object):
                                     max_occurs=1)
                 replacement_list.append(part_new)
 
-                self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list)
+                self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list,
+                                                       p_min_occurs, p_max_occurs)
 
     def __scan_elements_for_empty_content(self):
         """
@@ -1194,11 +1208,15 @@ class SchemaAnalyzer(object):
                         if not found:
                             re_list = []
                             log_write(f'  Copying particle(s) of {element.name_short} to {parent.name_short}.')
+                            p_min_occurs: int = None
+                            p_max_occurs: int = None
                             for name in search_list:
                                 part: Particle
                                 for part in parent.particles:
                                     if part.name == name:
                                         log_write(f'    Add to list and remove particle {part.name}.')
+                                        p_min_occurs = part.min_occurs
+                                        p_max_occurs = part.max_occurs
                                         part.min_occurs = 0
                                         part.is_substitute = False
                                         re_list.append(part)
@@ -1224,7 +1242,7 @@ class SchemaAnalyzer(object):
                                     abstract_seq.append(part.name)
 
                                 parent.has_abstract_sequence = True
-                                parent.abstract_sequences.append(abstract_seq)
+                                parent.abstract_sequences.append((abstract_seq, p_min_occurs, p_max_occurs))
 
     def __adjust_choice_elements(self):
         log_write('')

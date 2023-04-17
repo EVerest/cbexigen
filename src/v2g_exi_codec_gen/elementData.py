@@ -243,6 +243,7 @@ class Choice:
         self.multi_choice_max: int = 0
         self.choice_items = []
         self.choice_sequences = []
+        self.min_occurs = -1
 
     @property
     def choice_item_count(self) -> int:
@@ -283,7 +284,7 @@ class ElementData:
     has_abstract_particle: bool = False
     # additional info if element contains abstract particles and realizations
     has_abstract_sequence: bool = False
-    abstract_sequences = []
+    abstract_sequences = []  # list of tuples (list of particles, min_occurs, max_occurs)
     # list of particles
     particles = []
     # additional info if content model is choice
