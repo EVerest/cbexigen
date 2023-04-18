@@ -11,9 +11,10 @@
  * internal IDs for callback
  *****************************************************************************/
 #define EXI_DEBUG__BITSTREAM_INIT -1
-#define EXI_DEBUG__BITSTREAM_BYTE_POS_CHANGED -2
-#define EXI_DEBUG__BITSTREAM_WRITE_BIT -3
-#define EXI_DEBUG__BITSTREAM_READ_BIT -4
+#define EXI_DEBUG__BITSTREAM_RESET -2
+#define EXI_DEBUG__BITSTREAM_BYTE_POS_CHANGED -3
+#define EXI_DEBUG__BITSTREAM_WRITE_BIT -4
+#define EXI_DEBUG__BITSTREAM_READ_BIT -5
 
 #define EXI_DEBUG__BITSTREAM_WRITE_BITS -10
 #define EXI_DEBUG__BITSTREAM_READ_BITS -11
@@ -60,6 +61,10 @@ typedef struct {
     uint8_t bit_count;
     size_t byte_pos;
 
+    /* flags for reset and length function */
+    uint8_t _init_called;
+    size_t _flag_byte_pos;
+
     /* Pointer to callback for reporting errors or logging if assigned */
     exi_status_callback status_callback;
 } exi_bitstream_t;
@@ -78,6 +83,27 @@ typedef struct {
  *
  */
 void exi_bitstream_init(exi_bitstream_t* stream, uint8_t* data, size_t data_size, size_t data_offset, exi_status_callback status_callback);
+
+/**
+ * \brief       bitstream reset
+ *
+ *              Resets the exi bitstream to the parameters from the last init state.
+ *
+ * \param       stream      input or output stream
+ *
+ */
+void exi_bitstream_reset(exi_bitstream_t* stream);
+
+/**
+ * \brief       bitstream get length
+ *
+ *              Returns the length of the stream.
+ *
+ * \param       stream      output Stream
+ * \return                  length of stream
+ *
+ */
+size_t exi_bitstream_get_length(exi_bitstream_t* stream);
 
 /**
  * \brief       bitstream write bits

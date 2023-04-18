@@ -25,6 +25,10 @@ static void status_internal(int message_id, int status_code, int value_1, int va
         fprintf(logfile, "\n********************************************************************************\n");
         fprintf(logfile, "exi_bitstream_t - init: byte_pos = %d\n", value_1);
         break;
+    case EXI_DEBUG__BITSTREAM_RESET:
+        fprintf(logfile, "\n********************************************************************************\n");
+        fprintf(logfile, "exi_bitstream_t - reset: byte_pos = %d\n", value_1);
+        break;
     case EXI_DEBUG__BITSTREAM_BYTE_POS_CHANGED:
         fprintf(logfile, "exi_bitstream_t - byte_pos changed: byte_pos = %d\n", value_1);
         break;
