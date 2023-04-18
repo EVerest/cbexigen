@@ -1,6 +1,10 @@
+{%- if type_attribute == 0 %}
 {{ indent * level }}error = exi_basetypes_encoder_nbit_uint(stream, 1, 0);
 {{ indent * level }}if (error == EXI_ERROR__NO_ERROR)
 {{ indent * level }}{
+{%- else %}
+{%- set level = level - 1 %}
+{%- endif %}
 {{ indent * (level + 1) }}// string should not be found in table, so add 2
 {{ indent * (level + 1) }}error = exi_basetypes_encoder_uint_16(stream, (uint16_t)({{ length_parameter }} + 2));
 {{ indent * (level + 1) }}if (error == EXI_ERROR__NO_ERROR)
@@ -8,6 +12,7 @@
 {{ indent * (level + 2) }}error = exi_basetypes_encoder_characters(stream, {{ length_parameter }}, {{ value_parameter }}, {{ size_parameter }});
 {{ indent * (level + 2) }}if (error == EXI_ERROR__NO_ERROR)
 {{ indent * (level + 2) }}{
+{%- if type_attribute == 0 %}
 {{ indent * (level + 3) }}// encode END Element
 {{ indent * (level + 3) }}error = exi_basetypes_encoder_nbit_uint(stream, 1, 0);
 {{ indent * (level + 3) }}if (error == EXI_ERROR__NO_ERROR)
@@ -17,3 +22,8 @@
 {{ indent * (level + 2) }}}
 {{ indent * (level + 1) }}}
 {{ indent * level }}}
+{%- else %}
+{{ indent * (level + 3) }}grammar_id = {{ next_grammar }};
+{{ indent * (level + 2) }}}
+{{ indent * (level + 1) }}}
+{%- endif %}

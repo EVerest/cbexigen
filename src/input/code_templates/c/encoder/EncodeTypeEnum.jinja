@@ -1,9 +1,14 @@
+{%- if type_attribute == 0 -%}
 {{ indent * level }}error = exi_basetypes_encoder_nbit_uint(stream, 1, 0);
 {{ indent * level }}if (error == EXI_ERROR__NO_ERROR)
 {{ indent * level }}{
+{%- else -%}
+{%- set level = level - 1 %}
+{%- endif %}
 {{ indent * (level + 1) }}error = exi_basetypes_encoder_nbit_uint(stream, {{ bits_to_encode }}, {{ value_parameter }});
 {{ indent * (level + 1) }}if (error == EXI_ERROR__NO_ERROR)
 {{ indent * (level + 1) }}{
+{%- if type_attribute == 0 %}
 {{ indent * (level + 2) }}// encode END Element
 {{ indent * (level + 2) }}error = exi_basetypes_encoder_nbit_uint(stream, 1, 0);
 {{ indent * (level + 2) }}if (error == EXI_ERROR__NO_ERROR)
@@ -12,3 +17,7 @@
 {{ indent * (level + 2) }}}
 {{ indent * (level + 1) }}}
 {{ indent * level }}}
+{%- else %}
+{{ indent * (level + 2) }}grammar_id = {{ next_grammar }};
+{{ indent * (level + 1) }}}
+{%- endif %}
