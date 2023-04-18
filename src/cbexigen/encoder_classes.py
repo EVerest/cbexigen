@@ -233,6 +233,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         content = temp.render(length_parameter=length_parameter,
                               value_parameter=value_parameter,
                               size_parameter=size_parameter,
+                              type_attribute=detail.particle.is_attribute,
                               next_grammar=detail.next_grammar,
                               indent=self.indent, level=level)
 
@@ -297,6 +298,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         temp = self.generator.get_template('EncodeTypeEnum.jinja')
         content = temp.render(value_parameter=value_parameter,
                               bits_to_encode=bits_to_encode,
+                              type_attribute=detail.particle.is_attribute,
                               next_grammar=detail.next_grammar,
                               indent=self.indent, level=level)
 

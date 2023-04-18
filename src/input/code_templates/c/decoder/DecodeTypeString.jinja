@@ -1,9 +1,13 @@
 {{ indent * level }}{{ decode_comment }}
+{%- if type_attribute == 0 %}
 {{ indent * level }}error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
 {{ indent * level }}if (error == 0)
 {{ indent * level }}{
 {{ indent * (level + 1) }}if (eventCode == 0)
 {{ indent * (level + 1) }}{
+{%- else %}
+{%- set level = level - 2 %}
+{%- endif %}
 {{ indent * (level + 2) }}error = exi_basetypes_decoder_uint_16(stream, &{{ type_length }});
 {{ indent * (level + 2) }}if (error == 0)
 {{ indent * (level + 2) }}{
@@ -19,6 +23,7 @@
 {{ indent * (level + 4) }}error = EXI_ERROR__STRINGVALUES_NOT_SUPPORTED;
 {{ indent * (level + 3) }}}
 {{ indent * (level + 2) }}}
+{%- if type_attribute == 0 %}
 {{ indent * (level + 1) }}}
 {{ indent * (level + 1) }}else
 {{ indent * (level + 1) }}{
@@ -47,3 +52,9 @@
 {{ indent * (level + 2) }}}
 {{ indent * (level + 1) }}}
 {{ indent * level }}}
+{%- else %}
+{%- if type_option == 1 %}
+{{ indent * (level + 1) }}{{ type_value }}_isUsed = 1u;
+{%- endif %}
+{{ indent * (level + 2) }}grammar_id = {{ next_grammar_id }};
+{%- endif %}
