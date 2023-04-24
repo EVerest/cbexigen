@@ -450,6 +450,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                     f'{detail.particle.type_short} ({detail.particle.typename})); ' + \
                                     f'next={detail.next_grammar}'
                 else:
+                    # unsupported particle which appears in the event list
                     event_comment = f'// Event: {detail.flag} (None); next={detail.next_grammar}'
                 # currently not used, should be removed if it seems not to be useful!
                 # add_debug_code = self.get_status_for_add_debug_code(grammar.element_typename)

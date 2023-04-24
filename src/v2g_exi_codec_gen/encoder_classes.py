@@ -429,6 +429,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                                        type_parameter=type_parameter,
                                        indent=self.indent, level=level)
             else:
+                # unsupported particle which appears in the event list
                 event_comment = f'// Event: None (index={detail.event_index}); next={detail.next_grammar}'
                 type_content = str(self.indent * 4) + 'done = 1;'
 
