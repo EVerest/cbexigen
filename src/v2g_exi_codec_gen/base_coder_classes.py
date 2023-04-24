@@ -377,6 +377,8 @@ class ExiBaseCoderCode:
         def _add_subsequent_grammar_details(element: ElementData, particle: Particle,
                                             particle_index: int, index_last_nonoptional_particle: int,
                                             particle_is_part_of_sequence: bool):
+            # we push the grammar to a list below, and assign a new object to this variable;
+            # this assignment does not apply globally if the grammar is passed in
             nonlocal grammar
             if particle_index > index_last_nonoptional_particle:
                 # all the following particles are optional, so END needs to be an expected event
