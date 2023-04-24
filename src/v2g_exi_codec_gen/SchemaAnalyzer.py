@@ -930,25 +930,30 @@ class SchemaAnalyzer(object):
             self.__namespace_elements[ele.local_name] = items
 
         # Build the lists for the namespaces, e.g. MessageHeader or MessageBody and replace the particle list
-        if hasattr(current_namespace, 'imports'):
-            if len(current_namespace.imports) > 0:
-                for imp in current_namespace.imports.values():
-                    items = []
-                    name = imp.complex_types[0].local_name
-                    for ele in imp.elements.values():
-                        particle = self.__get_particle(ele)
-                        # min_occurs and is_substitute has to be set to original values
-                        particle.min_occurs = 0
-                        particle.is_substitute = True
-                        items.append(particle)
+        if not hasattr(current_namespace, 'imports'):
+            return
+        if len(current_namespace.imports) == 0:
+            return
 
-                    if len(items) > 0:
-                        for gen_elem in self.__generate_elements:
-                            if gen_elem.type == '{' + imp.default_namespace + '}' + name:
-                                gen_elem.particles = items
-                                gen_elem.is_in_namespace_elements = True
-                                self.__namespace_elements[name] = items
-                                break
+        for imp in current_namespace.imports.values():
+            items = []
+            name = imp.complex_types[0].local_name
+            for ele in imp.elements.values():
+                particle = self.__get_particle(ele)
+                # min_occurs and is_substitute has to be set to original values
+                particle.min_occurs = 0
+                particle.is_substitute = True
+                items.append(particle)
+
+            if len(items) == 0:
+                continue
+
+            for gen_elem in self.__generate_elements:
+                if gen_elem.type == '{' + imp.default_namespace + '}' + name:
+                    gen_elem.particles = items
+                    gen_elem.is_in_namespace_elements = True
+                    self.__namespace_elements[name] = items
+                    break
 
     def __build_generate_elements_types_list(self):
         xs_namespace = self.__current_schema.namespaces['xs']
@@ -979,21 +984,23 @@ class SchemaAnalyzer(object):
             with Body and BodyElement.
         """
         for abstract_element in self.__generate_elements:
-            if abstract_element.abstract_type:
-                for element in self.__generate_elements:
-                    for particle in element.particles:
-                        if abstract_element.name_short == particle.name and particle.abstract_type:
-                            if particle.name in self.__namespace_elements.keys():
-                                log_write('')
-                                log_write(f'Found particle match in namespace elements. '
-                                          f'Replacing particles of {element.name_short} ({element.type_short})')
-                                particle.is_substitute = True
-                                particles = [particle]
-                                for part in abstract_element.particles:
-                                    particles.append(part)
-                                element.particles = particles
-                                element.is_in_namespace_elements = True
-                                break
+            if not abstract_element.abstract_type:
+                continue
+
+            for element in self.__generate_elements:
+                for particle in element.particles:
+                    if abstract_element.name_short == particle.name and particle.abstract_type:
+                        if particle.name in self.__namespace_elements.keys():
+                            log_write('')
+                            log_write(f'Found particle match in namespace elements. '
+                                        f'Replacing particles of {element.name_short} ({element.type_short})')
+                            particle.is_substitute = True
+                            particles = [particle]
+                            for part in abstract_element.particles:
+                                particles.append(part)
+                            element.particles = particles
+                            element.is_in_namespace_elements = True
+                            break
 
     def __scan_particles_for_empty_parent_type(self):
         empty_list = []
@@ -1022,14 +1029,16 @@ class SchemaAnalyzer(object):
         parents = []
 
         for element in self.__generate_elements:
-            if element.name_short != element_name:
-                count = 0
-                for particle in element.particles:
-                    if particle.name in search_list:
-                        count += 1
+            if element.name_short == element_name:
+                continue
 
-                if count == len(search_list):
-                    parents.append(element)
+            count = 0
+            for particle in element.particles:
+                if particle.name in search_list:
+                    count += 1
+
+            if count == len(search_list):
+                parents.append(element)
 
         return parents
 
@@ -1102,13 +1111,15 @@ class SchemaAnalyzer(object):
                         particles_to_remove.append((parent.particles.index(particle), particle))
 
             for particle in parent.particles:
-                if particle.name == element.name_short:
-                    log_write(f'    Add to list and remove particle {particle.name}.')
-                    p_min_occurs = particle.min_occurs
-                    p_max_occurs = particle.max_occurs
-                    particle.min_occurs = 0
-                    replacement_list.append(particle)
-                    particles_to_remove.append((parent.particles.index(particle), particle))
+                if particle.name != element.name_short:
+                    continue
+
+                log_write(f'    Add to list and remove particle {particle.name}.')
+                p_min_occurs = particle.min_occurs
+                p_max_occurs = particle.max_occurs
+                particle.min_occurs = 0
+                replacement_list.append(particle)
+                particles_to_remove.append((parent.particles.index(particle), particle))
 
             if len(replacement_list) > 0:
                 self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list,
@@ -1117,40 +1128,42 @@ class SchemaAnalyzer(object):
     def __copy_particles_from_empty_content_elements_particle(self, element: ElementData, parents):
         parent: ElementData
         for parent in parents:
-            if parent.name_short != element.name_short:
-                replacement_list = []
-                particles_to_remove = []  # list of tuples (index within parent, particle)
-                log_write(f'  Copying particle(s) of {element.name_short} to {parent.name_short}.')
-                part_index: int
-                p_min_occurs: int = None
-                p_max_occurs: int = None
-                for p in element.particles:
-                    part: Particle
-                    for part_index, part in enumerate(parent.particles):
-                        if part.name == p.name:
-                            log_write(f'    Add to list and remove particle {part.name}.')
-                            # FIXME abstract_seq may need to inherit min/max_occurs(_old)
-                            p_min_occurs = part.min_occurs
-                            p_max_occurs = part.max_occurs
-                            part.min_occurs = 0
-                            part.is_substitute = False
-                            particles_to_remove.append((part_index, part))
-                            replacement_list.append(part)
-                            break
+            if parent.name_short == element.name_short:
+                continue
 
-                # finally, also add the original, abstract particle to the replacements
-                log_write(f'    Add new particle to list {element.name_short}.')
-                part_new = Particle(prefix=self.__schema_prefix,
-                                    name=element.name_short,
-                                    base_type=element.base_type,
-                                    type=element.type,
-                                    type_short=element.type_short,
-                                    min_occurs=0,
-                                    max_occurs=1)
-                replacement_list.append(part_new)
+            replacement_list = []
+            particles_to_remove = []  # list of tuples (index within parent, particle)
+            log_write(f'  Copying particle(s) of {element.name_short} to {parent.name_short}.')
+            part_index: int
+            p_min_occurs: int = None
+            p_max_occurs: int = None
+            for p in element.particles:
+                part: Particle
+                for part_index, part in enumerate(parent.particles):
+                    if part.name == p.name:
+                        log_write(f'    Add to list and remove particle {part.name}.')
+                        # FIXME abstract_seq may need to inherit min/max_occurs(_old)
+                        p_min_occurs = part.min_occurs
+                        p_max_occurs = part.max_occurs
+                        part.min_occurs = 0
+                        part.is_substitute = False
+                        particles_to_remove.append((part_index, part))
+                        replacement_list.append(part)
+                        break
 
-                self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list,
-                                                       p_min_occurs, p_max_occurs)
+            # finally, also add the original, abstract particle to the replacements
+            log_write(f'    Add new particle to list {element.name_short}.')
+            part_new = Particle(prefix=self.__schema_prefix,
+                                name=element.name_short,
+                                base_type=element.base_type,
+                                type=element.type,
+                                type_short=element.type_short,
+                                min_occurs=0,
+                                max_occurs=1)
+            replacement_list.append(part_new)
+
+            self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list,
+                                                    p_min_occurs, p_max_occurs)
 
     def __scan_elements_for_empty_content(self):
         """
@@ -1204,64 +1217,64 @@ class SchemaAnalyzer(object):
                             if particle.name == element.name_short:
                                 found = True
                                 break
+                        if found:
+                            continue
 
-                        if not found:
-                            re_list = []
-                            log_write(f'  Copying particle(s) of {element.name_short} to {parent.name_short}.')
-                            p_min_occurs: int = None
-                            p_max_occurs: int = None
-                            for name in search_list:
-                                part: Particle
-                                for part in parent.particles:
-                                    if part.name == name:
-                                        log_write(f'    Add to list and remove particle {part.name}.')
-                                        p_min_occurs = part.min_occurs
-                                        p_max_occurs = part.max_occurs
-                                        part.min_occurs = 0
-                                        part.is_substitute = False
-                                        re_list.append(part)
-                                        parent.particles.remove(part)
-                                        break
+                        re_list = []
+                        log_write(f'  Copying particle(s) of {element.name_short} to {parent.name_short}.')
+                        p_min_occurs: int = None
+                        p_max_occurs: int = None
+                        for name in search_list:
+                            part: Particle
+                            for part in parent.particles:
+                                if part.name == name:
+                                    log_write(f'    Add to list and remove particle {part.name}.')
+                                    p_min_occurs = part.min_occurs
+                                    p_max_occurs = part.max_occurs
+                                    part.min_occurs = 0
+                                    part.is_substitute = False
+                                    re_list.append(part)
+                                    parent.particles.remove(part)
+                                    break
 
-                            log_write(f'    Add new particle to list {element.name_short}.')
-                            part = Particle(prefix=self.__schema_prefix,
-                                            name=element.name_short,
-                                            base_type=element.base_type,
-                                            type=element.type,
-                                            type_short=element.type_short,
-                                            min_occurs=0,
-                                            max_occurs=1)
-                            re_list.append(part)
+                        log_write(f'    Add new particle to list {element.name_short}.')
+                        part = Particle(prefix=self.__schema_prefix,
+                                        name=element.name_short,
+                                        base_type=element.base_type,
+                                        type=element.type,
+                                        type_short=element.type_short,
+                                        min_occurs=0,
+                                        max_occurs=1)
+                        re_list.append(part)
 
-                            if len(re_list) > 0:
-                                re_list.sort(key=lambda particle_key: particle_key.name)
-                                abstract_seq = []
-                                for part in re_list:
-                                    log_write(f'    Add particle from list {part.name}.')
-                                    parent.particles.append(part)
-                                    abstract_seq.append(part.name)
+                        if len(re_list) > 0:
+                            re_list.sort(key=lambda particle_key: particle_key.name)
+                            abstract_seq = []
+                            for part in re_list:
+                                log_write(f'    Add particle from list {part.name}.')
+                                parent.particles.append(part)
+                                abstract_seq.append(part.name)
 
-                                parent.has_abstract_sequence = True
-                                parent.abstract_sequences.append((abstract_seq, p_min_occurs, p_max_occurs))
+                            parent.has_abstract_sequence = True
+                            parent.abstract_sequences.append((abstract_seq, p_min_occurs, p_max_occurs))
 
     def __adjust_choice_elements(self):
         log_write('')
         log_write('Adjusting choice elements')
         for element in self.__generate_elements:
-            if element.has_choice:
-                choice_list = []
-                for choice in element.choices:
-                    for item in choice.choice_items:
-                        choice_list.append(item[0])
+            if not element.has_choice:
+                continue
 
-                for particle in element.particles:
-                    if particle.name in choice_list:
-                        log_write(f'    Setting min_occurs of {particle.name} to 0.')
-                        particle.content_model_changed_restrictions = True
-                        particle.min_occurs_old = particle.min_occurs
-                        particle.min_occurs = 0
-                        # we may need to force this to avoid peculiar choice particle properties
-                        # particle.max_occurs = 1
+            choice_list = [item[0] for choice in element.choices for item in choice.choice_items]
+
+            for particle in element.particles:
+                if particle.name in choice_list:
+                    log_write(f'    Setting min_occurs of {particle.name} to 0.')
+                    particle.content_model_changed_restrictions = True
+                    particle.min_occurs_old = particle.min_occurs
+                    particle.min_occurs = 0
+                    # we may need to force this to avoid peculiar choice particle properties
+                    # particle.max_occurs = 1
 
     def __apply_array_optimizations(self):
         config_module = get_config_module()
