@@ -408,25 +408,36 @@ class ExiEncoderCode(ExiBaseCoderCode):
         if detail.flag == GrammarFlag.END:
             content += self.__get_event_content_for_end_element(detail, grammar.bits_to_write, False, level)
         else:
-            event_comment = f'// Event: {detail.flag} ({detail.particle.name}, {detail.particle.typename})' \
-                            f'; next={detail.next_grammar}'
-            type_parameter = CONFIG_PARAMS['encode_function_prefix'] + detail.particle.prefixed_name
-            if detail.particle.parent_has_choice_sequence:
-                parameter = f'{grammar.element_typename}->choice_{detail.particle.parent_choice_sequence_number}.' \
-                            f'{detail.particle.name}'
-            else:
-                parameter = grammar.element_typename + '->' + detail.particle.name
+            if detail.particle is not None:
+                event_comment = f'// Event: {detail.flag} ({detail.particle.name}, {detail.particle.typename})' \
+                                f'; next={detail.next_grammar}'
+                type_parameter = CONFIG_PARAMS['encode_function_prefix'] + detail.particle.prefixed_name
+                if detail.particle.parent_has_choice_sequence:
+                    parameter = f'{grammar.element_typename}->choice_{detail.particle.parent_choice_sequence_number}.' \
+                                f'{detail.particle.name}'
+                else:
+                    parameter = grammar.element_typename + '->' + detail.particle.name
 
-            temp = self.generator.get_template('EncodeEventOptionalElement.ctc')
-            content += temp.render(option=option,
-                                   parameter=parameter,
-                                   bits_to_write=grammar.bits_to_write,
-                                   value_to_write=detail.event_index,
-                                   event_comment=event_comment,
-                                   type_content=self.__get_type_content(grammar, detail, 5),
-                                   add_debug_code=self.get_status_for_add_debug_code(detail.particle.prefixed_name),
-                                   type_parameter=type_parameter,
-                                   indent=self.indent, level=level)
+                temp = self.generator.get_template('EncodeEventOptionalElement.ctc')
+                content += temp.render(option=option,
+                                       parameter=parameter,
+                                       bits_to_write=grammar.bits_to_write,
+                                       value_to_write=detail.event_index,
+                                       event_comment=event_comment,
+                                       type_content=self.__get_type_content(grammar, detail, 5),
+                                       add_debug_code=self.get_status_for_add_debug_code(detail.particle.prefixed_name),
+                                       type_parameter=type_parameter,
+                                       indent=self.indent, level=level)
+            else:
+                # unsupported particle which appears in the event list
+                event_comment = f'// Event: None (index={detail.event_index}); next={detail.next_grammar}'
+                type_content = str(self.indent * 4) + 'done = 1;'
+
+                temp = self.generator.get_template('EncodeEventOptionalElementNone.ctc')
+                content += temp.render(option=option,
+                                       event_comment=event_comment,
+                                       type_content=type_content,
+                                       indent=self.indent, level=level)
 
         content += '\n'
 

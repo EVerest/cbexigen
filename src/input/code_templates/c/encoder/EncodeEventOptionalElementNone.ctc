@@ -1,0 +1,11 @@
+{%- if option == 0 %}
+{{ indent * level }}if (1 == 0)
+{%- elif option > 0 %}
+{{ indent * level }}else if (1 == 0)
+{%- else %}
+{{ indent * level }}else
+{%- endif %}
+{{ indent * level }}{
+{{ indent * (level + 1) }}{{ event_comment }}
+{{ type_content }}
+{{ indent * level }}}

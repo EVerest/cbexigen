@@ -44,7 +44,7 @@ iso2_array_optimizations = {
     'PMaxScheduleEntryType': 12,
     'SalesTariffEntryType': 12,
     'ParameterSetType': 5,
-    'X509IssuerSerialType': 5
+    'X509IssuerSerialType': 5  # this shall apply to array ListOfRootCertificateIDsType->RootCertificateID only
 }
 
 # general c-code style

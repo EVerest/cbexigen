@@ -445,10 +445,13 @@ class ExiDecoderCode(ExiBaseCoderCode):
                     end_id = index
                     continue
 
-                event_comment = f'// Event: {detail.flag} ({detail.particle.name}, ' + \
-                                f'{detail.particle.type_short} ({detail.particle.typename})); ' + \
-                                f'next={detail.next_grammar}'
-                event_comment = f'// Event: {detail.flag} ({detail.particle.name}, {detail.particle.type_short} ({detail.particle.typename})); next={detail.next_grammar}'
+                if detail.particle is not None:
+                    event_comment = f'// Event: {detail.flag} ({detail.particle.name}, ' + \
+                                    f'{detail.particle.type_short} ({detail.particle.typename})); ' + \
+                                    f'next={detail.next_grammar}'
+                else:
+                    # unsupported particle which appears in the event list
+                    event_comment = f'// Event: {detail.flag} (None); next={detail.next_grammar}'
                 # currently not used, should be removed if it seems not to be useful!
                 # add_debug_code = self.get_status_for_add_debug_code(grammar.element_typename)
                 # type_parameter = CONFIG_PARAMS['decode_function_prefix'] + grammar.element_typename
@@ -533,7 +536,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                 add_debug_code = 0
                 type_parameter = ''
                 for detail in grammar.details:
-                    if detail.flag == GrammarFlag.START:
+                    if detail.flag == GrammarFlag.START and detail.particle is not None:
                         prefixed_type = detail.particle.prefixed_name
                         add_debug_code = self.get_status_for_add_debug_code(prefixed_type)
                         type_parameter = CONFIG_PARAMS['decode_function_prefix'] + prefixed_type

@@ -29,6 +29,8 @@ class Particle:
     is_attribute: bool = False
     is_simple_content: bool = False
     enum_count: int = -1
+    # additional flag if content model is choice and changed min occurrence
+    content_model_changed_restrictions: bool = False
     # additional flag if parent content model is sequence and changed occurrence
     parent_model_changed_restrictions: bool = False
     parent_has_sequence: bool = False
@@ -241,6 +243,7 @@ class Choice:
         self.multi_choice_max: int = 0
         self.choice_items = []
         self.choice_sequences = []
+        self.min_occurs = -1
 
     @property
     def choice_item_count(self) -> int:
@@ -281,7 +284,7 @@ class ElementData:
     has_abstract_particle: bool = False
     # additional info if element contains abstract particles and realizations
     has_abstract_sequence: bool = False
-    abstract_sequences = []
+    abstract_sequences = []  # list of tuples (list of particles, min_occurs, max_occurs)
     # list of particles
     particles = []
     # additional info if content model is choice
@@ -332,35 +335,52 @@ class ElementData:
 
     @property
     def element_comment(self):
+        comment_parts = []
+        comment_parts.append("definition=" + self.type_definition)
+        comment_parts.append("name=" + self.name)
+        comment_parts.append("type=" + self.type)
+        comment_parts.append("base type=" + self.base_type)
+        comment_parts.append("content type=" + self.content_type)
         comment = "// Element: "
-        comment += "definition=" + self.type_definition + "; "
-        comment += "name=" + self.name + "; "
-        comment += "type=" + self.type + "; "
-        comment += "base type=" + self.base_type + "; "
-        comment += "content type=" + self.content_type + ";\n"
-        comment += "//          "
-        comment += "abstract=" + str(self.abstract) + "; "
-        comment += "final=" + str(self.final) + "; "
+        comment += '; '.join(comment_parts) + ';\n'
+
+        comment_parts.clear()
+        comment_parts.append("abstract=" + str(self.abstract))
+        comment_parts.append("final=" + str(self.final))
         if self.derivation:
-            comment += "derivation=" + self.derivation + "; "
+            comment_parts.append("derivation=" + self.derivation)
         if self.is_choice:
-            comment += "choice=" + str(self.is_choice) + "; "
+            comment_parts.append("choice=" + str(self.is_choice))
         if self.has_sequence:
-            comment += "sequence=" + str(self.has_sequence) + " (" + str(len(self.sequences)) + "); "
+            comment_parts.append("sequence=" + str(self.has_sequence) + " (" + str(len(self.sequences)))
+        comment += "//          "
+        comment += '; '.join(comment_parts)
+        if comment_parts:
+            comment += ';'
 
         return comment
 
     @property
     def particle_comment(self):
-        comment = '// Particle: '
+        comment_parts = []
         for particle in self.particles:
-            comment += f'{particle.name}, {particle.type_short} ('
-            comment += f'{particle.min_occurs}, {particle.max_occurs})'
+            comment_part = f'{particle.name}, {particle.type_short} ('
+            comment_part += f'{particle.min_occurs}, {particle.max_occurs})'
 
             if particle.parent_has_sequence:
-                comment += f'(was {particle.min_occurs_old}, {particle.max_occurs_old})'
-                comment += f'(seq. {particle.parent_sequence})'
+                comment_part += f'(was {particle.min_occurs_old}, {particle.max_occurs_old})'
+                comment_part += f'(seq. {particle.parent_sequence})'
 
-            comment += '; '
+            comment_parts.append(comment_part)
 
+        comment = '// Particle: '
+        comment += '; '.join(comment_parts)
+        if comment_parts:
+            comment += ';'
         return comment
+
+    def particle_from_name(self, particle_name: str) -> Particle:
+        for particle in self.particles:
+            if particle.name == particle_name:
+                return particle
+        return None
