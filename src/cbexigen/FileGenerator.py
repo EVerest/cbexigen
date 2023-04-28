@@ -86,13 +86,13 @@ class FileGenerator(object):
         status_log_name = f"status_log_{parameters['prefix']}{parameters['type']}.txt"
         file_key = f"{parameters['type']}_{str(parameters['prefix']).upper()}DEBUG_LOG_H"
 
-        temp = generator.get_template('static_code/exi_debug_log_h.ctc')
+        temp = generator.get_template('static_code/exi_debug_log.h.jinja')
         code = temp.render(filename=log_name_h, filekey=file_key,
                            general_defines=self.__analyzer_data.debug_code_messages,
                            callback_prefix=callback_prefix)
         tools.save_code_to_file(log_name_h, code, parameters['folder'])
 
-        temp = generator.get_template('static_code/exi_debug_log_c.ctc')
+        temp = generator.get_template('static_code/exi_debug_log.c.jinja')
         code = temp.render(include_name=log_name_h, status_log_name=status_log_name,
                            general_defines=self.__analyzer_data.debug_code_messages,
                            callback_prefix=callback_prefix)

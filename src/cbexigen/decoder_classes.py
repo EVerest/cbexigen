@@ -35,7 +35,7 @@ class ExiDecoderHeader(ExiBaseCoderHeader):
 
     def __render_file(self):
         try:
-            temp = self.generator.get_template('DatatypesDecoder_h.ctc')
+            temp = self.generator.get_template('DatatypesDecoder.h.jinja')
             code = temp.render(filename=self.h_params["filename"], filekey=self.h_params['identifier'],
                                include_content=self.__include_content, code_content=self.__code_content)
             tools.save_code_to_file(self.h_params['filename'], code, self.parameters['folder'])
@@ -99,7 +99,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         type_define = detail.particle.prefixed_define_for_base_type
         next_grammar_id = detail.next_grammar
 
-        temp = self.generator.get_template('DecodeTypeHexBinary.ctc')
+        temp = self.generator.get_template('DecodeTypeHexBinary.jinja')
         decode_content = temp.render(decode_comment=decode_comment,
                                      type_value=type_value,
                                      type_content=type_content,
@@ -128,7 +128,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         type_define = detail.particle.prefixed_define_for_base_type
         next_grammar_id = detail.next_grammar
 
-        temp = self.generator.get_template('DecodeTypeBase64Binary.ctc')
+        temp = self.generator.get_template('DecodeTypeBase64Binary.jinja')
         decode_content = temp.render(decode_comment=decode_comment,
                                      type_value=type_value,
                                      type_content=type_content,
@@ -145,7 +145,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         type_value = f'{element_typename}->{detail.particle.name}'
         next_grammar_id = detail.next_grammar
 
-        temp = self.generator.get_template('DecodeTypeBoolean.ctc')
+        temp = self.generator.get_template('DecodeTypeBoolean.jinja')
         decode_content = temp.render(decode_comment=decode_comment,
                                      bits_to_decode=detail.particle.bit_count_for_coding,
                                      type_value=type_value,
@@ -160,10 +160,10 @@ class ExiDecoderCode(ExiBaseCoderCode):
         next_grammar_id = detail.next_grammar
 
         if detail.particle.integer_is_unsigned:
-            template_file = 'DecodeTypeUnsignedByte.ctc'
+            template_file = 'DecodeTypeUnsignedByte.jinja'
             decode_comment = '// decode: unsigned byte'
         else:
-            template_file = 'DecodeTypeByte.ctc'
+            template_file = 'DecodeTypeByte.jinja'
             decode_comment = '// decode: byte'
         temp = self.generator.get_template(template_file)
 
@@ -183,7 +183,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         type_offset = detail.particle.min_value
         next_grammar_id = detail.next_grammar
 
-        temp = self.generator.get_template('DecodeTypeRestrictedInt.ctc')
+        temp = self.generator.get_template('DecodeTypeRestrictedInt.jinja')
         decode_content = temp.render(decode_comment=decode_comment,
                                      bits_to_decode=detail.particle.bit_count_for_coding,
                                      type_value=type_value,
@@ -200,10 +200,10 @@ class ExiDecoderCode(ExiBaseCoderCode):
         next_grammar_id = detail.next_grammar
 
         if detail.particle.integer_is_unsigned:
-            template_file = 'DecodeTypeUnsignedShort.ctc'
+            template_file = 'DecodeTypeUnsignedShort.jinja'
             decode_comment = '// decode: unsigned short'
         else:
-            template_file = 'DecodeTypeShort.ctc'
+            template_file = 'DecodeTypeShort.jinja'
             decode_comment = '// decode: short'
         temp = self.generator.get_template(template_file)
 
@@ -220,10 +220,10 @@ class ExiDecoderCode(ExiBaseCoderCode):
         next_grammar_id = detail.next_grammar
 
         if detail.particle.integer_is_unsigned:
-            template_file = 'DecodeTypeUnsignedInt.ctc'
+            template_file = 'DecodeTypeUnsignedInt.jinja'
             decode_comment = '// decode: unsigned int'
         else:
-            template_file = 'DecodeTypeInt.ctc'
+            template_file = 'DecodeTypeInt.jinja'
             decode_comment = '// decode: int'
         temp = self.generator.get_template(template_file)
         decode_content = temp.render(decode_comment=decode_comment,
@@ -239,10 +239,10 @@ class ExiDecoderCode(ExiBaseCoderCode):
         next_grammar_id = detail.next_grammar
 
         if detail.particle.integer_is_unsigned:
-            template_file = 'DecodeTypeUnsignedLongInt.ctc'
+            template_file = 'DecodeTypeUnsignedLongInt.jinja'
             decode_comment = '// decode: unsigned long int'
         else:
-            template_file = 'DecodeTypeLongInt.ctc'
+            template_file = 'DecodeTypeLongInt.jinja'
             decode_comment = '// decode: long int'
         temp = self.generator.get_template(template_file)
         decode_content = temp.render(decode_comment=decode_comment,
@@ -261,7 +261,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         type_chars_size = detail.particle.prefixed_define_for_base_type
         next_grammar_id = detail.next_grammar
 
-        temp = self.generator.get_template('DecodeTypeString.ctc')
+        temp = self.generator.get_template('DecodeTypeString.jinja')
         decode_content = temp.render(decode_comment=decode_comment,
                                      type_value=type_value,
                                      type_length=type_length,
@@ -280,7 +280,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         decode_fn = f'{CONFIG_PARAMS["decode_function_prefix"]}{detail.particle.prefixed_type}'
         next_grammar_id = detail.next_grammar
 
-        temp = self.generator.get_template('DecodeTypeElementArray.ctc')
+        temp = self.generator.get_template('DecodeTypeElementArray.jinja')
         decode_content = temp.render(decode_comment=decode_comment,
                                      type_define=detail.particle.prefixed_define_for_array,
                                      type_array=type_array,
@@ -297,7 +297,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         type_value = f'{element_typename}->{particle.name}'
         next_grammar_id = next_grammar
 
-        temp = self.generator.get_template('DecodeTypeElement.ctc')
+        temp = self.generator.get_template('DecodeTypeElement.jinja')
         decode_content = temp.render(decode_comment=decode_comment,
                                      decode_fn=decode_fn,
                                      type_option=particle.is_optional,
@@ -313,7 +313,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         type_value = f'{element_typename}->{detail.particle.name}'
         next_grammar_id = detail.next_grammar
 
-        temp = self.generator.get_template('DecodeTypeElement.ctc')
+        temp = self.generator.get_template('DecodeTypeElement.jinja')
         decode_content = temp.render(decode_comment=decode_comment,
                                      decode_fn=decode_fn,
                                      type_option=detail.particle.is_optional,
@@ -330,7 +330,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         type_enum = detail.particle.prefixed_type
         next_grammar_id = detail.next_grammar
 
-        temp = self.generator.get_template('DecodeTypeEnumArray.ctc')
+        temp = self.generator.get_template('DecodeTypeEnumArray.jinja')
         decode_content = temp.render(decode_comment=decode_comment,
                                      type_array_len=type_array_len,
                                      type_define=detail.particle.prefixed_define_for_array,
@@ -349,7 +349,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         type_enum = detail.particle.prefixed_type
         next_grammar_id = detail.next_grammar
 
-        temp = self.generator.get_template('DecodeTypeEnum.ctc')
+        temp = self.generator.get_template('DecodeTypeEnum.jinja')
         decode_content = temp.render(decode_comment=decode_comment,
                                      bits_to_decode=detail.particle.bit_count_for_coding,
                                      type_option=detail.particle.is_optional,
@@ -362,7 +362,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
     def __get_type_content(self, grammar: ElementGrammar, detail: ElementGrammarDetail, level):
         if detail.particle is None:
-            temp = self.generator.get_template('BaseDecodeEndElement.ctc')
+            temp = self.generator.get_template('BaseDecodeEndElement.jinja')
             return temp.render(next_grammar=detail.next_grammar, indent=self.indent, level=level)
 
         type_content = f"{self.indent * level}// tbd! decode: '{detail.particle.type_short}', base type '{detail.particle.typename}'\n"
@@ -455,7 +455,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                 # currently not used, should be removed if it seems not to be useful!
                 # add_debug_code = self.get_status_for_add_debug_code(grammar.element_typename)
                 # type_parameter = CONFIG_PARAMS['decode_function_prefix'] + grammar.element_typename
-                temp = self.generator.get_template('BaseDecodeCaseEventId.ctc')
+                temp = self.generator.get_template('BaseDecodeCaseEventId.jinja')
                 event_content += temp.render(event_id=detail.event_index,
                                              event_id_comment=event_comment,
                                              type_content=self.__get_type_content(grammar, detail, 5),
@@ -467,7 +467,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
             if end_id >= 0:
                 event_comment = f'// Event: {grammar.details[end_id].flag}; '
                 event_comment += f'set next={grammar.details[end_id].next_grammar}'
-                temp = self.generator.get_template('BaseDecodeCaseEventId.ctc')
+                temp = self.generator.get_template('BaseDecodeCaseEventId.jinja')
                 event_content += temp.render(event_id=grammar.details[end_id].event_index,
                                              event_id_comment=event_comment,
                                              type_content=self.__get_type_content(grammar, grammar.details[end_id], 5),
@@ -500,7 +500,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                                                                next_grammar, level + 3)
 
                     event_comment = f'// Event: {hits[0].name}'
-                    temp = self.generator.get_template('BaseDecodeCaseEventId.ctc')
+                    temp = self.generator.get_template('BaseDecodeCaseEventId.jinja')
                     event_content += temp.render(event_id=event_index,
                                                  event_id_comment=event_comment,
                                                  type_content=type_content,
@@ -508,7 +508,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                     event_content += '\n'
                     event_index += 1
 
-                temp = self.generator.get_template('BaseDecodeCaseGrammarId.ctc')
+                temp = self.generator.get_template('BaseDecodeCaseGrammarId.jinja')
                 grammar_content += temp.render(grammar_id=grammar.grammar_id,
                                                grammar_id_comment=grammar_comment,
                                                bits_to_read=bits_to_read,
@@ -517,7 +517,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                                type_parameter=type_parameter,
                                                indent=self.indent, level=level)
             elif grammar.details[0].flag == GrammarFlag.END:
-                temp = self.generator.get_template('BaseDecodeCaseGrammarId.ctc')
+                temp = self.generator.get_template('BaseDecodeCaseGrammarId.jinja')
                 grammar_content += temp.render(grammar_id=grammar.grammar_id,
                                                grammar_id_comment=grammar.grammar_comment,
                                                bits_to_read=grammar.bits_to_read,
@@ -542,7 +542,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                         type_parameter = CONFIG_PARAMS['decode_function_prefix'] + prefixed_type
                         break
 
-                temp = self.generator.get_template('BaseDecodeCaseGrammarId.ctc')
+                temp = self.generator.get_template('BaseDecodeCaseGrammarId.jinja')
                 grammar_content += temp.render(grammar_id=grammar.grammar_id,
                                                grammar_id_comment=grammar.grammar_comment,
                                                bits_to_read=grammar.bits_to_read,
@@ -566,7 +566,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
             else:
                 grammar_content = self.__get_grammar_content(grammars, 2)
 
-            temp = self.generator.get_template('BaseDecodeFunction.ctc')
+            temp = self.generator.get_template('BaseDecodeFunction.jinja')
             content += temp.render(element_comment=element.element_comment,
                                    particle_comment=element.particle_comment,
                                    function_name=CONFIG_PARAMS['decode_function_prefix'] + element.prefixed_type,
@@ -606,7 +606,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
             bits = tools.get_bits_to_decode(len(self.analyzer_data.root_elements))
 
-            temp = self.generator.get_template('DecodeRootFunction.ctc')
+            temp = self.generator.get_template('DecodeRootFunction.jinja')
             root_content += temp.render(function_comment=root_comment,
                                         function_name=fn_name,
                                         struct_type=struct_type, parameter_name=parameter_name,
@@ -632,7 +632,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                     parameter_index += 1
 
                 bits = tools.get_bit_count_for_value(len(self.analyzer_data.namespace_elements[name_short]))
-                temp = self.generator.get_template('DecodeRootV2GMessage.ctc')
+                temp = self.generator.get_template('DecodeRootV2GMessage.jinja')
                 root_content += temp.render(function_comment=root_comment,
                                             function_name=fn_name,
                                             struct_type=struct_type, parameter_name=parameter_name,
@@ -648,7 +648,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
     def __render_file(self):
         try:
-            temp = self.generator.get_template("DatatypesDecoder_c.ctc")
+            temp = self.generator.get_template("DatatypesDecoder.c.jinja")
             code = temp.render(filename=self.c_params["filename"], filekey=self.c_params["identifier"],
                                includes_code=self.__include_content, code=self.__code_content)
             tools.save_code_to_file(self.c_params["filename"], code, self.parameters['folder'])

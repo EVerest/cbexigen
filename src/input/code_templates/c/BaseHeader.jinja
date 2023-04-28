@@ -1,4 +1,4 @@
-{% extends "CommonFileHeader.ctc" %}
+{% extends "CommonFileHeader.jinja" %}
 {%-block file_content %}
 
 #ifndef {{filekey}}
@@ -8,8 +8,11 @@
 extern "C" {
 #endif
 
-{% block includes %}{% endblock %}
+{% block includes %}{%- endblock %}
+{%- block defines %}{%- endblock %}
+{% block function_enum %}{% endblock %}
 {%- block content %}{% endblock %}
+{%- block prototypes %}{% endblock %}
 
 #ifdef __cplusplus
 }
