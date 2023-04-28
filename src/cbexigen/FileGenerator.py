@@ -3,13 +3,13 @@
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 
 from pathlib import Path
-import v2g_exi_codec_gen.tools_config as tools_conf
-from v2g_exi_codec_gen import SchemaAnalyzer as Analyzer
-from v2g_exi_codec_gen.typeDefinitions import AnalyzerData
-from v2g_exi_codec_gen import tools_generator, tools, tools_logging
-from v2g_exi_codec_gen.datatype_classes import DatatypeHeader, DatatypeCode
-from v2g_exi_codec_gen.decoder_classes import ExiDecoderHeader, ExiDecoderCode
-from v2g_exi_codec_gen.encoder_classes import ExiEncoderHeader, ExiEncoderCode
+import cbexigen.tools_config as tools_conf
+from cbexigen import SchemaAnalyzer as Analyzer
+from cbexigen.typeDefinitions import AnalyzerData
+from cbexigen import tools_generator, tools, tools_logging
+from cbexigen.datatype_classes import DatatypeHeader, DatatypeCode
+from cbexigen.decoder_classes import ExiDecoderHeader, ExiDecoderCode
+from cbexigen.encoder_classes import ExiEncoderHeader, ExiEncoderCode
 
 
 class FileGenerator(object):

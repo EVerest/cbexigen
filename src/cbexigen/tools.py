@@ -4,7 +4,7 @@
 
 """ Tools for the Exi Codegenerator """
 from pathlib import Path
-from v2g_exi_codec_gen.tools_config import CONFIG_ARGS, CONFIG_PARAMS
+from cbexigen.tools_config import CONFIG_ARGS, CONFIG_PARAMS
 
 TYPE_TRANSLATION_C = {
     'char': 'char',

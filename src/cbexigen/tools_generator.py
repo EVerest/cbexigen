@@ -6,9 +6,9 @@
 import os
 from pathlib import Path
 from xmlschema.extras.codegen import Environment, FileSystemLoader
-from v2g_exi_codec_gen import tools
-from v2g_exi_codec_gen.tools_config import CONFIG_ARGS
-from v2g_exi_codec_gen.elementData import Particle, ElementData
+from cbexigen import tools
+from cbexigen.tools_config import CONFIG_ARGS
+from cbexigen.elementData import Particle, ElementData
 
 
 ''' common generator tools '''

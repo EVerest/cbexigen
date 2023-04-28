@@ -6,9 +6,9 @@ import sys
 import argparse
 from pathlib import Path
 
-import v2g_exi_codec_gen.tools_config as conf
-from v2g_exi_codec_gen.tools_logging import log_init
-from v2g_exi_codec_gen import FileGenerator as Generator
+import cbexigen.tools_config as conf
+from cbexigen.tools_logging import log_init
+from cbexigen import FileGenerator as Generator
 
 
 def analyze_schema(argv):

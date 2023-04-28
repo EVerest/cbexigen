@@ -4,12 +4,12 @@
 
 import os
 from typing import List
-from v2g_exi_codec_gen.base_coder_classes import ExiBaseCoderHeader, ExiBaseCoderCode
-from v2g_exi_codec_gen import tools_generator, tools
-from v2g_exi_codec_gen.elementData import ElementData, Particle
-from v2g_exi_codec_gen.elementGrammar import GrammarFlag, ElementGrammar, ElementGrammarDetail
-from v2g_exi_codec_gen.tools_config import CONFIG_PARAMS
-from v2g_exi_codec_gen.tools_logging import log_write_error
+from cbexigen.base_coder_classes import ExiBaseCoderHeader, ExiBaseCoderCode
+from cbexigen import tools_generator, tools
+from cbexigen.elementData import ElementData, Particle
+from cbexigen.elementGrammar import GrammarFlag, ElementGrammar, ElementGrammarDetail
+from cbexigen.tools_config import CONFIG_PARAMS
+from cbexigen.tools_logging import log_write_error
 
 # ---------------------------------------------------------------------------
 # Exi encoder generating header file
