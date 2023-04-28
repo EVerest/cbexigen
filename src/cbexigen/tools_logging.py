@@ -5,8 +5,8 @@
 """ Logging tools for the Exi Codegenerator """
 import logging
 from pathlib import Path
-from v2g_exi_codec_gen.elementData import Particle, ElementData
-from v2g_exi_codec_gen.tools_config import CONFIG_ARGS
+from cbexigen.elementData import Particle, ElementData
+from cbexigen.tools_config import CONFIG_ARGS
 
 
 ''' Log tools '''

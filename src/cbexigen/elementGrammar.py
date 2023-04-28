@@ -3,7 +3,7 @@
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 
 from dataclasses import dataclass
-from v2g_exi_codec_gen.elementData import Particle
+from cbexigen.elementData import Particle
 
 
 class GrammarFlag:

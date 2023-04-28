@@ -3,7 +3,7 @@
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 
 from dataclasses import dataclass
-from v2g_exi_codec_gen.tools_config import CONFIG_PARAMS
+from cbexigen.tools_config import CONFIG_PARAMS
 
 
 @dataclass

@@ -5,12 +5,12 @@
 from xmlschema import XMLSchema11, XsdElement, XsdType, XsdAttribute
 from xmlschema.validators import XsdSimpleType, XsdComplexType, XsdGroup
 
-from v2g_exi_codec_gen import tools
-from v2g_exi_codec_gen.typeDefinitions import AnalyzerData, OCCURRENCE_LIMITS_CORRECTED
-from v2g_exi_codec_gen.elementData import Particle, Choice, ElementData
-from v2g_exi_codec_gen.tools_logging import log_write, log_write_dict, log_write_element, msg_write, \
+from cbexigen import tools
+from cbexigen.typeDefinitions import AnalyzerData, OCCURRENCE_LIMITS_CORRECTED
+from cbexigen.elementData import Particle, Choice, ElementData
+from cbexigen.tools_logging import log_write, log_write_dict, log_write_element, msg_write, \
     log_write_element_pos_data
-from v2g_exi_codec_gen.tools_config import CONFIG_PARAMS, get_config_module
+from cbexigen.tools_config import CONFIG_PARAMS, get_config_module
 
 
 class SchemaAnalyzer(object):

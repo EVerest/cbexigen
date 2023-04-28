@@ -3,11 +3,11 @@
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 
 from typing import List
-from v2g_exi_codec_gen import tools_generator, tools
-from v2g_exi_codec_gen.elementData import Particle, ElementData, Choice
-from v2g_exi_codec_gen.elementGrammar import GrammarFlag, ElementGrammar, ElementGrammarDetail
-from v2g_exi_codec_gen.tools_config import CONFIG_PARAMS
-from v2g_exi_codec_gen.tools_logging import log_write_error, log_init_logger, log_write_logger, \
+from cbexigen import tools_generator, tools
+from cbexigen.elementData import Particle, ElementData, Choice
+from cbexigen.elementGrammar import GrammarFlag, ElementGrammar, ElementGrammarDetail
+from cbexigen.tools_config import CONFIG_PARAMS
+from cbexigen.tools_logging import log_write_error, log_init_logger, log_write_logger, \
     log_deinit_logger, log_exists_logger
 
 # ---------------------------------------------------------------------------

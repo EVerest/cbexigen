@@ -3,12 +3,12 @@
 # Copyright (C) 2023 Contributors to EVerest
 
 from xmlschema import XMLSchema11
-from v2g_exi_codec_gen import tools, tools_generator, tools_logging
-from v2g_exi_codec_gen.elementData import Particle, ElementData
-from v2g_exi_codec_gen.tools_config import CONFIG_PARAMS
-from v2g_exi_codec_gen.tools_logging import log_write_error, log_init_logger, log_write_logger, \
+from cbexigen import tools, tools_generator, tools_logging
+from cbexigen.elementData import Particle, ElementData
+from cbexigen.tools_config import CONFIG_PARAMS
+from cbexigen.tools_logging import log_write_error, log_init_logger, log_write_logger, \
     log_deinit_logger, log_exists_logger
-from v2g_exi_codec_gen.typeDefinitions import AnalyzerData
+from cbexigen.typeDefinitions import AnalyzerData
 
 
 # ---------------------------------------------------------------------------
