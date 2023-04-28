@@ -35,7 +35,7 @@ class ExiEncoderHeader(ExiBaseCoderHeader):
 
     def __render_file(self):
         try:
-            temp = self.generator.get_template('DataTypesEncoder_h.ctc')
+            temp = self.generator.get_template('DataTypesEncoder.h.jinja')
             code = temp.render(filename=self.h_params["filename"], filekey=self.h_params['identifier'],
                                include_content=self.__include_content, code_content=self.__code_content)
             tools.save_code_to_file(self.h_params['filename'], code, self.parameters['folder'])
@@ -91,7 +91,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         value_parameter = f'{element_typename}->{detail.particle.name}.{detail.particle.value_parameter_name}'
         size_parameter = f'{detail.particle.prefixed_define_for_base_type}'
 
-        temp = self.generator.get_template('EncodeTypeHexBinary.ctc')
+        temp = self.generator.get_template('EncodeTypeHexBinary.jinja')
         content = temp.render(length_parameter=length_parameter,
                               value_parameter=value_parameter,
                               size_parameter=size_parameter,
@@ -117,7 +117,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
         size_parameter = f'{detail.particle.prefixed_define_for_base_type}'
 
-        temp = self.generator.get_template('EncodeTypeBase64Binary.ctc')
+        temp = self.generator.get_template('EncodeTypeBase64Binary.jinja')
         content = temp.render(length_parameter=length_parameter,
                               value_parameter=value_parameter,
                               size_parameter=size_parameter,
@@ -131,7 +131,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         bits_to_encode = detail.particle.bit_count_for_coding
         min_value = detail.particle.min_value
 
-        temp = self.generator.get_template('EncodeTypeRestricted.ctc')
+        temp = self.generator.get_template('EncodeTypeRestricted.jinja')
         content = temp.render(value_parameter=value_parameter,
                               bits_to_encode=bits_to_encode,
                               min_value=min_value,
@@ -143,7 +143,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
     def __get_content_encode_boolean(self, element_typename, detail: ElementGrammarDetail, level):
         value_parameter = f'{element_typename}->{detail.particle.name}'
 
-        temp = self.generator.get_template('EncodeTypeBoolean.ctc')
+        temp = self.generator.get_template('EncodeTypeBoolean.jinja')
         content = temp.render(value_parameter=value_parameter,
                               next_grammar=detail.next_grammar,
                               indent=self.indent, level=level)
@@ -155,9 +155,9 @@ class ExiEncoderCode(ExiBaseCoderCode):
         min_value = detail.particle.min_value
 
         if detail.particle.integer_is_unsigned:
-            temp = self.generator.get_template('EncodeTypeUnsignedByte.ctc')
+            temp = self.generator.get_template('EncodeTypeUnsignedByte.jinja')
         else:
-            temp = self.generator.get_template('EncodeTypeByte.ctc')
+            temp = self.generator.get_template('EncodeTypeByte.jinja')
 
         content = temp.render(value_parameter=value_parameter,
                               min_value=min_value,
@@ -170,9 +170,9 @@ class ExiEncoderCode(ExiBaseCoderCode):
         value_parameter = f'{element_typename}->{detail.particle.name}'
 
         if detail.particle.integer_is_unsigned:
-            temp = self.generator.get_template('EncodeTypeUnsignedShort.ctc')
+            temp = self.generator.get_template('EncodeTypeUnsignedShort.jinja')
         else:
-            temp = self.generator.get_template('EncodeTypeShort.ctc')
+            temp = self.generator.get_template('EncodeTypeShort.jinja')
 
         content = temp.render(value_parameter=value_parameter,
                               next_grammar=detail.next_grammar,
@@ -184,9 +184,9 @@ class ExiEncoderCode(ExiBaseCoderCode):
         value_parameter = f'{element_typename}->{detail.particle.name}'
 
         if detail.particle.integer_is_unsigned:
-            temp = self.generator.get_template('EncodeTypeUnsignedInt.ctc')
+            temp = self.generator.get_template('EncodeTypeUnsignedInt.jinja')
         else:
-            temp = self.generator.get_template('EncodeTypeInt.ctc')
+            temp = self.generator.get_template('EncodeTypeInt.jinja')
 
         content = temp.render(value_parameter=value_parameter,
                               next_grammar=detail.next_grammar,
@@ -198,9 +198,9 @@ class ExiEncoderCode(ExiBaseCoderCode):
         value_parameter = f'{element_typename}->{detail.particle.name}'
 
         if detail.particle.integer_is_unsigned:
-            temp = self.generator.get_template('EncodeTypeUnsignedInt64.ctc')
+            temp = self.generator.get_template('EncodeTypeUnsignedInt64.jinja')
         else:
-            temp = self.generator.get_template('EncodeTypeInt64.ctc')
+            temp = self.generator.get_template('EncodeTypeInt64.jinja')
 
         content = temp.render(value_parameter=value_parameter,
                               next_grammar=detail.next_grammar,
@@ -213,7 +213,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         value_parameter = f'{element_typename}->{detail.particle.name}.{detail.particle.value_parameter_name}'
         size_parameter = f'{detail.particle.prefixed_define_for_base_type}'
 
-        temp = self.generator.get_template('EncodeTypeString.ctc')
+        temp = self.generator.get_template('EncodeTypeString.jinja')
         content = temp.render(length_parameter=length_parameter,
                               value_parameter=value_parameter,
                               size_parameter=size_parameter,
@@ -227,7 +227,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         value_parameter = f'{element_typename}->{detail.particle.name}.{detail.particle.value_parameter_name}'
         index_parameter = detail.particle.name + '_currentIndex'
 
-        temp = self.generator.get_template('EncodeTypeElementArray.ctc')
+        temp = self.generator.get_template('EncodeTypeElementArray.jinja')
         content = temp.render(type_parameter=type_parameter,
                               value_parameter=value_parameter,
                               index_parameter=index_parameter,
@@ -240,7 +240,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         type_parameter = self.config['encode_function_prefix'] + particle.prefixed_type
         value_parameter = f'{element_typename}->{particle.name}'
 
-        temp = self.generator.get_template('EncodeTypeElement.ctc')
+        temp = self.generator.get_template('EncodeTypeElement.jinja')
         content = temp.render(type_parameter=type_parameter,
                               value_parameter=value_parameter,
                               next_grammar=next_grammar,
@@ -252,7 +252,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         type_parameter = self.config['encode_function_prefix'] + detail.particle.prefixed_type
         value_parameter = f'{element_typename}->{detail.particle.name}'
 
-        temp = self.generator.get_template('EncodeTypeElement.ctc')
+        temp = self.generator.get_template('EncodeTypeElement.jinja')
         content = temp.render(type_parameter=type_parameter,
                               value_parameter=value_parameter,
                               next_grammar=detail.next_grammar,
@@ -265,7 +265,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         value_parameter = f'{element_typename}->{detail.particle.name}.{detail.particle.value_parameter_name}'
         bits_to_encode = detail.particle.bit_count_for_coding
 
-        temp = self.generator.get_template('EncodeTypeEnumArray.ctc')
+        temp = self.generator.get_template('EncodeTypeEnumArray.jinja')
         content = temp.render(value_parameter=value_parameter,
                               bits_to_encode=bits_to_encode,
                               index_parameter=index_parameter,
@@ -278,7 +278,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         value_parameter = f'{element_typename}->{detail.particle.name}'
         bits_to_encode = detail.particle.bit_count_for_coding
 
-        temp = self.generator.get_template('EncodeTypeEnum.ctc')
+        temp = self.generator.get_template('EncodeTypeEnum.jinja')
         content = temp.render(value_parameter=value_parameter,
                               bits_to_encode=bits_to_encode,
                               next_grammar=detail.next_grammar,
@@ -288,7 +288,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
     def __get_type_content(self, grammar: ElementGrammar, detail: ElementGrammarDetail, level):
         if detail.particle is None:
-            temp = self.generator.get_template('BaseDecodeEndElement.ctc')
+            temp = self.generator.get_template('BaseDecodeEndElement.jinja')
             return temp.render(next_grammar=detail.next_grammar, indent=self.indent, level=level)
 
         type_content = f"{self.indent * level}// tbd! decode: '{detail.particle.type_short}'" \
@@ -367,7 +367,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
         event_comment = f'// Event: {detail.flag}; '
         event_comment += f'set next={detail.next_grammar}'
-        temp = self.generator.get_template('EncodeEventEndElement.ctc')
+        temp = self.generator.get_template('EncodeEventEndElement.jinja')
         content += temp.render(bits_to_write=bits_to_write,
                                value_to_write=detail.event_index,
                                event_comment=event_comment,
@@ -385,7 +385,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         length_parameter = f'{grammar.element_typename}->{detail.particle.name}.{detail.particle.length_parameter_name}'
         current_level = level + 2 if option >= 0 else level + 3
 
-        temp = self.generator.get_template('EncodeEventArrayElement.ctc')
+        temp = self.generator.get_template('EncodeEventArrayElement.jinja')
         content += temp.render(option=option,
                                index_parameter=index_parameter,
                                length_parameter=length_parameter,
@@ -418,7 +418,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                 else:
                     parameter = grammar.element_typename + '->' + detail.particle.name
 
-                temp = self.generator.get_template('EncodeEventOptionalElement.ctc')
+                temp = self.generator.get_template('EncodeEventOptionalElement.jinja')
                 content += temp.render(option=option,
                                        parameter=parameter,
                                        bits_to_write=grammar.bits_to_write,
@@ -433,7 +433,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                 event_comment = f'// Event: None (index={detail.event_index}); next={detail.next_grammar}'
                 type_content = str(self.indent * 4) + 'done = 1;'
 
-                temp = self.generator.get_template('EncodeEventOptionalElementNone.ctc')
+                temp = self.generator.get_template('EncodeEventOptionalElementNone.jinja')
                 content += temp.render(option=option,
                                        event_comment=event_comment,
                                        type_content=type_content,
@@ -451,7 +451,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         else:
             event_comment = f'// Event: {detail.flag} ({detail.particle.typename}); next={detail.next_grammar}'
             type_parameter = CONFIG_PARAMS['encode_function_prefix'] + detail.particle.prefixed_name
-            temp = self.generator.get_template('EncodeEventSingleElement.ctc')
+            temp = self.generator.get_template('EncodeEventSingleElement.jinja')
             content += temp.render(bits_to_write=grammar.bits_to_write,
                                    value_to_write=detail.event_index,
                                    event_comment=event_comment,
@@ -512,7 +512,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                 type_content = self.__get_content_encode_namespace_element(element.typename, hits[0],
                                                                            next_grammar, level + 2)
 
-                temp = self.generator.get_template('EncodeEventOptionalElement.ctc')
+                temp = self.generator.get_template('EncodeEventOptionalElement.jinja')
                 content += temp.render(parameter=parameter,
                                        option=index,
                                        bits_to_write=bits_to_write,
@@ -524,7 +524,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                                        indent=self.indent, level=level)
 
             content += '\n'
-            temp = self.generator.get_template('EncodeEventErrorUnknownId.ctc')
+            temp = self.generator.get_template('EncodeEventErrorUnknownId.jinja')
             content += temp.render(indent=self.indent, level=level)
 
         return self.left_trim_lf(content)
@@ -546,7 +546,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                     grammar_id_comment += f'{grammar.details[0].flag} ({grammar.details[0].particle.name})'
                     event_content = self.__get_event_content_namespace_element(element, grammar, level + 1)
 
-                temp = self.generator.get_template('BaseEncodeCaseGrammarId.ctc')
+                temp = self.generator.get_template('BaseEncodeCaseGrammarId.jinja')
                 grammar_content += temp.render(grammar_id=grammar.grammar_id,
                                                grammar_id_comment=grammar_id_comment,
                                                event_content=event_content,
@@ -574,7 +574,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
             if has_array:
                 names = self.get_element_array_particle_names(element)
 
-            temp = self.generator.get_template('BaseEncodeFunction.ctc')
+            temp = self.generator.get_template('BaseEncodeFunction.jinja')
             content += temp.render(element_comment=element.element_comment,
                                    particle_comment=element.particle_comment,
                                    function_name=CONFIG_PARAMS['encode_function_prefix'] + element.prefixed_type,
@@ -613,7 +613,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
             bits = tools.get_bit_count_for_value(len(self.analyzer_data.root_elements))
 
-            temp = self.generator.get_template('EncodeRootFunction.ctc')
+            temp = self.generator.get_template('EncodeRootFunction.jinja')
             root_content += temp.render(function_comment=root_comment,
                                         function_name=fn_name,
                                         struct_type=struct_type, parameter_name=parameter_name,
@@ -639,7 +639,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
                 bits = tools.get_bit_count_for_value(len(self.analyzer_data.namespace_elements[name_short]))
 
-                temp = self.generator.get_template('EncodeRootV2GMessage.ctc')
+                temp = self.generator.get_template('EncodeRootV2GMessage.jinja')
                 root_content += temp.render(function_comment=root_comment,
                                             function_name=fn_name,
                                             struct_type=struct_type, parameter_name=parameter_name,
@@ -655,7 +655,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
     def __render_file(self):
         try:
-            temp = self.generator.get_template("DataTypesEncoder_c.ctc")
+            temp = self.generator.get_template("DataTypesEncoder.c.jinja")
             code = temp.render(filename=self.c_params["filename"], filekey=self.c_params["identifier"],
                                includes_code=self.__include_content, code=self.__code_content)
             tools.save_code_to_file(self.c_params["filename"], code, self.parameters['folder'])

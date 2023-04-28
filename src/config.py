@@ -59,7 +59,7 @@ c_files_to_generate = {
         'type': 'static',
         'folder': 'common',
         'h': {
-            'template': 'static_code/exi_error_codes_h.ctc',
+            'template': 'static_code/exi_error_codes.h.jinja',
             'filename': 'exi_error_codes.h',
             'identifier': 'EXI_ERROR_CODES_H',
             'include_std_lib': [],
@@ -71,14 +71,14 @@ c_files_to_generate = {
         'type': 'static',
         'folder': 'common',
         'h': {
-            'template': 'static_code/exi_basetypes_h.ctc',
+            'template': 'static_code/exi_basetypes.h.jinja',
             'filename': 'exi_basetypes.h',
             'identifier': 'EXI_BASETYPES_H',
             'include_std_lib': [],
             'include_other': []
         },
         'c': {
-            'template': 'static_code/exi_basetypes_c.ctc',
+            'template': 'static_code/exi_basetypes.c.jinja',
             'filename': 'exi_basetypes.c',
             'identifier': 'EXI_BASETYPES_C',
             'include_std_lib': [],
@@ -90,14 +90,14 @@ c_files_to_generate = {
         'type': 'static',
         'folder': 'common',
         'h': {
-            'template': 'static_code/exi_bitstream_h.ctc',
+            'template': 'static_code/exi_bitstream.h.jinja',
             'filename': 'exi_bitstream.h',
             'identifier': 'EXI_BITSTREAM_H',
             'include_std_lib': [],
             'include_other': []
         },
         'c': {
-            'template': 'static_code/exi_bitstream_c.ctc',
+            'template': 'static_code/exi_bitstream.c.jinja',
             'filename': 'exi_bitstream.c',
             'identifier': 'EXI_BITSTREAM_C',
             'include_std_lib': [],
@@ -109,14 +109,14 @@ c_files_to_generate = {
         'type': 'static',
         'folder': 'common',
         'h': {
-            'template': 'static_code/exi_header_h.ctc',
+            'template': 'static_code/exi_header.h.jinja',
             'filename': 'exi_header.h',
             'identifier': 'EXI_HEADER_H',
             'include_std_lib': [],
             'include_other': []
         },
         'c': {
-            'template': 'static_code/exi_header_c.ctc',
+            'template': 'static_code/exi_header.c.jinja',
             'filename': 'exi_header.c',
             'identifier': 'EXI_HEADER_C',
             'include_std_lib': [],
@@ -128,14 +128,14 @@ c_files_to_generate = {
         'type': 'static',
         'folder': 'common',
         'h': {
-            'template': 'static_code/exi_basetypes_decoder_h.ctc',
+            'template': 'static_code/exi_basetypes_decoder.h.jinja',
             'filename': 'exi_basetypes_decoder.h',
             'identifier': 'EXI_BASETYPES_DECODER_H',
             'include_std_lib': [],
             'include_other': []
         },
         'c': {
-            'template': 'static_code/exi_basetypes_decoder_c.ctc',
+            'template': 'static_code/exi_basetypes_decoder.c.jinja',
             'filename': 'exi_basetypes_decoder.c',
             'identifier': 'EXI_BASETYPES_DECODER_C',
             'include_std_lib': [],
@@ -147,14 +147,14 @@ c_files_to_generate = {
         'type': 'static',
         'folder': 'common',
         'h': {
-            'template': 'static_code/exi_basetypes_encoder_h.ctc',
+            'template': 'static_code/exi_basetypes_encoder.h.jinja',
             'filename': 'exi_basetypes_encoder.h',
             'identifier': 'EXI_BASETYPES_ENCODER_H',
             'include_std_lib': [],
             'include_other': []
         },
         'c': {
-            'template': 'static_code/exi_basetypes_encoder_c.ctc',
+            'template': 'static_code/exi_basetypes_encoder.c.jinja',
             'filename': 'exi_basetypes_encoder.c',
             'identifier': 'EXI_BASETYPES_ENCODER_C',
             'include_std_lib': [],
@@ -166,14 +166,14 @@ c_files_to_generate = {
         'type': 'static',
         'folder': 'common',
         'h': {
-            'template': 'static_code/exi_types_decoder_h.ctc',
+            'template': 'static_code/exi_types_decoder.h.jinja',
             'filename': 'exi_types_decoder.h',
             'identifier': 'EXI_TYPES_DECODER_H',
             'include_std_lib': [],
             'include_other': []
         },
         'c': {
-            'template': 'static_code/exi_types_decoder_c.ctc',
+            'template': 'static_code/exi_types_decoder.c.jinja',
             'filename': 'exi_types_decoder.c',
             'identifier': 'EXI_TYPES_DECODER_C',
             'include_std_lib': [],
@@ -185,14 +185,14 @@ c_files_to_generate = {
         'type': 'static',
         'folder': 'v2gtp',
         'h': {
-            'template': 'static_code/exi_v2gtp_h.ctc',
+            'template': 'static_code/exi_v2gtp.h.jinja',
             'filename': 'exi_v2gtp.h',
             'identifier': 'EXI_V2GTP_H',
             'include_std_lib': [],
             'include_other': []
         },
         'c': {
-            'template': 'static_code/exi_v2gtp_c.ctc',
+            'template': 'static_code/exi_v2gtp.c.jinja',
             'filename': 'exi_v2gtp.c',
             'identifier': 'EXI_V2GTP_C',
             'include_std_lib': [],

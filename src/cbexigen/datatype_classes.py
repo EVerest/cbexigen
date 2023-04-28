@@ -115,7 +115,7 @@ class DatatypeHeader:
     # ---------------------------------------------------------------------------
 
     def __generate_defines(self):
-        temp = self.generator.get_template('BaseDefines.ctc')
+        temp = self.generator.get_template('BaseDefines.jinja')
         return temp.render(defines=self.__global_define_list)
 
     def __generate_functions_enum(self):
@@ -127,14 +127,14 @@ class DatatypeHeader:
                 items.append(self.parameters['prefix'] + value.local_name)
         items.sort()
 
-        temp = self.generator.get_template('BaseEnum.ctc')
+        temp = self.generator.get_template('BaseEnum.jinja')
         return temp.render(list=items, element_comment=comment, enum_type=enum_type)
 
     def __generate_enum_array_struct(self, particle):
         # generate struct for array with length variable
         comment = self.__get_particle_comment(particle)
         particle_type = particle.prefixed_type
-        temp = self.generator.get_template("SubStructSimpleArray.ctc")
+        temp = self.generator.get_template("SubStructSimpleArray.jinja")
 
         return temp.render(struct_name=particle.name,
                            struct_type=particle_type,
@@ -145,12 +145,12 @@ class DatatypeHeader:
         # generate struct for array with length variable
         comment = self.__get_particle_comment(particle)
         particle_type = particle.prefixed_type
-        temp = self.generator.get_template("SubStructArray.ctc")
+        temp = self.generator.get_template("SubStructArray.jinja")
 
         if particle.integer_base_type:
             if particle.integer_base_type in tools.TYPE_TRANSLATION_C:
                 particle_type = tools.TYPE_TRANSLATION_C[particle.integer_base_type]
-                temp = self.generator.get_template("SubStructSimpleArray.ctc")
+                temp = self.generator.get_template("SubStructSimpleArray.jinja")
             else:
                 log_write_error(f"No integer type found for integer base type {particle.integer_base_type}")
 
@@ -162,7 +162,7 @@ class DatatypeHeader:
     def __generate_char_array_struct(self, particle: Particle):
         # generate struct for array with length variable
         comment = self.__get_particle_comment(particle)
-        temp = self.generator.get_template("SubStructChar.ctc")
+        temp = self.generator.get_template("SubStructChar.jinja")
         return temp.render(struct_name=particle.name,
                            struct_type="char",
                            type_def=particle.prefixed_define_for_base_type,
@@ -171,7 +171,7 @@ class DatatypeHeader:
     def __generate_char_array_struct_from_string(self, particle: Particle, with_used=False):
         # generate struct for array with length variable
         comment = self.__get_particle_comment(particle)
-        temp = self.generator.get_template("SubStructCharWithUsed.ctc" if with_used else "SubStructChar.ctc")
+        temp = self.generator.get_template("SubStructCharWithUsed.jinja" if with_used else "SubStructChar.jinja")
         return temp.render(struct_name=particle.name,
                            struct_type="char",
                            type_def=particle.prefixed_define_for_base_type,
@@ -181,7 +181,7 @@ class DatatypeHeader:
         # generate struct for array with length variable
         indent = ' ' * self.config['c_code_indent_chars']
         comment = self.__get_particle_comment(particle)
-        temp = self.generator.get_template("SubStructByteWithIsUsed.ctc" if with_used else "SubStructByte.ctc")
+        temp = self.generator.get_template("SubStructByteWithIsUsed.jinja" if with_used else "SubStructByte.jinja")
 
         return temp.render(indent=indent, level=indent_level,
                            struct_name=particle.name,
@@ -201,15 +201,15 @@ class DatatypeHeader:
         else:
             type_str = particle.prefixed_type
 
-        temp = self.generator.get_template('SubStructVariableWithUsed.ctc') \
-            if particle.is_complex or is_in_types else self.generator.get_template('SubVariableWithUsed.ctc')
+        temp = self.generator.get_template('SubStructVariableWithUsed.jinja') \
+            if particle.is_complex or is_in_types else self.generator.get_template('SubVariableWithUsed.jinja')
 
         return temp.render(variable_name=particle.name,
                            variable_type=type_str,
                            variable_comment=comment)
 
     def __generate_variables_with_union_and_used(self, elements):
-        temp = self.generator.get_template('SubStructVariablesWithUnionAndUsed.ctc')
+        temp = self.generator.get_template('SubStructVariablesWithUnionAndUsed.jinja')
         return temp.render(elements=elements)
 
     def __generate_variable(self, particle: Particle, is_in_types=False):
@@ -224,8 +224,8 @@ class DatatypeHeader:
         else:
             type_str = particle.prefixed_type
 
-        temp = self.generator.get_template('SubStructVariable.ctc') \
-            if particle.is_complex or is_in_types else self.generator.get_template('SubVariable.ctc')
+        temp = self.generator.get_template('SubStructVariable.jinja') \
+            if particle.is_complex or is_in_types else self.generator.get_template('SubVariable.jinja')
 
         return temp.render(variable_name=particle.name,
                            variable_type=type_str,
@@ -239,7 +239,7 @@ class DatatypeHeader:
 
     def __generate_sequence_content(self, name, comment, content, indent_level=1):
         indent = ' ' * self.config['c_code_indent_chars']
-        temp = self.generator.get_template('SubStructSequence.ctc')
+        temp = self.generator.get_template('SubStructSequence.jinja')
         return temp.render(indent=indent, level=indent_level,
                            sequence_comment=comment, sequence_name=name, sequence_content=content)
 
@@ -338,7 +338,7 @@ class DatatypeHeader:
                 name = self.config['choice_sequence_prefix'] + str(index + 1)
                 union_content += self.__generate_sequence_content(name, comment, seq_content, 2) + '\n\n'
 
-            temp = self.generator.get_template('SubUnion.ctc')
+            temp = self.generator.get_template('SubUnion.jinja')
             struct_content += temp.render(union_content=union_content)
 
         return struct_content
@@ -358,9 +358,9 @@ class DatatypeHeader:
                 self.analyzer_data.known_prototypes[element.prefixed_type] = element.type_short
 
         # generate struct for array with length variable
-        temp = self.generator.get_template('BaseStructWithUnionAndUsed.ctc')
+        temp = self.generator.get_template('BaseStructWithUnionAndUsed.jinja')
         if len(self.analyzer_data.root_elements) == 1:
-            temp = self.generator.get_template('BaseStruct.ctc')
+            temp = self.generator.get_template('BaseStruct.jinja')
 
         return temp.render(struct_name=name,
                            element_comment=comment,
@@ -377,7 +377,7 @@ class DatatypeHeader:
                         self.analyzer_data.known_prototypes[element.prefixed_type] = element.type_short
 
         # generate prototypes for elements
-        temp = self.generator.get_template('BasePrototype.ctc')
+        temp = self.generator.get_template('BasePrototype.jinja')
         return temp.render(comment=comment,
                            elements=self.analyzer_data.known_prototypes)
 
@@ -442,7 +442,7 @@ class DatatypeHeader:
 
                         element_list.append(f'{element.prefixed_type}_{text}')
 
-                temp = self.generator.get_template('BaseEnum.ctc')
+                temp = self.generator.get_template('BaseEnum.jinja')
                 content += temp.render(list=element_list, enum_type=element.prefixed_type, element_comment=comment)
                 content += '\n\n'
                 # update generated elements list
@@ -482,7 +482,7 @@ class DatatypeHeader:
                 if struct_content == '':
                     struct_content += '    int _unused;'
 
-                temp = self.generator.get_template('BaseStructWithDefine.ctc')
+                temp = self.generator.get_template('BaseStructWithDefine.jinja')
                 content += temp.render(defines=define_list,
                                        struct_name=element.prefixed_type,
                                        content=struct_content,
@@ -505,7 +505,7 @@ class DatatypeHeader:
 
         # file
         try:
-            temp = self.generator.get_template('BaseDatatypes_h.ctc')
+            temp = self.generator.get_template('BaseDatatypes.h.jinja')
             code = temp.render(filename=self.h_params['filename'],
                                filekey=self.h_params['identifier'],
                                include=include,
@@ -603,7 +603,7 @@ class DatatypeCode:
                     elements[element.typename] = element.typename
 
         # generate init function for struct with isUsed = 0u
-        temp = self.generator.get_template("BaseInitWithUsed.ctc")
+        temp = self.generator.get_template("BaseInitWithUsed.jinja")
 
         return temp.render(function_name=function_name,
                            struct_type=struct_type,
@@ -656,7 +656,7 @@ class DatatypeCode:
                             ele.append(particle.name)
 
                 # generate init function with arrayLen = 0u and isUsed = 0u
-                temp = self.generator.get_template("BaseInitWithArrayLenAndUsed.ctc")
+                temp = self.generator.get_template("BaseInitWithArrayLenAndUsed.jinja")
                 result += temp.render(function_name=function_name,
                                       struct_type=struct_type,
                                       parameter_name=parameter_name,
@@ -684,7 +684,7 @@ class DatatypeCode:
 
         # file
         try:
-            temp = self.generator.get_template("BaseDatatypes_c.ctc")
+            temp = self.generator.get_template("BaseDatatypes.c.jinja")
             code = temp.render(filename=self.c_params["filename"], filekey=self.c_params["identifier"],
                                includes_code=includes, code=content)
             tools.save_code_to_file(self.c_params["filename"], code, self.parameters['folder'])
