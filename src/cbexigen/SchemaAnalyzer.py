@@ -948,6 +948,10 @@ class SchemaAnalyzer(object):
             if len(items) == 0:
                 continue
 
+            # TODO - find a better way not to overwrite HeaderType
+            if name == 'MessageHeaderType':
+                continue
+
             for gen_elem in self.__generate_elements:
                 if gen_elem.type == '{' + imp.default_namespace + '}' + name:
                     gen_elem.particles = items
