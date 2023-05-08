@@ -20,6 +20,8 @@ class ExiDecoderHeader(ExiBaseCoderHeader):
     def __init__(self, parameters, enable_logging=True):
         super(ExiDecoderHeader, self).__init__(parameters=parameters, enable_logging=enable_logging)
 
+        self.__is_iso20 = True if str(self.parameters['prefix']).startswith('iso20_') else False
+
         self.__include_content = ''
         self.__code_content = ''
 
@@ -64,6 +66,8 @@ class ExiDecoderHeader(ExiBaseCoderHeader):
 class ExiDecoderCode(ExiBaseCoderCode):
     def __init__(self, parameters, analyzer_data, enable_logging=True):
         super(ExiDecoderCode, self).__init__(parameters, analyzer_data, enable_logging)
+
+        self.__is_iso20 = True if str(self.parameters['prefix']).startswith('iso20_') else False
 
         self.__include_content = ''
         self.__code_content = ''
@@ -631,8 +635,27 @@ class ExiDecoderCode(ExiBaseCoderCode):
         elif len(self.analyzer_data.root_elements) > 1:
             decode_fn = []
             for elem in self.analyzer_data.root_elements:
-                decode_fn.append([CONFIG_PARAMS['decode_function_prefix'] + elem.prefixed_type,
-                                  parameter_name + '->' + elem.typename])
+                if self.__is_iso20:
+                    # TODO: The following if filters the simple types DigestValue, MgmtData and KeyName.
+                    #       Simple types has to be decoded directly and not with an decoding function.
+                    #       So it has to be checked if these types can be ignored here or
+                    #       the decoding has to be implemented.
+                    #       Currently an empty case with the event code is generated.
+                    prefix_name_short = f'{elem.prefix}{elem.name_short}'
+                    if elem.type_definition == 'complex':
+                        decode_fn.append([CONFIG_PARAMS['decode_function_prefix'] + elem.prefixed_type,
+                                          parameter_name + '->' + elem.name_short])
+                    else:
+                        decode_fn.append([f'{CONFIG_PARAMS["decode_function_prefix"]}{prefix_name_short}', ''])
+                else:
+                    if elem.typename in self.analyzer_data.schema_builtin_types:
+                        decode_fn.append([f'{CONFIG_PARAMS["decode_function_prefix"]}{elem.prefix}{elem.name_short}',
+                                          f'{parameter_name}->{elem.prefix}{elem.name_short}'])
+                    else:
+                        decode_fn.append([CONFIG_PARAMS['decode_function_prefix'] + elem.prefixed_type,
+                                          parameter_name + '->' + elem.typename])
+
+            decode_fn.sort()
 
             bits = tools.get_bits_to_decode(len(self.analyzer_data.root_elements))
 

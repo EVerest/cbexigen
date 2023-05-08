@@ -853,27 +853,55 @@ class SchemaAnalyzer(object):
         subst_list = []
 
         msg_write("\nSchema: child count=" + str(self.__get_child_count(self.__current_schema)))
-        for element_str in self.__current_schema.elements:
-            element: XsdElement = self.__current_schema.elements.get(element_str)
-            element_data = self.__get_element_data(element, level, count, subst_list)
 
-            if element.type.is_complex():
+        # Build list of builtin types
+        self.__build_schema_builtin_types_list()
+
+        if str(self.__schema_prefix).startswith('iso20_'):
+            for element in self.__current_schema.elements.target_dict.values():
+                if element.prefixed_name.startswith('xs:'):
+                    continue
+
+                element_data = self.__get_element_data(element, level, count, subst_list)
+
+                if element_data.typename in self.__schema_builtin_types:
+                    self.__root_elements.append(element_data)
+                    continue
+                if element_data.content_type == 'simple' and len(element_data.particles) == 0:
+                    self.__root_elements.append(element_data)
+                    continue
+
                 if element.type.qualified_name:
                     if element.type.qualified_name not in self.__known_elements:
                         self.__known_elements[element.type.qualified_name] = element.type.local_name
                         self.__generate_elements.append(element_data)
-                        self.__root_elements.append(element_data)
-                else:
-                    if element.qualified_name not in self.__known_elements:
-                        self.__known_elements[element.qualified_name] = element.local_name
-                        self.__generate_elements.append(element_data)
-                        self.__root_elements.append(element_data)
 
-            self.__get_child_tree(element, level)
-            count += 1
+                self.__root_elements.append(element_data)
+
+                self.__get_child_tree(element, level)
+                count += 1
+        else:
+            for element_str in self.__current_schema.elements:
+                element: XsdElement = self.__current_schema.elements.get(element_str)
+                element_data = self.__get_element_data(element, level, count, subst_list)
+
+                if element.type.is_complex():
+                    if element.type.qualified_name:
+                        if element.type.qualified_name not in self.__known_elements:
+                            self.__known_elements[element.type.qualified_name] = element.type.local_name
+                            self.__generate_elements.append(element_data)
+                            self.__root_elements.append(element_data)
+                    else:
+                        if element.qualified_name not in self.__known_elements:
+                            self.__known_elements[element.qualified_name] = element.local_name
+                            self.__generate_elements.append(element_data)
+                            self.__root_elements.append(element_data)
+
+                self.__get_child_tree(element, level)
+                count += 1
 
         # Build list of builtin types
-        self.__build_schema_builtin_types_list()
+        # self.__build_schema_builtin_types_list()
 
         # Build list of generate elements types
         self.__build_generate_elements_types_list()

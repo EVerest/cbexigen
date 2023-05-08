@@ -14,8 +14,12 @@ int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ pa
 {{ indent * 3 }}{
 {%- for function, parameter in decode_functions %}
 {{ indent * 3 }}case {{ loop.index0 }}:
+{%- if parameter == '' %}
+{{ indent * 4 }}// simple type! {{ function }};
+{%- else %}
 {{ indent * 4 }}error = {{ function }}(stream, &{{ parameter }});
 {{ indent * 4 }}{{ parameter }}_isUsed = 1u;
+{%- endif %}
 {{ indent * 4 }}break;
 {%- endfor %}
 {{ indent * 3 }}default:
