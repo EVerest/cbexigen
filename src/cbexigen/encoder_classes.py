@@ -20,6 +20,8 @@ class ExiEncoderHeader(ExiBaseCoderHeader):
     def __init__(self, parameters, enable_logging=True):
         super(ExiEncoderHeader, self).__init__(parameters=parameters, enable_logging=enable_logging)
 
+        self.__is_iso20 = True if str(self.parameters['prefix']).startswith('iso20_') else False
+
         self.__include_content = ''
         self.__code_content = ''
 
@@ -64,6 +66,8 @@ class ExiEncoderHeader(ExiBaseCoderHeader):
 class ExiEncoderCode(ExiBaseCoderCode):
     def __init__(self, parameters, analyzer_data, enable_logging=True):
         super(ExiEncoderCode, self).__init__(parameters, analyzer_data, enable_logging)
+
+        self.__is_iso20 = True if str(self.parameters['prefix']).startswith('iso20_') else False
 
         self.__include_content = ''
         self.__code_content = ''
@@ -623,8 +627,17 @@ class ExiEncoderCode(ExiBaseCoderCode):
         elif len(self.analyzer_data.root_elements) > 1:
             encode_fn = []
             for elem in self.analyzer_data.root_elements:
-                encode_fn.append([CONFIG_PARAMS['encode_function_prefix'] + elem.prefixed_type,
-                                  parameter_name + '->' + elem.typename])
+                if self.__is_iso20:
+                    # TODO: The following if filters the simple types DigestValue, MgmtData and KeyName.
+                    #       Simple types have to be encoded directly and not with an encoding function.
+                    #       So it has to be checked if these types can be ignored here or
+                    #       the encoding has to be implemented.
+                    if elem.type_definition == 'complex':
+                        encode_fn.append([CONFIG_PARAMS['encode_function_prefix'] + elem.prefixed_type,
+                                          parameter_name + '->' + elem.name_short])
+                else:
+                    encode_fn.append([CONFIG_PARAMS['encode_function_prefix'] + elem.prefixed_type,
+                                      parameter_name + '->' + elem.typename])
 
             bits = tools.get_bit_count_for_value(len(self.analyzer_data.root_elements))
 

@@ -27,6 +27,8 @@ class DatatypeHeader:
         self.logger_name = ''
         self.scheme = current_scheme
 
+        self.__is_iso20 = True if str(self.parameters['prefix']).startswith('iso20_') else False
+
         if self.logging_enabled:
             self.logger_name = str(self.h_params['filename'])
             if self.logger_name.casefold().endswith('.h') or self.logger_name.casefold().endswith('.c'):
@@ -350,12 +352,19 @@ class DatatypeHeader:
         self.analyzer_data.known_prototypes[name] = self.config['root_parameter_name']
 
         for element in self.analyzer_data.root_elements:
-            if element.base_type == '':
-                elements[element.prefixed_name] = element.name_short
-                self.analyzer_data.known_prototypes[element.prefixed_name] = element.name_short
+            if self.__is_iso20:
+                # TODO: The following if filters the simple types DigestValue, MgmtData and KeyName.
+                #       So it has to be checked if these types can be ignored here.
+                if element.type_definition == 'complex':
+                    elements[element.prefixed_type] = element.name_short
+                    self.analyzer_data.known_prototypes[element.prefixed_type] = element.name_short
             else:
-                elements[element.prefixed_type] = element.type_short
-                self.analyzer_data.known_prototypes[element.prefixed_type] = element.type_short
+                if element.base_type == '':
+                    elements[element.prefixed_name] = element.name_short
+                    self.analyzer_data.known_prototypes[element.prefixed_name] = element.name_short
+                else:
+                    elements[element.prefixed_type] = element.type_short
+                    self.analyzer_data.known_prototypes[element.prefixed_type] = element.type_short
 
         # generate struct for array with length variable
         temp = self.generator.get_template('BaseStructWithUnionAndUsed.jinja')
@@ -534,6 +543,8 @@ class DatatypeCode:
         self.logging_enabled = enable_logging
         self.logger_name = ''
 
+        self.__is_iso20 = True if str(self.parameters['prefix']).startswith('iso20_') else False
+
         if self.logging_enabled:
             self.logger_name = str(self.c_params['filename'])
             if self.logger_name.casefold().endswith('.h') or self.logger_name.casefold().endswith('.c'):
@@ -597,10 +608,16 @@ class DatatypeCode:
 
         if len(self.analyzer_data.root_elements) > 1:
             for element in self.analyzer_data.root_elements:
-                if element.base_type == '':
-                    elements[element.name_short] = element.name_short
+                if self.__is_iso20:
+                    # TODO: The following if filters the simple types DigestValue, MgmtData and KeyName.
+                    #       So it has to be checked if these types can be ignored here.
+                    if element.type_definition == 'complex':
+                        elements[element.name_short] = element.name_short
                 else:
-                    elements[element.typename] = element.typename
+                    if element.base_type == '':
+                        elements[element.name_short] = element.name_short
+                    else:
+                        elements[element.typename] = element.typename
 
         # generate init function for struct with isUsed = 0u
         temp = self.generator.get_template("BaseInitWithUsed.jinja")
