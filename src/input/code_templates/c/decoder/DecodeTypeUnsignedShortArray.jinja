@@ -1,0 +1,16 @@
+{{ indent * level }}{{ decode_comment }}
+{{ indent * level }}if ({{ type_array_len }} < {{ type_define }})
+{{ indent * level }}{
+{{ indent * (level + 1) }}error = decode_exi_type_uint16(stream, &{{ type_array }}[{{ type_array_len }}++]);
+{{ indent * level }}}
+{{ indent * level }}else
+{{ indent * level }}{
+{{ indent * (level + 1) }}error = EXI_ERROR__ARRAY_OUT_OF_BOUNDS;
+{{ indent * level }}}
+{{ indent * level }}if (error == 0)
+{{ indent * level }}{
+{%- if type_option == 1 %}
+{{ indent * (level + 1) }}{{ type_value }}_isUsed = 1u;
+{%- endif %}
+{{ indent * (level + 1) }}grammar_id = {{ next_grammar_id }};
+{{ indent * level }}}

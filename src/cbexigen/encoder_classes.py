@@ -180,6 +180,18 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
         return content
 
+    def __get_content_encode_unsigned_short_array(self, element_typename, detail: ElementGrammarDetail, level):
+        value_parameter = f'{element_typename}->{detail.particle.name}.{detail.particle.value_parameter_name}'
+        index_parameter = detail.particle.name + '_currentIndex'
+
+        temp = self.generator.get_template('EncodeTypeUnsignedShortArray.jinja')
+        content = temp.render(value_parameter=value_parameter,
+                              index_parameter=index_parameter,
+                              next_grammar=detail.next_grammar,
+                              indent=self.indent, level=level)
+
+        return content
+
     def __get_content_encode_int(self, element_typename, detail: ElementGrammarDetail, level):
         value_parameter = f'{element_typename}->{detail.particle.name}'
 
@@ -326,7 +338,10 @@ class ExiEncoderCode(ExiBaseCoderCode):
             elif detail.particle.integer_base_type == 'uint8':
                 type_content = self.__get_content_encode_byte(grammar.element_typename, detail, level)
             elif detail.particle.integer_base_type == 'uint16':
-                type_content = self.__get_content_encode_short(grammar.element_typename, detail, level)
+                if detail.particle.is_array:
+                    type_content = self.__get_content_encode_unsigned_short_array(grammar.element_typename, detail, level)
+                else:
+                    type_content = self.__get_content_encode_short(grammar.element_typename, detail, level)
             elif detail.particle.integer_base_type == 'uint32':
                 type_content = self.__get_content_encode_int(grammar.element_typename, detail, level)
             elif detail.particle.integer_base_type == 'uint64':

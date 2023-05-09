@@ -215,6 +215,32 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
         return decode_content
 
+    def __get_content_decode_short_array(self, element_typename, detail: ElementGrammarDetail, level):
+        type_array = f'{element_typename}->{detail.particle.name}.{detail.particle.value_parameter_name}'
+        type_array_len = f'{element_typename}->{detail.particle.name}.{detail.particle.length_parameter_name}'
+        next_grammar_id = detail.next_grammar
+
+        template_file = 'DecodeTypeElementArray.jinja'
+        if detail.particle.integer_is_unsigned:
+            decode_comment = '// decode: unsigned short array'
+            decode_fn = 'decode_exi_type_uint16'
+        else:
+            decode_comment = '// decode: short array'
+            decode_fn = 'decode_exi_type_integer16'
+        temp = self.generator.get_template(template_file)
+
+        decode_content = temp.render(decode_comment=decode_comment,
+                                     type_define=detail.particle.prefixed_define_for_array,
+                                     type_array=type_array,
+                                     type_array_len=type_array_len,
+                                     decode_fn=decode_fn,
+                                     type_value=type_array,
+                                     type_option=detail.particle.is_optional,
+                                     next_grammar_id=next_grammar_id,
+                                     indent=self.indent, level=level)
+
+        return decode_content
+
     def __get_content_decode_int(self, element_typename, detail: ElementGrammarDetail, level):
         type_value = f'{element_typename}->{detail.particle.name}'
         next_grammar_id = detail.next_grammar
@@ -281,6 +307,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         next_grammar_id = detail.next_grammar
 
         temp = self.generator.get_template('DecodeTypeElementArray.jinja')
+        # FIXME support optional element arrays (need to define type_value as well)
         decode_content = temp.render(decode_comment=decode_comment,
                                      type_define=detail.particle.prefixed_define_for_array,
                                      type_array=type_array,
@@ -398,7 +425,10 @@ class ExiDecoderCode(ExiBaseCoderCode):
             elif detail.particle.integer_base_type == 'uint8':
                 type_content = self.__get_content_decode_byte(grammar.element_typename, detail, level)
             elif detail.particle.integer_base_type == 'uint16':
-                type_content = self.__get_content_decode_short(grammar.element_typename, detail, level)
+                if detail.particle.is_array:
+                    type_content = self.__get_content_decode_short_array(grammar.element_typename, detail, level)
+                else:
+                    type_content = self.__get_content_decode_short(grammar.element_typename, detail, level)
             elif detail.particle.integer_base_type == 'uint32':
                 type_content = self.__get_content_decode_int(grammar.element_typename, detail, level)
             elif detail.particle.integer_base_type == 'uint64':
