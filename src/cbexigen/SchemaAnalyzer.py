@@ -993,7 +993,7 @@ class SchemaAnalyzer(object):
                         if particle.name in self.__namespace_elements.keys():
                             log_write('')
                             log_write(f'Found particle match in namespace elements. '
-                                        f'Replacing particles of {element.name_short} ({element.type_short})')
+                                      f'Replacing particles of {element.name_short} ({element.type_short})')
                             particle.is_substitute = True
                             particles = [particle]
                             for part in abstract_element.particles:
@@ -1163,7 +1163,7 @@ class SchemaAnalyzer(object):
             replacement_list.append(part_new)
 
             self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list,
-                                                    p_min_occurs, p_max_occurs)
+                                                   p_min_occurs, p_max_occurs)
 
     def __scan_elements_for_empty_content(self):
         """
