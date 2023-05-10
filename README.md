@@ -7,6 +7,23 @@ DIN 70121, ISO 15118-2 and ISO 15118-20, and derivates of these. It creates
 a library capable of encoding and decoding the complete EXI message set of
 the defined protocols.
 
+---
+## :exclamation: Call for ISO 15118-20 EXI streams :exclamation:
+
+You would greatly suppport this project if you are able to provide real-life
+EXI streams of ISO 15118-20 messages. We need these to validate the quality
+of the code. Any streams would be appreciated. Formats can be binary or
+hex-represented V2GTP messages, or just their EXI payload, or traffic
+captures (PCAP or PCAPNG). If possible, provide the corresponding expected
+content (e.g. as XML, JSON, or just a list of fields and values).
+
+Please get in touch with the authors, or
+[open a GitHub issue](https://github.com/EVerest/cbexigen/issues/new).
+
+Thank you!
+
+---
+
 ## What
 
 V2GTP is a protocol for "vehicle to grid" communication. It is used for
