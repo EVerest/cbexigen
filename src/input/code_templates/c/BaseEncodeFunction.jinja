@@ -3,7 +3,7 @@
 static int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ parameter_name }}) {
 {{ indent * level }}int grammar_id = {{ start_grammar_id }};
 {{ indent * level }}int done = 0;
-{{ indent * level }}int error;
+{{ indent * level }}int error = 0;
 {%- if has_array %}
 {%- for name in names %}
 {{ indent * level }}uint16_t {{ name }}_currentIndex = 0;
