@@ -450,7 +450,8 @@ class ExiEncoderCode(ExiBaseCoderCode):
             else:
                 # unsupported particle which appears in the event list
                 event_comment = f'// Event: None (index={detail.event_index}); next={detail.next_grammar}'
-                type_content = str(self.indent * 4) + 'done = 1;'
+                type_content = str(self.indent * 4) + 'error = EXI_ERROR__NO_ERROR;\n'
+                type_content += str(self.indent * 4) + 'done = 1;'
 
                 temp = self.generator.get_template('EncodeEventOptionalElementNone.jinja')
                 content += temp.render(option=option,
