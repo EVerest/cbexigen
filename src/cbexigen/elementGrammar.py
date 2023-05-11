@@ -47,7 +47,7 @@ class ElementGrammarDetail:
         if self.particle is None:
             return False
 
-        return self.particle.min_occurs == 1 and self.particle.max_occurs > 1
+        return self.particle.min_occurs >= 1 and self.particle.max_occurs > 1
 
 
 @dataclass
