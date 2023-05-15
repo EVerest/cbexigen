@@ -6,6 +6,9 @@ int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ pa
 {{ indent }}if (error == EXI_ERROR__NO_ERROR)
 {{ indent }}{
 {%- for function, parameter in encode_functions %}
+{%- if parameter == '' %}
+{{ indent * 2 }}// simple type! {{ function }};
+{%- else %}
 {%- if loop.first %}
 {{ indent * 2 }}if ({{ parameter }}_isUsed == 1)
 {%- else %}
@@ -19,6 +22,7 @@ int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ pa
 {{ indent * 4 }}error = {{ function }}(stream, &{{ parameter }});
 {{ indent * 3 }}}
 {{ indent * 2 }}}
+{%- endif %}
 {%- endfor %}
 {{ indent * 2 }}else
 {{ indent * 2 }}{
