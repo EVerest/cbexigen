@@ -632,12 +632,21 @@ class ExiEncoderCode(ExiBaseCoderCode):
                     #       Simple types have to be encoded directly and not with an encoding function.
                     #       So it has to be checked if these types can be ignored here or
                     #       the encoding has to be implemented.
+                    prefix_name_short = f'{elem.prefix}{elem.name_short}'
                     if elem.type_definition == 'complex':
                         encode_fn.append([CONFIG_PARAMS['encode_function_prefix'] + elem.prefixed_type,
                                           parameter_name + '->' + elem.name_short])
+                    else:
+                        encode_fn.append([f'{CONFIG_PARAMS["encode_function_prefix"]}{prefix_name_short}', ''])
                 else:
-                    encode_fn.append([CONFIG_PARAMS['encode_function_prefix'] + elem.prefixed_type,
-                                      parameter_name + '->' + elem.typename])
+                    if elem.typename in self.analyzer_data.schema_builtin_types:
+                        encode_fn.append([f'{CONFIG_PARAMS["encode_function_prefix"]}{elem.prefix}{elem.name_short}',
+                                          f'{parameter_name}->{elem.prefix}{elem.name_short}'])
+                    else:
+                        encode_fn.append([CONFIG_PARAMS['encode_function_prefix'] + elem.prefixed_type,
+                                          parameter_name + '->' + elem.typename])
+
+            encode_fn.sort()
 
             bits = tools.get_bit_count_for_value(len(self.analyzer_data.root_elements))
 
