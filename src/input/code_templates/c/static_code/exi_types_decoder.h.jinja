@@ -18,84 +18,27 @@
  */
 int decode_exi_type_hex_binary(exi_bitstream_t* stream, uint16_t* value_len, uint8_t* value_buffer, size_t value_buffer_size);
 
+{% for size in [8, 16, 32, 64] -%}
 /**
- * \brief       Decode 8-bit integer
+ * \brief       Decode {{ size }}-bit integer
  *
  * \param       stream              EXI bitstream
- * \param       value               int8_t (out) decoded value
+ * \param       value               int{{ size }}_t (out) decoded value
  * \return                          Error-Code <> 0, if no error 0
  *
  */
-int decode_exi_type_integer8(exi_bitstream_t* stream, int8_t* value);
+int decode_exi_type_integer{{ size }}(exi_bitstream_t* stream, int{{ size }}_t* value);
 
+{% endfor -%}
+{% for size in [8, 16, 32, 64] %}
 /**
- * \brief       Decode 16-bit integer
+ * \brief       Decode {{ size }}-bit unsigned integer
  *
  * \param       stream              EXI bitstream
- * \param       value               int16_t (out) decoded value
+ * \param       value               uint{{ size }}_t (out) decoded value
  * \return                          Error-Code <> 0, if no error 0
  *
  */
-int decode_exi_type_integer16(exi_bitstream_t* stream, int16_t* value);
-
-/**
- * \brief       Decode 32-bit integer
- *
- * \param       stream              EXI bitstream
- * \param       value               int32_t (out) decoded value
- * \return                          Error-Code <> 0, if no error 0
- *
- */
-int decode_exi_type_integer32(exi_bitstream_t* stream, int32_t* value);
-
-/**
- * \brief       Decode 64-bit integer
- *
- * \param       stream              EXI bitstream
- * \param       value               int64_t (out) decoded value
- * \return                          Error-Code <> 0, if no error 0
- *
- */
-int decode_exi_type_integer64(exi_bitstream_t* stream, int64_t* value);
-
-/**
- * \brief       Decode 8-bit unsigned integer
- *
- * \param       stream              EXI bitstream
- * \param       value               uint8_t (out) decoded value
- * \return                          Error-Code <> 0, if no error 0
- *
- */
-int decode_exi_type_uint8(exi_bitstream_t* stream, uint8_t* value);
-
-/**
- * \brief       Decode 16-bit unsigned integer
- *
- * \param       stream              EXI bitstream
- * \param       value               uint16_t (out) decoded value
- * \return                          Error-Code <> 0, if no error 0
- *
- */
-int decode_exi_type_uint16(exi_bitstream_t* stream, uint16_t* value);
-
-/**
- * \brief       Decode 32-bit unsigned integer
- *
- * \param       stream              EXI bitstream
- * \param       value               uint32_t (out) decoded value
- * \return                          Error-Code <> 0, if no error 0
- *
- */
-int decode_exi_type_uint32(exi_bitstream_t* stream, uint32_t* value);
-
-/**
- * \brief       Decode 64-bit unsigned integer
- *
- * \param       stream              EXI bitstream
- * \param       value               uint64_t (out) decoded value
- * \return                          Error-Code <> 0, if no error 0
- *
- */
-int decode_exi_type_uint64(exi_bitstream_t* stream, uint64_t* value);
-
+int decode_exi_type_uint{{ size }}(exi_bitstream_t* stream, uint{{ size }}_t* value);
+{% endfor -%}
 {% endblock %}

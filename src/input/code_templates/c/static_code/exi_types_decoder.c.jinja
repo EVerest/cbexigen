@@ -56,93 +56,82 @@ int decode_exi_type_hex_binary(exi_bitstream_t* stream, uint16_t* value_len, uin
 // *********
 // integers
 // *********
-#ifndef BUILD_DECODE_EXI_TYPE_INTEGER_N
-#define BUILD_DECODE_EXI_TYPE_INTEGER_N(bitwidth) \
-int decode_exi_type_integer##bitwidth(exi_bitstream_t* stream, int##bitwidth##_t* value) \
-{ \
-    uint32_t eventCode; \
-    int error; \
-\
-    error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode); \
-    if (error == 0) \
-    { \
-        if (eventCode == 0) \
-        { \
-            error = exi_basetypes_decoder_integer_##bitwidth(stream, value); \
-        } \
-        else \
-        { \
-            /* Second level event is not supported */ \
-            error = EXI_ERROR__UNSUPPORTED_SUB_EVENT; \
-        } \
-    } \
-\
-    /* if nothing went wrong, the error of last decoding is evaluated here */ \
-    if (error == 0) \
-    { \
-        /* test EE for simple element */ \
-        error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode); \
-        if (error == 0) \
-        { \
-            if(eventCode != 0) \
-            { \
-                /* deviants are not supported or also typecast and nillable */ \
-                error = EXI_ERROR__DEVIANTS_NOT_SUPPORTED; \
-            } \
-        } \
-    } \
-\
-    return error; \
+{% for size in [8, 16, 32, 64] -%}
+int decode_exi_type_integer{{ size }}(exi_bitstream_t* stream, int{{ size }}_t* value)
+{
+    uint32_t eventCode;
+    int error;
+
+    error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
+    if (error == 0)
+    {
+        if (eventCode == 0)
+        {
+            error = exi_basetypes_decoder_integer_{{ size }}(stream, value);
+        }
+        else
+        {
+            /* Second level event is not supported */
+            error = EXI_ERROR__UNSUPPORTED_SUB_EVENT;
+        }
+    }
+
+    /* if nothing went wrong, the error of last decoding is evaluated here */
+    if (error == 0)
+    {
+        /* test EE for simple element */
+        error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
+        if (error == 0)
+        {
+            if(eventCode != 0)
+            {
+                /* deviants are not supported or also typecast and nillable */
+                error = EXI_ERROR__DEVIANTS_NOT_SUPPORTED;
+            }
+        }
+    }
+
+    return error;
 }
-#endif /* BUILD_DECODE_EXI_TYPE_INTEGER_N */
 
-BUILD_DECODE_EXI_TYPE_INTEGER_N(8)
-BUILD_DECODE_EXI_TYPE_INTEGER_N(16)
-BUILD_DECODE_EXI_TYPE_INTEGER_N(32)
-BUILD_DECODE_EXI_TYPE_INTEGER_N(64)
+{% endfor -%}
 
-#ifndef BUILD_DECODE_EXI_TYPE_UINT_N
-#define BUILD_DECODE_EXI_TYPE_UINT_N(bitwidth) \
-int decode_exi_type_uint##bitwidth(exi_bitstream_t* stream, uint##bitwidth##_t* value) \
-{ \
-    uint32_t eventCode; \
-    int error; \
-\
-    error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode); \
-    if (error == 0) \
-    { \
-        if (eventCode == 0) \
-        { \
-            error = exi_basetypes_decoder_uint_##bitwidth(stream, value); \
-        } \
-        else \
-        { \
-            /* Second level event is not supported */ \
-            error = EXI_ERROR__UNSUPPORTED_SUB_EVENT; \
-        } \
-    } \
-\
-    /* if nothing went wrong, the error of last decoding is evaluated here */ \
-    if (error == 0) \
-    { \
-        /* test EE for simple element */ \
-        error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode); \
-        if (error == 0) \
-        { \
-            if (eventCode != 0) \
-            { \
-                /* deviants are not supported or also typecast and nillable */ \
-                error = EXI_ERROR__DEVIANTS_NOT_SUPPORTED; \
-            } \
-        } \
-    } \
-\
-    return error; \
+{% for size in [8, 16, 32, 64] %}
+int decode_exi_type_uint{{ size }}(exi_bitstream_t* stream, uint{{ size }}_t* value)
+{
+    uint32_t eventCode;
+    int error;
+
+    error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
+    if (error == 0)
+    {
+        if (eventCode == 0)
+        {
+            error = exi_basetypes_decoder_uint_{{ size }}(stream, value);
+        }
+        else
+        {
+            /* Second level event is not supported */
+            error = EXI_ERROR__UNSUPPORTED_SUB_EVENT;
+        }
+    }
+
+    /* if nothing went wrong, the error of last decoding is evaluated here */
+    if (error == 0)
+    {
+        /* test EE for simple element */
+        error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
+        if (error == 0)
+        {
+            if (eventCode != 0)
+            {
+                /* deviants are not supported or also typecast and nillable */
+                error = EXI_ERROR__DEVIANTS_NOT_SUPPORTED;
+            }
+        }
+    }
+
+    return error;
 }
-#endif /* BUILD_DECODE_EXI_TYPE_UINT_N */
-
-BUILD_DECODE_EXI_TYPE_UINT_N(8)
-BUILD_DECODE_EXI_TYPE_UINT_N(16)
-BUILD_DECODE_EXI_TYPE_UINT_N(32)
-BUILD_DECODE_EXI_TYPE_UINT_N(64)
+{% endfor -%}
 {% endblock %}
