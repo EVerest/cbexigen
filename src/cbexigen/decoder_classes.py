@@ -164,16 +164,14 @@ class ExiDecoderCode(ExiBaseCoderCode):
         next_grammar_id = detail.next_grammar
 
         if detail.particle.integer_is_unsigned:
-            template_file = 'DecodeTypeUnsignedByte.jinja'
-            decode_comment = '// decode: unsigned byte'
+            decode_comment = '// decode: unsigned byte (restricted integer)'
         else:
-            template_file = 'DecodeTypeByte.jinja'
-            decode_comment = '// decode: byte'
-        temp = self.generator.get_template(template_file)
-
+            decode_comment = '// decode: byte (restricted integer)'
+        temp = self.generator.get_template('DecodeTypeRestrictedInt.jinja')
         decode_content = temp.render(decode_comment=decode_comment,
-                                     bits_to_decode=detail.particle.bit_count_for_coding,
+                                     bits_to_decode=8,
                                      type_value=type_value,
+                                     type_offset=(0 if detail.particle.integer_is_unsigned else -128),
                                      type_int=tools.TYPE_TRANSLATION_C[detail.particle.integer_base_type],
                                      type_option=detail.particle.is_optional,
                                      next_grammar_id=next_grammar_id,
