@@ -612,12 +612,13 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                    indent=self.indent, level=1)
             content += '\n\n'
         else:
-            content += element.element_comment + '\n'
-            content += element.particle_comment + '\n'
-            content += self.get_function_declaration(typename, False) + '\n{\n'
-            content += self.indent + '// Element has no particles, so the function just returns zero\n'
-            content += self.indent + 'return 0;\n'
-            content += '}\n\n'
+            temp = self.generator.get_template('BaseEmptyFunction.jinja')
+            content += temp.render(element_comment=element.element_comment,
+                                   function_name=CONFIG_PARAMS['decode_function_prefix'] + element.prefixed_type,
+                                   struct_type=element.prefixed_type, parameter_name=typename,
+                                   add_debug_code=self.get_status_for_add_debug_code(element.prefixed_type),
+                                   indent=self.indent, level=1)
+            content += '\n\n'
 
         return content
 
