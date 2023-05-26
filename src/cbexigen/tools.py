@@ -5,6 +5,7 @@
 """ Tools for the Exi Codegenerator """
 from pathlib import Path
 from cbexigen.tools_config import CONFIG_ARGS, CONFIG_PARAMS
+from xmlschema import XMLSchema11, XsdElement
 
 TYPE_TRANSLATION_C = {
     'char': 'char',
@@ -113,3 +114,43 @@ def get_bits_to_decode(max_value):
 
 def get_bit_count_for_value(max_value):
     return get_bits_to_decode(max_value)
+
+
+def analyze_element(schema: XMLSchema11, element_name: str):
+    element: XsdElement = schema.elements.get(element_name)
+    if element is None:
+        return
+
+    def __print_child_recursive(child_element: XsdElement, level):
+        indent = '    ' * level
+        status = ', optional' if child_element.min_occurs == 0 else ''
+
+        if child_element.local_name is not None:
+            print(f'{indent}{child_element.local_name} ({child_element.type.local_name}{status})')
+        else:
+            print(f'{indent}None ({child_element.namespace[0]}{status})')
+
+        for attribute_str in child_element.attributes:
+            attr = child_element.attributes.get(attribute_str)
+            print(f'{indent}    {attr.local_name} (attribute, {attr.use})')
+
+        for sub_child in child_element.iterchildren():
+            __print_child_recursive(sub_child, level + 1)
+
+    print(element.local_name)
+    for child in element.iterchildren():
+        __print_child_recursive(child, 1)
+
+
+def exi_hex_string_to_bin(exi_hex_string: str):
+    exi_bin = ''
+
+    for c in exi_hex_string:
+        nibble = int(c) if c in '0123456789' else ord(c.upper()) - 55
+        for n in [8, 4, 2, 1]:
+            if (nibble & n) > 0:
+                exi_bin += '1'
+            else:
+                exi_bin += '0'
+
+    print(exi_bin)
