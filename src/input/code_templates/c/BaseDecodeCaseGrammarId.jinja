@@ -3,7 +3,7 @@
 {% if add_debug_code == 1 -%}
 {{ indent * (level + 1) }}if (stream->status_callback)
 {{ indent * (level + 1) }}{
-{{ indent * (level + 2) }}stream->status_callback({{ type_parameter|upper }}, 0, 0, 0);
+{{ indent * (level + 2) }}stream->status_callback({{ type_parameter|upper }}, 0, {{ grammar_id }}, ((stream->byte_pos * 8) + stream->bit_count));
 {{ indent * (level + 1) }}}
 
 {% endif -%}
