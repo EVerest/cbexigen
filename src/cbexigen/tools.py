@@ -7,6 +7,7 @@ from pathlib import Path
 from cbexigen.tools_config import CONFIG_ARGS, CONFIG_PARAMS
 from xmlschema import XMLSchema11, XsdElement
 from xmlschema.validators import XsdAnyElement, XsdAtomicBuiltin, Xsd11AtomicRestriction, Xsd11Group
+from pprint import pprint
 
 TYPE_TRANSLATION_C = {
     'char': 'char',
@@ -122,7 +123,7 @@ def analyze_element(schema: XMLSchema11, element_name: str, prefix):
     if element is None:
         return
 
-    def __print_child_recursive(tree_file, child_element: XsdElement, level):
+    def __print_child_recursive(tree_file, child_element: XsdElement, level, tree):
         indent = '    ' * level
         status = ', optional' if child_element.min_occurs == 0 else ''
 
@@ -178,33 +179,47 @@ def analyze_element(schema: XMLSchema11, element_name: str, prefix):
                     # file.write(f'{indent}{child_element.local_name}: ENUM (Elements: '
                     #            f'{len(child_element.type.enumeration)}) {enum_content}\n')
 
+        sub_tree = {}
+
         if child_element.local_name is not None:
             # print(f'{indent}{child_element.local_name} ({abstract}{child_element.type.local_name}{status}), {occurs}')
             file.write(f'{indent}{child_element.local_name} '
                        f'({abstract}{child_element.type.local_name}{status}), {occurs}{derivation}, '
                        f'content-type={child_element.type.content_type_label}{base_type_name}'
                        f'{model_name}{content}{enum_content}\n')
+
+            if child_element.type.content_type_label == 'simple':
+                tree[child_element.local_name] = 'simple_type'
+            else:
+                tree[child_element.local_name] = sub_tree
         else:
+            process = f'process_content={child_element.process_contents}'
             # print(f'{indent}None ({child_element.namespace[0]}{status}), {occurs}')
-            file.write(f'{indent}None ({child_element.namespace[0]}{status}), {occurs}\n')
+            file.write(f'{indent}None ({child_element.namespace[0]}{status}), {occurs}, {process}\n')
+            tree[child_element.namespace[0]] = 'wildcard'
 
         for attribute_str in child_element.attributes:
             attr = child_element.attributes.get(attribute_str)
             # print(f'{indent}    {attr.local_name} (attribute, {attr.type.local_name}, {attr.use})')
             file.write(f'{indent}    {attr.local_name} (attribute, {attr.type.local_name}, {attr.use})\n')
+            sub_tree[attr.local_name] = 'attribute'
 
         for subst_child in child_element.iter_substitutes():
-            __print_child_recursive(tree_file, subst_child, level)
+            __print_child_recursive(tree_file, subst_child, level, tree)
 
         for sub_child in child_element.iterchildren():
-            __print_child_recursive(tree_file, sub_child, level + 1)
+            __print_child_recursive(tree_file, sub_child, level + 1, sub_tree)
 
     # print(element.local_name)
     file = open('tree_' + prefix + element.local_name + '.txt', 'w', encoding="utf-8")
     file.write(element.local_name + '\n')
+    inner_tree = {}
+    all_tree = {element.local_name: inner_tree}
     for child in element.iterchildren():
-        __print_child_recursive(file, child, 1)
+        __print_child_recursive(file, child, 1, inner_tree)
 
+    file.write('\n\npprint output of all_tree structure:\n\n')
+    pprint(all_tree, sort_dicts=False, stream=file)
     file.close()
 
 
