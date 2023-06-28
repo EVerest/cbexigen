@@ -37,6 +37,8 @@ class SchemaAnalyzer(object):
         self.config = CONFIG_PARAMS
         self.__schema_prefix = schema_prefix
 
+        self.__is_iso20 = True if str(self.__schema_prefix).startswith('iso20_') else False
+
     def open(self):
         if self.__schema is None or self.__schema_base is None:
             return
@@ -45,10 +47,6 @@ class SchemaAnalyzer(object):
         self.__current_schema: XMLSchema11 = XMLSchema11(self.__schema_file,
                                                          base_url=self.__schema_base,
                                                          build=False)
-
-        # if self.__schema_prefix == 'iso20_':
-        #     add = f"{CONFIG_ARGS['schema_base_dir']}\ISO_15118-20\FDIS\V2G_CI_CommonMessages.xsd"
-        #     self.__current_schema.add_schema(add)
 
         self.__current_schema.build()
 
@@ -857,7 +855,7 @@ class SchemaAnalyzer(object):
         # Build list of builtin types
         self.__build_schema_builtin_types_list()
 
-        if str(self.__schema_prefix).startswith('iso20_'):
+        if self.__is_iso20:
             for element in self.__current_schema.elements.target_dict.values():
                 if element.prefixed_name.startswith('xs:'):
                     continue
@@ -900,9 +898,6 @@ class SchemaAnalyzer(object):
                 self.__get_child_tree(element, level)
                 count += 1
 
-        # Build list of builtin types
-        # self.__build_schema_builtin_types_list()
-
         # Build list of generate elements types
         self.__build_generate_elements_types_list()
 
@@ -917,6 +912,12 @@ class SchemaAnalyzer(object):
         # Otherwise the types are not generated correctly.
         self.__scan_elements_for_empty_content()
         self.__scan_particles_for_empty_parent_type()
+
+        # In the 15118-20 AC and Dc schema some elements have not all possible particles.
+        # This is e.g. ChargeParameterDiscovery or ChargeLoop. There are missing the BPT elements.
+        # The BPT element are just derived and extended but not abstract.
+        if self.__is_iso20:
+            self.__scan_for_derived_and_extended_elements()
 
         # Adjust min_occurs for elements in choices
         self.__adjust_choice_elements()
@@ -1290,6 +1291,85 @@ class SchemaAnalyzer(object):
                             parent.has_abstract_sequence = True
                             parent.abstract_sequences.append((abstract_seq, p_min_occurs, p_max_occurs))
 
+    def __scan_for_derived_and_extended_elements(self):
+        log_write('')
+        log_write('Scan for derived and extended elements')
+
+        def find_base_type(base_type_name):
+            result = None
+            for item in self.__current_schema.elements.target_dict.values():
+                if item.prefixed_name.startswith('xs:'):
+                    continue
+                if item.type.base_type is None:
+                    continue
+
+                if item.type.base_type.local_name == base_type_name:
+                    result = item
+                    break
+
+            return result
+
+        element: ElementData
+        particle: Particle
+        for element in self.__generate_elements:
+            list_with_missing = []
+            for particle in element.particles:
+                if particle.type_short not in self.__schema_builtin_types:
+                    if particle.abstract_type:
+                        particle.min_occurs_old = particle.min_occurs
+                        particle.min_occurs = 0
+                        list_with_missing.append(particle)
+                        log_write(f'    Adding abstract particle {particle.name} to missing list.')
+
+                    missing_element = find_base_type(particle.type_short)
+                    if missing_element is not None:
+                        part = self.__get_particle(missing_element)
+
+                        particle.min_occurs_old = particle.min_occurs
+                        particle.min_occurs = 0
+                        list_with_missing.append(particle)
+                        log_write(f'    Adding particle {particle.name} to missing list.')
+
+                        part.min_occurs_old = part.min_occurs
+                        part.min_occurs = 0
+                        list_with_missing.append(part)
+                        log_write(f'    Adding missing particle {part.name} to missing list.')
+
+            if len(list_with_missing) > 0:
+                first = -1
+                last = -1
+                first_set = False
+                list_with_missing.sort(key=lambda item: item.name)
+
+                abstract_seq = []
+                for part in list_with_missing:
+                    abstract_seq.append(part.name)
+
+                element.has_abstract_sequence = True
+                element.abstract_sequences.append((abstract_seq, 1, 1))
+                log_write(f'  Add abstract sequence to {element.name_short}.')
+
+                for p_index, particle in enumerate(element.particles):
+                    exist = [x for x in list_with_missing if x.name == particle.name]
+                    if len(exist) > 0:
+                        if not first_set:
+                            first = p_index
+                            first_set = True
+                    elif first_set:
+                        last = p_index
+
+                log_write('  New particle list:')
+                new_list = element.particles[:first]
+                new_list.extend(list_with_missing)
+                if last > 0:
+                    new_list.extend(element.particles[last:])
+                for part in new_list:
+                    log_write(f'      {part.name} ({part.type_short})')
+
+                element.particles = new_list
+                log_write(f'  Replacing particle list of {element.name_short}.')
+                log_write('')
+
     def __adjust_choice_elements(self):
         log_write('')
         log_write('Adjusting choice elements')
@@ -1319,7 +1399,7 @@ class SchemaAnalyzer(object):
         for element in self.__generate_elements:
             for particle in element.particles:
                 if (particle.type_short in optimizations.keys()
-                    and particle.max_occurs > optimizations[particle.type_short]):
+                   and particle.max_occurs > optimizations[particle.type_short]):
                     particle.max_occurs = optimizations[particle.type_short]
 
     def __prepare_for_type_generation(self):
