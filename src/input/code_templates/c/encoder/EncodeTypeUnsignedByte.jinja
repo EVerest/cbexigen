@@ -1,10 +1,11 @@
 {{ indent * level }}error = exi_basetypes_encoder_nbit_uint(stream, 1, 0);
 {{ indent * level }}if (error == EXI_ERROR__NO_ERROR)
 {{ indent * level }}{
-{%- if min_value == 0 %}
-{{ indent * (level + 1) }}error = exi_basetypes_encoder_uint_8(stream, {{ value_parameter }});
+{%- if value_offset == 0 %}
+{{ indent * (level + 1) }}error = exi_basetypes_encoder_nbit_uint(stream, 8, {{ value_parameter }});
 {%- else %}
-{{ indent * (level + 1) }}error = exi_basetypes_encoder_uint_8(stream, {{ value_parameter }} - {{ min_value }});
+{{ indent * (level + 1) }}// type has min_value = {{ value_offset }}
+{{ indent * (level + 1) }}error = exi_basetypes_encoder_nbit_uint(stream, 8, {{ value_parameter }} + {{ value_offset }});
 {%- endif %}
 {{ indent * (level + 1) }}if (error == EXI_ERROR__NO_ERROR)
 {{ indent * (level + 1) }}{

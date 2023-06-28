@@ -156,7 +156,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
     def __get_content_encode_byte(self, element_typename, detail: ElementGrammarDetail, level):
         value_parameter = f'{element_typename}->{detail.particle.name}'
-        min_value = detail.particle.min_value
+        value_offset = (0 if detail.particle.integer_is_unsigned else -128)
 
         if detail.particle.integer_is_unsigned:
             temp = self.generator.get_template('EncodeTypeUnsignedByte.jinja')
@@ -164,7 +164,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
             temp = self.generator.get_template('EncodeTypeByte.jinja')
 
         content = temp.render(value_parameter=value_parameter,
-                              min_value=min_value,
+                              value_offset=value_offset,
                               next_grammar=detail.next_grammar,
                               indent=self.indent, level=level)
 
