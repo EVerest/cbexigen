@@ -864,7 +864,8 @@ class SchemaAnalyzer(object):
 
                 element_data = self.__get_element_data(element, level, count, subst_list)
 
-                # tools.analyze_element(self.__current_schema, element_data.name_short, self.__schema_prefix)
+                if self.config['generate_analysis_tree_20'] == 1:
+                    tools.generate_analysis_tree(self.__current_schema, element_data.name_short, self.__schema_prefix)
 
                 if element_data.typename in self.__schema_builtin_types:
                     self.__root_elements.append(element_data)
@@ -887,7 +888,8 @@ class SchemaAnalyzer(object):
                 element: XsdElement = self.__current_schema.elements.get(element_str)
                 element_data = self.__get_element_data(element, level, count, subst_list)
 
-                tools.analyze_element(self.__current_schema, element_data.name_short, self.__schema_prefix)
+                if self.config['generate_analysis_tree'] == 1:
+                    tools.generate_analysis_tree(self.__current_schema, element_data.name_short, self.__schema_prefix)
 
                 if element.type.is_complex():
                     if element.type.qualified_name:

@@ -118,7 +118,7 @@ def get_bit_count_for_value(max_value):
     return get_bits_to_decode(max_value)
 
 
-def analyze_element(schema: XMLSchema11, element_name: str, prefix):
+def generate_analysis_tree(schema: XMLSchema11, element_name: str, prefix):
     element: XsdElement = schema.elements.get(element_name)
     if element is None:
         return

@@ -20,6 +20,12 @@ log_file_name = 'logfile.txt'
 # and create separate code for the debugging functions
 add_debug_code = 0
 
+# generate analysis tree while generating code
+# this will generate an analysis tree file starting from the root element
+# for the 15118-20 every message has its separate tree file
+generate_analysis_tree = 0
+generate_analysis_tree_20 = 0
+
 # root structure definitions
 root_struct_name = 'exiDocument'
 root_parameter_name = 'exiDoc'
