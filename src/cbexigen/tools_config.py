@@ -21,6 +21,9 @@ CONFIG_ARGS: Dict[str, Union[str, Path]] = {
 CONFIG_PARAMS: Dict[str, Union[str, int]] = {
     # add debug code while generating code
     'add_debug_code': 0,
+    # generate analysis tree while generating code
+    'generate_analysis_tree': 0,
+    'generate_analysis_tree_20': 0,
     # root structure definitions
     'root_struct_name': 'exiDocument',
     'root_parameter_name': 'exiDoc',
@@ -90,6 +93,14 @@ def process_config_parameters():
     # add_debug_code
     if hasattr(config_module, 'add_debug_code'):
         CONFIG_PARAMS['add_debug_code'] = config_module.add_debug_code
+
+    ''' analysis tree definitions '''
+    # generate_analysis_tree
+    if hasattr(config_module, 'generate_analysis_tree'):
+        CONFIG_PARAMS['generate_analysis_tree'] = config_module.generate_analysis_tree
+    # generate_analysis_tree_20
+    if hasattr(config_module, 'generate_analysis_tree_20'):
+        CONFIG_PARAMS['generate_analysis_tree_20'] = config_module.generate_analysis_tree_20
 
     ''' root structure definitions '''
     # root_struct_name
