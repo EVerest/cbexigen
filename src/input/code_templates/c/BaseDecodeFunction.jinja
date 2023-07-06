@@ -11,7 +11,7 @@ static int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}
 
 {{ indent * level }}if (stream->status_callback)
 {{ indent * level }}{
-{{ indent * (level + 1) }}stream->status_callback({{ function_name|upper }}, 0, 0, 0);
+{{ indent * (level + 1) }}stream->status_callback({{ function_name|upper }}, 0, {{ start_grammar_id }}, 0);
 {{ indent * level }}}
 {%- endif %}
 
