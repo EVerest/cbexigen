@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2022 - 2023 chargebyte GmbH
 # Copyright (c) 2022 - 2023 Contributors to EVerest
+from typing import Union
 
 from xmlschema import XMLSchema11, XsdElement, XsdType, XsdAttribute
-from xmlschema.validators import XsdSimpleType, XsdComplexType, XsdGroup
+from xmlschema.validators import XsdSimpleType, XsdComplexType, XsdGroup, XsdAnyElement, Xsd11AnyElement
 
 from cbexigen import tools
 from cbexigen.typeDefinitions import AnalyzerData, OCCURRENCE_LIMITS_CORRECTED
@@ -294,6 +295,32 @@ class SchemaAnalyzer(object):
 
         return result
 
+    def __get_particle_from_any(self, any_element: Union[XsdElement, XsdAnyElement]):
+        particle = Particle(prefix=self.__schema_prefix)
+
+        particle.name = 'ANY'
+
+        # TODO: The type AnyType and the base type assignment base64Binary are chosen so that on the one hand
+        #  the type can be recognized easily and on the other hand the mechanisms of the type processing work.
+        #  Normally the base type should be String. But if the type is declared as string,
+        #  appropriate case distinctions must be implemented, especially for the PGPData element.
+        particle.type = 'anyType'
+        particle.type_short = 'anyType'
+        particle.base_type = 'base64Binary'
+
+        # should only be strict or lax
+        particle.process_content = any_element.process_contents
+
+        # Value chosen arbitrarily, can be changed
+        particle.max_length = 4
+        particle.min_occurs = any_element.min_occurs
+        if any_element.max_occurs is None:
+            particle.max_occurs = 1
+        else:
+            particle.max_occurs = any_element.max_occurs
+
+        return particle
+
     def __get_particle_from_attribute(self, attribute: XsdAttribute):
         particle = Particle(prefix=self.__schema_prefix)
 
@@ -507,6 +534,8 @@ class SchemaAnalyzer(object):
 
         for child in element.iterchildren():
             if child.name is None:
+                particle = self.__get_particle_from_any(child)
+                particles.append(particle)
                 continue
 
             if self.__is_abstract(child):
@@ -553,12 +582,12 @@ class SchemaAnalyzer(object):
                     if group.model == 'sequence':
                         current = []
                         for seq_item in group.iter_model():
-                            name = seq_item.local_name if seq_item.local_name is not None else 'other'
+                            name = seq_item.local_name if seq_item.local_name is not None else 'ANY'
                             current.append([name, index + 1])
 
                         choice.choice_sequences.append(current)
                 else:
-                    name = group.local_name if group.local_name is not None else 'other'
+                    name = group.local_name if group.local_name is not None else 'ANY'
                     choice.choice_items.append([name, index + 1])
 
             choice.min_occurs = model_group.min_occurs
@@ -591,10 +620,13 @@ class SchemaAnalyzer(object):
                     seq_current = 0
                     seq_old = 0
                     for component in element.type.content.iter_components():
-                        if component.name is not None and seq_current > 0:
-                            seq.append([component.local_name, seq_current])
+                        comp_name = component.local_name
+                        if isinstance(component, Xsd11AnyElement):
+                            comp_name = 'ANY'
+                        if comp_name is not None and seq_current > 0:
+                            seq.append([comp_name, seq_current])
                             for particle in elem_data.particles:
-                                if particle.name == component.local_name:
+                                if particle.name == comp_name:
                                     if particle.parent_choice_sequence_number < 0:
                                         particle.parent_has_choice_sequence = True
                                         particle.parent_choice_sequence_number = seq_current
