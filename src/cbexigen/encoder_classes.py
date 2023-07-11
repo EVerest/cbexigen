@@ -555,26 +555,28 @@ class ExiEncoderCode(ExiBaseCoderCode):
         grammar_content = ''
 
         for grammar in grammars:
-            if grammar.details[0].flag != GrammarFlag.ERROR:
-                # first reorder details, move first END Element to end of list
-                self.move_end_element_to_end_of_list(grammar)
+            if grammar.details[0].flag == GrammarFlag.ERROR:
+                continue
 
-                if element is None or grammar.details[0].flag == GrammarFlag.END:
-                    grammar_id_comment = grammar.grammar_comment
-                    event_content = self.__get_event_content(grammar, level + 1)
-                else:
-                    bits_to_write = tools.get_bits_to_decode(len(element.particles))
-                    grammar_id_comment = f'// Grammar: ID={grammar.grammar_id}; read/write bits={bits_to_write}; '
-                    grammar_id_comment += f'{grammar.details[0].flag} ({grammar.details[0].particle.name})'
-                    event_content = self.__get_event_content_namespace_element(element, grammar, level + 1)
+            # first reorder details, move first END Element to end of list
+            self.move_end_element_to_end_of_list(grammar)
 
-                temp = self.generator.get_template('BaseEncodeCaseGrammarId.jinja')
-                grammar_content += temp.render(grammar_id=grammar.grammar_id,
-                                               grammar_id_comment=grammar_id_comment,
-                                               event_content=event_content,
-                                               indent=self.indent, level=level)
+            if element is None or grammar.details[0].flag == GrammarFlag.END:
+                grammar_id_comment = grammar.grammar_comment
+                event_content = self.__get_event_content(grammar, level + 1)
+            else:
+                bits_to_write = tools.get_bits_to_decode(len(element.particles))
+                grammar_id_comment = f'// Grammar: ID={grammar.grammar_id}; read/write bits={bits_to_write}; '
+                grammar_id_comment += f'{grammar.details[0].flag} ({grammar.details[0].particle.name})'
+                event_content = self.__get_event_content_namespace_element(element, grammar, level + 1)
 
-                grammar_content += '\n'
+            temp = self.generator.get_template('BaseEncodeCaseGrammarId.jinja')
+            grammar_content += temp.render(grammar_id=grammar.grammar_id,
+                                            grammar_id_comment=grammar_id_comment,
+                                            event_content=event_content,
+                                            indent=self.indent, level=level)
+
+            grammar_content += '\n'
 
         return self.trim_lf(grammar_content)
 
