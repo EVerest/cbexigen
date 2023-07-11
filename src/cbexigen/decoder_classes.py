@@ -542,9 +542,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
         for grammar in grammars:
             if grammar.details[0].flag == GrammarFlag.START:
-                names = []
-                for particle in element.particles:
-                    names.append(particle.name)
+                names = [particle.name for particle in element.particles]
                 names.sort()
 
                 bits_to_read = tools.get_bits_to_decode(len(names))
@@ -592,26 +590,28 @@ class ExiDecoderCode(ExiBaseCoderCode):
         grammar_content = ''
 
         for grammar in grammars:
-            if grammar.details[0].flag != GrammarFlag.ERROR:
-                add_debug_code = 0
-                type_parameter = ''
-                for detail in grammar.details:
-                    if detail.flag == GrammarFlag.START and detail.particle is not None:
-                        prefixed_type = detail.particle.prefixed_name
-                        add_debug_code = self.get_status_for_add_debug_code(prefixed_type)
-                        type_parameter = CONFIG_PARAMS['decode_function_prefix'] + prefixed_type
-                        break
+            if grammar.details[0].flag == GrammarFlag.ERROR:
+                continue
 
-                temp = self.generator.get_template('BaseDecodeCaseGrammarId.jinja')
-                grammar_content += temp.render(grammar_id=grammar.grammar_id,
-                                               grammar_id_comment=grammar.grammar_comment,
-                                               bits_to_read=grammar.bits_to_read,
-                                               event_content=self.__get_event_content(grammar, 4),
-                                               add_debug_code=add_debug_code,
-                                               type_parameter=type_parameter,
-                                               indent=self.indent, level=level)
+            add_debug_code = 0
+            type_parameter = ''
+            for detail in grammar.details:
+                if detail.flag == GrammarFlag.START and detail.particle is not None:
+                    prefixed_type = detail.particle.prefixed_name
+                    add_debug_code = self.get_status_for_add_debug_code(prefixed_type)
+                    type_parameter = CONFIG_PARAMS['decode_function_prefix'] + prefixed_type
+                    break
 
-                grammar_content += '\n'
+            temp = self.generator.get_template('BaseDecodeCaseGrammarId.jinja')
+            grammar_content += temp.render(grammar_id=grammar.grammar_id,
+                                            grammar_id_comment=grammar.grammar_comment,
+                                            bits_to_read=grammar.bits_to_read,
+                                            event_content=self.__get_event_content(grammar, 4),
+                                            add_debug_code=add_debug_code,
+                                            type_parameter=type_parameter,
+                                            indent=self.indent, level=level)
+
+            grammar_content += '\n'
 
         return self.trim_lf(grammar_content)
 
