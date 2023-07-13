@@ -750,9 +750,16 @@ class SchemaAnalyzer(object):
             element_data.particles = []
             attribute_list = element.attributes
             if len(attribute_list) > 0:
+                temp_list = []
                 for attribute_name in attribute_list:
                     attribute = element.type.attributes[attribute_name]
-                    element_data.particles.append(self.__get_particle_from_attribute(attribute))
+                    # element_data.particles.append(self.__get_particle_from_attribute(attribute))
+                    temp_list.append(self.__get_particle_from_attribute(attribute))
+
+                if len(temp_list) > 1:
+                    temp_list.sort(key=lambda item: item.name, reverse=False)
+                for particle in temp_list:
+                    element_data.particles.append(particle)
 
                 if element.type.content_type_label == 'simple':
                     for content in element.attributes.iter_components():
