@@ -2,7 +2,6 @@
 # Copyright (c) 2022 - 2023 chargebyte GmbH
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 
-import os
 from typing import List
 from cbexigen.base_coder_classes import ExiBaseCoderHeader, ExiBaseCoderCode
 from cbexigen import tools_generator, tools
@@ -345,7 +344,8 @@ class ExiEncoderCode(ExiBaseCoderCode):
                 type_content = self.__get_content_encode_byte(grammar.element_typename, detail, level)
             elif detail.particle.integer_base_type == 'uint16':
                 if detail.particle.is_array:
-                    type_content = self.__get_content_encode_unsigned_short_array(grammar.element_typename, detail, level)
+                    type_content = \
+                        self.__get_content_encode_unsigned_short_array(grammar.element_typename, detail, level)
                 else:
                     type_content = self.__get_content_encode_short(grammar.element_typename, detail, level)
             elif detail.particle.integer_base_type == 'uint32':
@@ -572,9 +572,9 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
             temp = self.generator.get_template('BaseEncodeCaseGrammarId.jinja')
             grammar_content += temp.render(grammar_id=grammar.grammar_id,
-                                            grammar_id_comment=grammar_id_comment,
-                                            event_content=event_content,
-                                            indent=self.indent, level=level)
+                                           grammar_id_comment=grammar_id_comment,
+                                           event_content=event_content,
+                                           indent=self.indent, level=level)
 
             grammar_content += '\n'
 

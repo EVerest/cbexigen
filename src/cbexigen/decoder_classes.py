@@ -2,7 +2,6 @@
 # Copyright (c) 2022 - 2023 chargebyte GmbH
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 
-import os
 from typing import List
 from cbexigen.base_coder_classes import ExiBaseCoderHeader, ExiBaseCoderCode
 from cbexigen import tools_generator, tools
@@ -20,7 +19,7 @@ class ExiDecoderHeader(ExiBaseCoderHeader):
     def __init__(self, parameters, enable_logging=True):
         super(ExiDecoderHeader, self).__init__(parameters=parameters, enable_logging=enable_logging)
 
-        self.__is_iso20 = True if str(self.parameters['prefix']).startswith('iso20_') else False
+        self.__is_iso20 = str(self.parameters['prefix']).startswith('iso20_')
 
         self.__include_content = ''
         self.__code_content = ''
@@ -67,7 +66,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
     def __init__(self, parameters, analyzer_data, enable_logging=True):
         super(ExiDecoderCode, self).__init__(parameters, analyzer_data, enable_logging)
 
-        self.__is_iso20 = True if str(self.parameters['prefix']).startswith('iso20_') else False
+        self.__is_iso20 = str(self.parameters['prefix']).startswith('iso20_')
 
         self.__include_content = ''
         self.__code_content = ''
@@ -95,7 +94,8 @@ class ExiDecoderCode(ExiBaseCoderCode):
         if detail.particle.is_attribute:
             decode_comment += ' (Attribute)'
         if detail.particle.parent_has_choice_sequence:
-            type_value = f'{element_typename}->choice_{detail.particle.parent_choice_sequence_number}.{detail.particle.name}'
+            type_value = \
+                f'{element_typename}->choice_{detail.particle.parent_choice_sequence_number}.{detail.particle.name}'
             type_content = type_value + f'.{detail.particle.value_parameter_name}'
             type_content_len = type_value + f'.{detail.particle.length_parameter_name}'
         else:
@@ -122,7 +122,8 @@ class ExiDecoderCode(ExiBaseCoderCode):
         if detail.particle.is_attribute:
             decode_comment += ' (Attribute)'
         if detail.particle.parent_has_choice_sequence:
-            type_value = f'{element_typename}->choice_{detail.particle.parent_choice_sequence_number}.{detail.particle.name}'
+            type_value = \
+                f'{element_typename}->choice_{detail.particle.parent_choice_sequence_number}.{detail.particle.name}'
             type_content = type_value + f'.{detail.particle.value_parameter_name}'
             type_content_len = type_value + f'.{detail.particle.length_parameter_name}'
         elif detail.particle.has_simple_content:
@@ -422,17 +423,18 @@ class ExiDecoderCode(ExiBaseCoderCode):
             temp = self.generator.get_template('BaseDecodeEndElement.jinja')
             return temp.render(next_grammar=detail.next_grammar, indent=self.indent, level=level)
 
-        type_content = f"{self.indent * level}// tbd! decode: '{detail.particle.type_short}', base type '{detail.particle.typename}'\n"
+        type_content = f"{self.indent * level}// tbd! decode: '{detail.particle.type_short}', " + \
+                       f"base type '{detail.particle.typename}'\n"
         type_content += f"{self.indent * level}error = EXI_ERROR__DECODER_NOT_IMPLEMENTED;\n"
 
         # If the associated schema datatype is directly or indirectly derived from xsd:integer
         # and the bounded range determined by its minInclusiveXS2, minExclusiveXS2, maxInclusiveXS2
         # and maxExclusiveXS2 facets has 4096 or fewer values
-        type_is_restricted_int = detail.particle.integer_base_type \
-                                 and detail.particle.integer_base_type != 'boolean' \
-                                 and detail.particle.integer_base_type != 'char' \
-                                 and detail.particle.bit_count_for_coding > 0 \
-                                 and (detail.particle.max_value - detail.particle.min_value + 1 <= 4096)
+        type_is_restricted_int = (detail.particle.integer_base_type
+                                  and detail.particle.integer_base_type != 'boolean'
+                                  and detail.particle.integer_base_type != 'char'
+                                  and detail.particle.bit_count_for_coding > 0
+                                  and (detail.particle.max_value - detail.particle.min_value + 1 <= 4096))
 
         if detail.particle.is_enum:
             if detail.particle.is_array:
@@ -604,12 +606,12 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
             temp = self.generator.get_template('BaseDecodeCaseGrammarId.jinja')
             grammar_content += temp.render(grammar_id=grammar.grammar_id,
-                                            grammar_id_comment=grammar.grammar_comment,
-                                            bits_to_read=grammar.bits_to_read,
-                                            event_content=self.__get_event_content(grammar, 4),
-                                            add_debug_code=add_debug_code,
-                                            type_parameter=type_parameter,
-                                            indent=self.indent, level=level)
+                                           grammar_id_comment=grammar.grammar_comment,
+                                           bits_to_read=grammar.bits_to_read,
+                                           event_content=self.__get_event_content(grammar, 4),
+                                           add_debug_code=add_debug_code,
+                                           type_parameter=type_parameter,
+                                           indent=self.indent, level=level)
 
             grammar_content += '\n'
 
