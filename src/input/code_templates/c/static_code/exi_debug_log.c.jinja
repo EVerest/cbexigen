@@ -41,21 +41,21 @@ static void status_internal(int message_id, int status_code, int value_1, int va
     case EXI_DEBUG__BITSTREAM_WRITE_BITS:
         if (value_2 > 31 && value_2 < 128)
         {
-            fprintf(logfile, "exi_bitstream_t - write_bits: bit_count = %d; value = %d = '%c'\n", value_1, value_2, value_2);
+            fprintf(logfile, "exi_bitstream_t - write_bits: bit_count = %d; value = %d (0x%02x) = '%c'\n", value_1, value_2, value_2, value_2);
         }
         else
         {
-            fprintf(logfile, "exi_bitstream_t - write_bits: bit_count = %d; value = %d\n", value_1, value_2);
+            fprintf(logfile, "exi_bitstream_t - write_bits: bit_count = %d; value = %d (0x%02x)\n", value_1, value_2, value_2);
         }
         break;
     case EXI_DEBUG__BITSTREAM_READ_BITS:
         if (value_2 > 31 && value_2 < 128)
         {
-            fprintf(logfile, "exi_bitstream_t - read_bits: bit_count = %d; value = %d = '%c'\n", value_1, value_2, value_2);
+            fprintf(logfile, "exi_bitstream_t - read_bits: bit_count = %d; value = %d (0x%02x) = '%c'\n", value_1, value_2, value_2, value_2);
         }
         else
         {
-            fprintf(logfile, "exi_bitstream_t - read_bits: bit_count = %d; value = %d\n", value_1, value_2);
+            fprintf(logfile, "exi_bitstream_t - read_bits: bit_count = %d; value = %d (0x%02x)\n", value_1, value_2, value_2);
         }
         break;
     // *** basetypes encoder ***
