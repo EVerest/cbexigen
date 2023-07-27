@@ -522,7 +522,8 @@ class ExiBaseCoderCode:
                                  f'Grammar ID={grammar.grammar_id}',
                                  f'eventCode={grammar.details[0].event_index}',
                                  f'decode={grammar.details[0].particle.typename} ' +
-                                 f"(Particle '{grammar.details[0].particle.name}')",
+                                 f"(Particle '{grammar.details[0].particle.name}'" +
+                                 (" (attribute)" if grammar.details[0].particle.is_attribute else "") + ")",
                                  f'next ID={grammar.details[0].next_grammar}',
                             ]))
             else:
@@ -573,7 +574,8 @@ class ExiBaseCoderCode:
                                          f'Grammar ID={grammar.grammar_id}',
                                          f'eventCode={grammar_detail.event_index}',
                                          f'decode={ptname} ' +
-                                         f"(Particle '{pname}')",
+                                         f"(Particle '{pname}'" +
+                                         (" (attribute)" if grammar_detail.particle.is_attribute else "") + ")",
                                          f'next ID={grammar_detail.next_grammar}',
                                     ]))
                         event_code += 1
