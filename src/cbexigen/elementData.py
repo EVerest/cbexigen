@@ -115,6 +115,11 @@ class Particle:
         return not bool(self.min_occurs)
 
     @property
+    def is_any(self) -> bool:
+        # should probably be set by the analyzer, and not via name
+        return self.name == 'ANY'
+
+    @property
     def simple_type(self) -> str:
         result = self.type_short
 
