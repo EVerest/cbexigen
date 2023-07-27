@@ -774,8 +774,7 @@ class SchemaAnalyzer(object):
 
                 if len(temp_list) > 1:
                     temp_list.sort(key=lambda item: item.name, reverse=False)
-                for particle in temp_list:
-                    element_data.particles.append(particle)
+                element_data.particles.extend(temp_list)
 
                 if element.type.content_type_label == 'simple':
                     for content in element.attributes.iter_components():
