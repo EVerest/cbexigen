@@ -49,6 +49,10 @@ class ElementGrammarDetail:
 
         return self.particle.min_occurs >= 1 and self.particle.max_occurs > 1
 
+    @property
+    def is_any(self):
+        return self.particle is not None and self.particle.is_any
+
 
 @dataclass
 class ElementGrammar:
