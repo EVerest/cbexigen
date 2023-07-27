@@ -7,8 +7,14 @@ from cbexigen import tools_generator, tools
 from cbexigen.elementData import Particle, ElementData, Choice
 from cbexigen.elementGrammar import GrammarFlag, ElementGrammar, ElementGrammarDetail
 from cbexigen.tools_config import CONFIG_PARAMS
-from cbexigen.tools_logging import log_write_error, log_init_logger, log_write_logger, \
-    log_deinit_logger, log_exists_logger
+from cbexigen.tools_logging import (
+    log_write,
+    log_write_error,
+    log_init_logger,
+    log_write_logger,
+    log_deinit_logger,
+    log_exists_logger,
+)
 
 # ---------------------------------------------------------------------------
 # Exi decoder and encoder common base header class
@@ -345,30 +351,30 @@ class ExiBaseCoderCode:
         def _debug_element_particle_properties(element: ElementData):
             particle: Particle
             for particle in element.particles:
-                log_write_error(f"Investigating particle '{particle.name}'")
-                log_write_error(f"\tmin_occurs: {particle.min_occurs}")
-                log_write_error(f"\tmax_occurs: {particle.max_occurs}")
+                log_write(f"Investigating particle '{particle.name}'")
+                log_write(f"\tmin_occurs: {particle.min_occurs}")
+                log_write(f"\tmax_occurs: {particle.max_occurs}")
                 if particle.min_occurs_old != -1 and not particle.parent_has_sequence:
-                    log_write_error(f"\tpeculiar: min_occurs_old: {particle.min_occurs_old}")
+                    log_write(f"\tpeculiar: min_occurs_old: {particle.min_occurs_old}")
                 if particle.max_occurs_old != -1 and not particle.parent_has_sequence:
-                    log_write_error(f"\tpeculiar: max_occurs_old: {particle.max_occurs_old}")
+                    log_write(f"\tpeculiar: max_occurs_old: {particle.max_occurs_old}")
                 if _particle_is_in_choice(element, particle):
                     group = []
                     group, choice_name_list, min_o, max_o = self._get_choice_options(element, particle)
-                    log_write_error(f"\tis in a choice group, min_occurs = {min_o}, max_occurs = {max_o}")
-                    log_write_error([x.name if x is not None else '' for x in group])
+                    log_write(f"\tis in a choice group, min_occurs = {min_o}, max_occurs = {max_o}")
+                    log_write([x.name if x is not None else '' for x in group])
                 if _particle_is_in_abstract_choice(element, particle):
                     group = []
                     group, choice_name_list, min_o, max_o = self._get_choice_options(element, particle)
-                    log_write_error(f"\tis in an abstract choice group, min_occurs = {min_o}, max_occurs = {max_o}")
-                    log_write_error([x.name if x is not None else '' for x in group])
+                    log_write(f"\tis in an abstract choice group, min_occurs = {min_o}, max_occurs = {max_o}")
+                    log_write([x.name if x is not None else '' for x in group])
                 if particle.parent_has_sequence:
-                    log_write_error("\tis in a sequence")
-                    log_write_error(f"\tmin_occurs_old: {particle.min_occurs_old}")
-                    log_write_error(f"\tmax_occurs_old: {particle.max_occurs_old}")
+                    log_write("\tis in a sequence")
+                    log_write(f"\tmin_occurs_old: {particle.min_occurs_old}")
+                    log_write(f"\tmax_occurs_old: {particle.max_occurs_old}")
                 if particle.parent_has_choice_sequence:
-                    log_write_error(f"\tparent is in a sequence which is choice, number {particle.parent_choice_sequence_number}")
-                    log_write_error([x.name if x is not None else '' for x in _get_choice_sequence(element, particle)])
+                    log_write(f"\tparent is in a sequence which is choice, number {particle.parent_choice_sequence_number}")
+                    log_write([x.name if x is not None else '' for x in _get_choice_sequence(element, particle)])
 
         # _debug_element_particle_properties(element)
 
