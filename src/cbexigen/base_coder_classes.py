@@ -2,6 +2,7 @@
 # Copyright (c) 2022 - 2023 chargebyte GmbH
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 
+import copy
 from typing import List
 from cbexigen import tools_generator, tools
 from cbexigen.elementData import Particle, ElementData, Choice
@@ -501,6 +502,52 @@ class ExiBaseCoderCode:
             _add_subsequent_grammar_details(element, particle, particle_index,
                                             index_last_nonoptional_particle, particle_is_part_of_sequence)
             grammar = self.create_empty_grammar()
+
+        # at this point, the grammar detail lists for this element's grammars are complete
+
+        grammar: ElementGrammar
+        # reorder: ANY as last real particle(s)
+        for grammar in self.element_grammars:
+            self.__expand_any_grammar(grammar)
+
+    def __expand_any_grammar(self, grammar):
+        # take the list of grammars details
+        # for every 'ANY' particle detail (there can theoretically be multiple):
+        #    move it to the end, instead of alphabetically
+        #    add an extra grammar detail after the 'END' detail (needs to be countable)
+        #
+        # FIXME: make the appended 'ANY' detail a special pseudo detail (different handling)
+        sorted_element_grammar_details: list[ElementGrammarDetail] = []
+        any_type_details: list[ElementGrammarDetail] = []
+        end_details: list[ElementGrammarDetail] = []
+        grammar_detail: ElementGrammarDetail
+        for grammar_detail in grammar.details:
+            if grammar_detail.flag == GrammarFlag.END:
+                end_details.append(grammar_detail)
+            elif grammar_detail.is_any:
+                any_type_details.append(grammar_detail)
+            else:
+                sorted_element_grammar_details.append(grammar_detail)
+        if end_details:
+            # generic/dummy ANYs first, then END, then implemented string/binary ANYs
+            sorted_element_grammar_details.extend(any_type_details)
+            sorted_element_grammar_details.extend(end_details)
+            # sorted_element_grammar_details.extend(any_type_details)
+            for any_detail in any_type_details:
+                # create new property for duplicated events
+                # TBD any_detail.property = foo
+                final_any_detail: ElementGrammarDetail = copy.copy(any_detail)
+                final_any_detail.any_is_dummy = False
+                sorted_element_grammar_details.append(final_any_detail)
+        else:
+            # assumption: without an END, only the implemented string/binary ANYs get event codes
+            # (no such case within V2G, cannot be confirmed, needs to be checked in EXI standard)
+            for any_detail in any_type_details:
+                any_detail.any_is_dummy = False
+            sorted_element_grammar_details.extend(any_type_details)
+
+        # overwrite the original list
+        grammar.details = sorted_element_grammar_details
 
     def generate_event_info(self, grammars: List[ElementGrammar], element: ElementData):
         len_grammars = len(grammars)
