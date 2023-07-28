@@ -53,6 +53,10 @@ class ElementGrammarDetail:
     def is_any(self):
         return self.particle is not None and self.particle.is_any
 
+    @property
+    def particle_name(self):
+        return self.particle.name if self.particle else 'END' if self.flag == GrammarFlag.END else 'None'
+
 
 @dataclass
 class ElementGrammar:
