@@ -7,5 +7,6 @@
 {%- endif %}
 {{ indent * level }}{
 {{ indent * (level + 1) }}{{ event_comment }}
-{{ type_content }}
+{{ indent * (level + 1) }}error = EXI_ERROR__ENCODER_NOT_IMPLEMENTED;
+{{ indent * (level + 1) }}done = 1;
 {{ indent * level }}}
