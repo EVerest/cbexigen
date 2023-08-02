@@ -397,7 +397,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         content = ''
 
         event_comment = f'// Event: {detail.flag}; '
-        event_comment += f'set next={detail.next_grammar}'
+        event_comment += f'next={detail.next_grammar}'
         temp = self.generator.get_template('EncodeEventEndElement.jinja')
         content += temp.render(bits_to_write=bits_to_write,
                                value_to_write=detail.event_index,
@@ -485,14 +485,11 @@ class ExiEncoderCode(ExiBaseCoderCode):
                                        indent=self.indent, level=level)
             else:
                 # unsupported particle which appears in the event list
-                event_comment = f'// Event: None (index={detail.event_index}); next={detail.next_grammar}'
-                type_content = str(self.indent * 4) + 'error = EXI_ERROR__NO_ERROR;\n'
-                type_content += str(self.indent * 4) + 'done = 1;'
+                event_comment = f'// Event: {detail.particle_name} (index={detail.event_index}); next={detail.next_grammar}'
 
                 temp = self.generator.get_template('EncodeEventOptionalElementNone.jinja')
                 content += temp.render(option=option,
                                        event_comment=event_comment,
-                                       type_content=type_content,
                                        indent=self.indent, level=level)
 
         content += '\n'
