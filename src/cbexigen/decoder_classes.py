@@ -459,16 +459,33 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
         return decode_content
 
+    def __get_content_decode_no_event(self, element_typename, detail: ElementGrammarDetail, level):
+        decode_comment = '// decode: event not accepted'
+        temp = self.generator.get_template('DecodeTypeNoEvent.jinja')
+        decode_content = temp.render(decode_comment=decode_comment,
+                                     indent=self.indent, level=level)
+
+        return decode_content
+
+    def __get_content_decode_not_implemented(self, element_typename, detail: ElementGrammarDetail, level):
+        decode_comment = f"// tbd! decode: '{detail.particle.type_short}', base type '{detail.particle.typename}"
+        temp = self.generator.get_template('DecodeTypeNotImplemented.jinja')
+        decode_content = temp.render(decode_comment=decode_comment,
+                                     indent=self.indent, level=level)
+
+        return decode_content
+
     def __get_type_content(self, grammar: ElementGrammar, detail: ElementGrammarDetail, level):
         if detail.particle is None:
             temp = self.generator.get_template('BaseDecodeEndElement.jinja')
             return temp.render(next_grammar=detail.next_grammar, indent=self.indent, level=level)
 
-        type_content = f"{self.indent * level}// tbd! decode: '{detail.particle.type_short}', " + \
-                       f"base type '{detail.particle.typename}'\n"
-        type_content += f"{self.indent * level}error = EXI_ERROR__DECODER_NOT_IMPLEMENTED;\n"
+        # default content for types not covered below
+        type_content = self.__get_content_decode_not_implemented(grammar.element_typename, detail, level)
 
-        if detail.particle.is_enum:
+        if detail.is_any and detail.any_is_dummy:
+            type_content = self.__get_content_decode_no_event(grammar.element_typename, detail, level)
+        elif detail.particle.is_enum:
             if detail.particle.is_array:
                 type_content = self.__get_content_decode_enum_array(grammar.element_typename, detail, level)
             else:
