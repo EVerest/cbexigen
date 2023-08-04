@@ -321,14 +321,23 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
         return content
 
+    def __get_content_encode_not_implemented(self, element_typename, detail: ElementGrammarDetail, level):
+        encode_comment = f"// tbd! decode: '{detail.particle.type_short}', " + \
+            f"base type '{detail.particle.typename}'"
+
+        temp = self.generator.get_template('EncodeTypeNotImplemented.jinja')
+        content = temp.render(encode_comment=encode_comment,
+                              indent=self.indent, level=level)
+
+        return content
+
     def __get_type_content(self, grammar: ElementGrammar, detail: ElementGrammarDetail, level):
         if detail.particle is None:
             temp = self.generator.get_template('BaseDecodeEndElement.jinja')
             return temp.render(next_grammar=detail.next_grammar, indent=self.indent, level=level)
 
-        type_content = f"{self.indent * level}// tbd! decode: '{detail.particle.type_short}'" \
-                       f", base type '{detail.particle.typename}'\n"
-        type_content += f"{self.indent * level}error = EXI_ERROR__ENCODER_NOT_IMPLEMENTED;\n"
+        # default content for types not covered below
+        type_content = self.__get_content_encode_not_implemented(grammar.element_typename, detail, level)
 
         # If the associated schema datatype is directly or indirectly derived from xsd:integer
         # and the bounded range determined by its minInclusiveXS2, minExclusiveXS2, maxInclusiveXS2
