@@ -569,12 +569,11 @@ class ExiBaseCoderCode:
                                                     f"{grammar_detail.particle.name}")
 
                         ptname = grammar_detail.particle.typename if grammar_detail.particle is not None else '(None)'
-                        pname = grammar_detail.particle.name if grammar_detail.particle is not None else ''
                         self.log(', '.join([
                                          f'Grammar ID={grammar.grammar_id}',
                                          f'eventCode={grammar_detail.event_index}',
                                          f'decode={ptname} ' +
-                                         f"(Particle '{pname}'" +
+                                         f"(Particle '{grammar_detail.particle_name}'" +
                                          (" (attribute)" if grammar_detail.particle.is_attribute else "") + ")",
                                          f'next ID={grammar_detail.next_grammar}',
                                     ]))
