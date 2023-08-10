@@ -561,9 +561,10 @@ class ExiBaseCoderCode:
                 log_write_error(f'ERROR! Empty item list. Grammar {grammar.grammar_id}')
                 continue
 
-            # case 1: just one element, START
+            # case 1: just one element, START as singular grammar detail
             if len_details == 1 and grammar.details[0].flag == GrammarFlag.START:
                 grammar.details[0].event_index = 0
+                # the next grammar must be that of the subsequent particle
                 grammar.details[0].next_grammar = grammars[idx_grammar + 1].grammar_id
                 self.log(', '.join([
                                  f'Grammar ID={grammar.grammar_id}',
@@ -577,19 +578,32 @@ class ExiBaseCoderCode:
                 end_elem_detail_index = -1
                 event_code = 0
                 grammar_detail: ElementGrammarDetail  # type hint
+                # first, find the index of the END grammar (used below)
                 for grammar_detail_index, grammar_detail in enumerate(grammar.details):
                     if grammar_detail.flag == GrammarFlag.END:
                         end_elem_detail_index = grammar_detail_index
-                        continue
+                        break
 
-                    if grammar_detail.flag == GrammarFlag.START:
-                        grammar_detail.event_index = event_code
+                for grammar_detail_index, grammar_detail in enumerate(grammar.details):
+                    grammar_detail.event_index = grammar_detail_index
 
+                    if grammar_detail.flag == GrammarFlag.END:
+                        # the next grammar is the ERROR grammar
+                        grammar_detail.next_grammar = self.grammar_unknown
+                        self.log(', '.join([
+                                        f'Grammar ID={grammar.grammar_id}',
+                                        f'eventCode={grammar_detail.event_index}',
+                                        GrammarFlag.END,
+                                        f'next ID={grammar_detail.next_grammar}',
+                                    ]))
+
+                    elif grammar_detail.flag == GrammarFlag.START:
                         if grammar_detail_index < len_details:
                             if end_elem_detail_index >= 0 and len_details == 2:
                                 grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
                             else:
                                 # find the particle's index in the element
+                                # FIXME can this break on repeated occurrences, as in PGPKeyDataType?
                                 part_index: int = None
                                 for part_index, part in enumerate(element.particles):
                                     if grammar_detail.particle == part:
@@ -608,7 +622,7 @@ class ExiBaseCoderCode:
 
                                     if _is_final_particle(element, part_index):
                                         # next grammar is always END for the final particle
-                                        grammar_detail.next_grammar = grammars[-2].grammar_id
+                                        grammar_detail.next_grammar = self.grammar_end_element
                                     else:
                                         grammar_detail.next_grammar = element.particles_next_grammar_ids[part_index]
                                 else:
@@ -634,16 +648,6 @@ class ExiBaseCoderCode:
                     else:
                         # the END element gets ERROR as next grammar
                         grammar_detail.next_grammar = grammars[len_grammars - 1].grammar_id
-
-                if end_elem_detail_index >= 0:
-                    grammar.details[end_elem_detail_index].event_index = event_code
-                    grammar.details[end_elem_detail_index].next_grammar = grammars[len_grammars - 1].grammar_id
-                    self.log(', '.join([
-                                     f'Grammar ID={grammar.grammar_id}',
-                                     f'eventCode={grammar.details[end_elem_detail_index].event_index}',
-                                     GrammarFlag.END,
-                                     f'next ID={grammar.details[end_elem_detail_index].next_grammar}',
-                                 ]))
 
     # ---------------------------------------------------------------------------
     # general generator functions

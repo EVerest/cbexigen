@@ -538,14 +538,12 @@ class ExiDecoderCode(ExiBaseCoderCode):
         event_content = ''
 
         if grammar.details[0].flag != GrammarFlag.ERROR:
-            end_id = -1
             detail: ElementGrammarDetail = None
-            for index, detail in enumerate(grammar.details):
+            for detail in grammar.details:
                 if detail.flag == GrammarFlag.END:
-                    end_id = index
-                    continue
-
-                if detail.particle is not None:
+                    event_comment = f'// Event: {detail.flag}; ' + \
+                                    f'next={detail.next_grammar}'
+                elif detail.particle is not None:
                     event_comment = f'// Event: {detail.flag} ({detail.particle.name}, ' + \
                                     f'{detail.particle.type_short} ({detail.particle.typename})); ' + \
                                     f'next={detail.next_grammar}'
@@ -563,17 +561,6 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                              # type_parameter=type_parameter,
                                              indent=self.indent, level=level)
                 event_content += '\n'
-
-            if end_id >= 0:
-                event_comment = f'// Event: {grammar.details[end_id].flag}; '
-                event_comment += f'set next={grammar.details[end_id].next_grammar}'
-                temp = self.generator.get_template('BaseDecodeCaseEventId.jinja')
-                event_content += temp.render(event_id=grammar.details[end_id].event_index,
-                                             event_id_comment=event_comment,
-                                             type_content=self.__get_type_content(grammar, grammar.details[end_id], 5),
-                                             indent=self.indent, level=level)
-
-            event_content += '\n'
 
         return self.trim_lf(event_content)
 
