@@ -161,39 +161,58 @@ class DatatypeHeader:
                            type_def=particle.prefixed_define_for_array,
                            variable_comment=comment)
 
-    def __generate_char_array_struct(self, particle: Particle):
+    def __generate_char_array_struct(self, particle: Particle, indent_level=1):
         # generate struct for array with length variable
+        indent = ' ' * self.config['c_code_indent_chars']
         comment = self.__get_particle_comment(particle)
+        type_array = 0
+        struct_def = ''
+
         temp = self.generator.get_template("SubStructChar.jinja")
-        return temp.render(struct_name=particle.name,
+        return temp.render(indent=indent, level=indent_level,
+                           struct_name=particle.name,
                            struct_type="char",
                            type_def=particle.prefixed_define_for_base_type,
+                           type_array=type_array,
+                           struct_def=struct_def,
                            variable_comment=comment)
 
-    def __generate_char_array_struct_from_string(self, particle: Particle, with_used=False):
+    def __generate_char_array_struct_from_string(self, particle: Particle, with_used=False, indent_level=1):
         # generate struct for array with length variable
+        indent = ' ' * self.config['c_code_indent_chars']
         comment = self.__get_particle_comment(particle)
+        type_array = 1 if particle.max_occurs > 1 else 0
+        struct_def = particle.prefixed_define_for_array if particle.max_occurs > 1 else ''
+
         temp = self.generator.get_template("SubStructCharWithUsed.jinja" if with_used else "SubStructChar.jinja")
-        return temp.render(struct_name=particle.name,
+        return temp.render(indent=indent, level=indent_level,
+                           struct_name=particle.name,
                            struct_type="char",
                            type_def=particle.prefixed_define_for_base_type,
+                           type_array=type_array,
+                           struct_def=struct_def,
                            variable_comment=comment)
 
     def __generate_byte_array_struct_from_binary(self, particle: Particle, with_used=False, indent_level=1):
         # generate struct for array with length variable
         indent = ' ' * self.config['c_code_indent_chars']
         comment = self.__get_particle_comment(particle)
-        temp = self.generator.get_template("SubStructByteWithIsUsed.jinja" if with_used else "SubStructByte.jinja")
+        type_array = 1 if particle.max_occurs > 1 else 0
+        struct_def = particle.prefixed_define_for_array if particle.max_occurs > 1 else ''
 
+        temp = self.generator.get_template("SubStructByteWithIsUsed.jinja" if with_used else "SubStructByte.jinja")
         return temp.render(indent=indent, level=indent_level,
                            struct_name=particle.name,
                            struct_type="uint8_t",
                            type_def=particle.prefixed_define_for_base_type,
+                           type_array=type_array,
+                           struct_def=struct_def,
                            variable_comment=comment)
 
     def __generate_variable_with_used(self, particle: Particle, is_in_types=False):
         # generate variable with type or struct type and isUsed flag
         comment = self.__get_particle_comment(particle)
+        type_str = ''
 
         if particle.integer_base_type is not None:
             if particle.integer_base_type in tools.TYPE_TRANSLATION_C:
@@ -217,6 +236,7 @@ class DatatypeHeader:
     def __generate_variable(self, particle: Particle, is_in_types=False):
         # generate variable with type or struct type
         comment = self.__get_particle_comment(particle)
+        type_str = ''
 
         if particle.integer_base_type is not None:
             if particle.integer_base_type in tools.TYPE_TRANSLATION_C:
@@ -233,8 +253,8 @@ class DatatypeHeader:
                            variable_type=type_str,
                            variable_comment=comment)
 
-    def __generate_string(self, particle: Particle, with_used=False):
-        return self.__generate_char_array_struct_from_string(particle, with_used)
+    def __generate_string(self, particle: Particle, with_used=False, indent_level=1):
+        return self.__generate_char_array_struct_from_string(particle, with_used, indent_level)
 
     def __generate_base64binary(self, particle: Particle, with_used=False, indent_level=1):
         return self.__generate_byte_array_struct_from_binary(particle, with_used, indent_level)
@@ -285,7 +305,7 @@ class DatatypeHeader:
             else:
                 particle_type = tools_generator.get_particle_type(particle)
                 if particle.simple_type_is_string:
-                    content += self.__generate_string(particle, True)
+                    content += self.__generate_string(particle, True, indent_level)
                 elif particle_type == 'binary':
                     content += self.__generate_base64binary(particle, True, indent_level) + '\n'
                 else:
@@ -572,11 +592,12 @@ class DatatypeCode:
     def __get_type_member_array(particle: Particle):
         result = particle.name + '.arrayLen'
 
-        particle_type = tools_generator.get_particle_type(particle)
-        if particle_type == 'string':
-            result = particle.name + '.charactersLen'
-        elif particle_type == 'binary':
-            result = particle.name + '.bytesLen'
+        if particle.max_occurs == 1:
+            particle_type = tools_generator.get_particle_type(particle)
+            if particle_type == 'string':
+                result = particle.name + '.charactersLen'
+            elif particle_type == 'binary':
+                result = particle.name + '.bytesLen'
 
         return result
 

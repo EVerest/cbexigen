@@ -1,4 +1,9 @@
 {{ indent * level }}{{ decode_comment }}
+{%- if type_array == 1 %}
+{{ indent * level }}if ({{ type_array_length }} < {{ type_array_define }})
+{{ indent * level }}{
+{%- set level = level + 1 %}
+{%- endif %}
 {%- if type_attribute == 0 %}
 {{ indent * level }}error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
 {{ indent * level }}if (error == 0)
@@ -8,6 +13,7 @@
 {%- else %}
 {%- set level = level - 2 %}
 {%- endif %}
+{%- if type_array == 1 %}
 {{ indent * (level + 2) }}error = exi_basetypes_decoder_uint_16(stream, &{{ type_length }});
 {{ indent * (level + 2) }}if (error == 0)
 {{ indent * (level + 2) }}{
@@ -16,6 +22,20 @@
 {{ indent * (level + 4) }}// string tables and table partitions are not supported, so the length has to be decremented by 2
 {{ indent * (level + 4) }}{{ type_length }} -= 2;
 {{ indent * (level + 4) }}error = exi_basetypes_decoder_characters(stream, {{ type_length }}, {{ type_chars }}, {{ type_chars_size }});
+{{ indent * (level + 4) }}if (error == 0)
+{{ indent * (level + 4) }}{
+{{ indent * (level + 5) }}{{ type_array_length }}++;
+{{ indent * (level + 4) }}}
+{%- else %}
+{{ indent * (level + 2) }}error = exi_basetypes_decoder_uint_16(stream, &{{ type_length }});
+{{ indent * (level + 2) }}if (error == 0)
+{{ indent * (level + 2) }}{
+{{ indent * (level + 3) }}if ({{ type_length }} >= 2)
+{{ indent * (level + 3) }}{
+{{ indent * (level + 4) }}// string tables and table partitions are not supported, so the length has to be decremented by 2
+{{ indent * (level + 4) }}{{ type_length }} -= 2;
+{{ indent * (level + 4) }}error = exi_basetypes_decoder_characters(stream, {{ type_length }}, {{ type_chars }}, {{ type_chars_size }});
+{%- endif %}
 {{ indent * (level + 3) }}}
 {{ indent * (level + 3) }}else
 {{ indent * (level + 3) }}{
@@ -31,6 +51,14 @@
 {{ indent * (level + 2) }}error = EXI_ERROR__UNSUPPORTED_SUB_EVENT;
 {{ indent * (level + 1) }}}
 {{ indent * level }}}
+{%- if type_array == 1 %}
+{%- set level = level - 1 %}
+{{ indent * level }}}
+{{ indent * level }}else
+{{ indent * level }}{
+{{ indent * (level  + 1) }}error = EXI_ERROR__ARRAY_OUT_OF_BOUNDS;
+{{ indent * level }}}
+{%- endif %}
 
 {{ indent * level }}// if nothing went wrong, the error of exi_basetypes_decoder_characters is evaluated here
 {{ indent * level }}if (error == 0)

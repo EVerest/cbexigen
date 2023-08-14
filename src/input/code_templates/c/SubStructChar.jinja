@@ -1,6 +1,15 @@
-    {{ variable_comment }}
-    struct {
-        {{ struct_type }} characters[{{ type_def }}];
-        uint16_t charactersLen;
-    } {{ struct_name }};
-
+{{ indent * level }}{{ variable_comment }}
+{%- if type_array == 1 %}
+{{ indent * level }}struct {
+{{ indent * (level + 1) }}struct {
+{{ indent * (level + 2) }}{{ struct_type }} characters[{{ type_def }}];
+{{ indent * (level + 2) }}uint16_t charactersLen;
+{{ indent * (level + 1) }}} array[{{ struct_def }}];
+{{ indent * (level + 1) }}uint16_t arrayLen;
+{{ indent * level }}} {{ struct_name }};
+{%- else %}
+{{ indent * level }}struct {
+{{ indent * (level + 1) }}{{ struct_type }} characters[{{ type_def }}];
+{{ indent * (level + 1) }}uint16_t charactersLen;
+{{ indent * level }}} {{ struct_name }};
+{% endif %}

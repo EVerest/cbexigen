@@ -131,9 +131,17 @@ class ExiDecoderCode(ExiBaseCoderCode):
             type_content = type_value + f'.{detail.particle.value_parameter_name}'
             type_content_len = type_value + f'.{detail.particle.length_parameter_name}'
         else:
-            type_value = f'{element_typename}->{detail.particle.name}'
-            type_content = type_value + f'.{detail.particle.value_parameter_name}'
-            type_content_len = type_value + f'.{detail.particle.length_parameter_name}'
+            if detail.particle.max_occurs > 1:
+                decode_comment += ' (Array)'
+                type_array_length = f'{element_typename}->{detail.particle.name}.arrayLen'
+                type_value = f'{element_typename}->{detail.particle.name}'
+                type_content_len = type_value + f'.array[{type_array_length}].{detail.particle.length_parameter_name}'
+                type_content = type_value + f'.array[{type_array_length}].{detail.particle.value_parameter_name}'
+            else:
+                type_value = f'{element_typename}->{detail.particle.name}'
+                type_content = type_value + f'.{detail.particle.value_parameter_name}'
+                type_content_len = type_value + f'.{detail.particle.length_parameter_name}'
+
         type_define = detail.particle.prefixed_define_for_base_type
         next_grammar_id = detail.next_grammar
 
@@ -144,6 +152,9 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                      type_content_len=type_content_len,
                                      type_define=type_define,
                                      type_option=detail.particle.is_optional,
+                                     type_array=detail.particle.max_occurs > 1,
+                                     type_array_length=f'{element_typename}->{detail.particle.name}.arrayLen',
+                                     type_array_define=detail.particle.prefixed_define_for_array,
                                      next_grammar_id=next_grammar_id,
                                      indent=self.indent, level=level)
 
@@ -308,6 +319,12 @@ class ExiDecoderCode(ExiBaseCoderCode):
         type_chars_size = detail.particle.prefixed_define_for_base_type
         next_grammar_id = detail.next_grammar
 
+        if detail.particle.max_occurs > 1:
+            decode_comment += ' (Array)'
+            type_array_length = f'{element_typename}->{detail.particle.name}.arrayLen'
+            type_length = type_value + f'.array[{type_array_length}].{detail.particle.length_parameter_name}'
+            type_chars = type_value + f'.array[{type_array_length}].{detail.particle.value_parameter_name}'
+
         temp = self.generator.get_template('DecodeTypeString.jinja')
         decode_content = temp.render(decode_comment=decode_comment,
                                      type_value=type_value,
@@ -316,6 +333,9 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                      type_chars_size=type_chars_size,
                                      type_option=detail.particle.is_optional,
                                      type_attribute=detail.particle.is_attribute,
+                                     type_array=detail.particle.max_occurs > 1,
+                                     type_array_length=f'{element_typename}->{detail.particle.name}.arrayLen',
+                                     type_array_define=detail.particle.prefixed_define_for_array,
                                      next_grammar_id=next_grammar_id,
                                      indent=self.indent, level=level)
 
