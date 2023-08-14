@@ -12,6 +12,9 @@
 {{ indent * (level + 2) }}error = exi_basetypes_encoder_characters(stream, {{ length_parameter }}, {{ value_parameter }}, {{ size_parameter }});
 {{ indent * (level + 2) }}if (error == EXI_ERROR__NO_ERROR)
 {{ indent * (level + 2) }}{
+{%- if type_array == 1 %}
+{{ indent * (level + 3) }}{{ type_array_index }}++;
+{%- endif %}
 {%- if type_attribute == 0 %}
 {{ indent * (level + 3) }}// encode END Element
 {{ indent * (level + 3) }}error = exi_basetypes_encoder_nbit_uint(stream, 1, 0);

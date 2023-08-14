@@ -1,9 +1,25 @@
 {{ indent * level }}{{ decode_comment }}
+{%- if type_array == 1 %}
+{{ indent * level }}if ({{ type_array_length }} < {{ type_array_define }})
+{{ indent * level }}{
+{%- set level = level + 1 %}
+{%- endif %}
 {{ indent * level }}error = decode_exi_type_hex_binary(stream, &{{ type_content_len }}, &{{ type_content }}[0], {{ type_define }});
 {{ indent * level }}if (error == 0)
 {{ indent * level }}{
+{%- if type_array == 1 %}
+{{ indent * (level + 1) }}{{ type_array_length }}++;
+{%- endif %}
 {%- if type_option == 1 %}
 {{ indent * (level + 1) }}{{ type_value }}_isUsed = 1u;
 {%- endif %}
 {{ indent * (level + 1) }}grammar_id = {{ next_grammar_id }};
 {{ indent * level }}}
+{%- if type_array == 1 %}
+{%- set level = level - 1 %}
+{{ indent * level }}}
+{{ indent * level }}else
+{{ indent * level }}{
+{{ indent * (level  + 1) }}error = EXI_ERROR__ARRAY_OUT_OF_BOUNDS;
+{{ indent * level }}}
+{%- endif %}
