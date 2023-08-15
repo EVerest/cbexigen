@@ -330,23 +330,13 @@ class ExiEncoderCode(ExiBaseCoderCode):
                        f", base type '{detail.particle.typename}'\n"
         type_content += f"{self.indent * level}error = EXI_ERROR__ENCODER_NOT_IMPLEMENTED;\n"
 
-        # If the associated schema datatype is directly or indirectly derived from xsd:integer
-        # and the bounded range determined by its minInclusiveXS2, minExclusiveXS2, maxInclusiveXS2
-        # and maxExclusiveXS2 facets has 4096 or fewer values
-        type_is_restricted_int = \
-            detail.particle.integer_base_type \
-            and detail.particle.integer_base_type != 'boolean' \
-            and detail.particle.integer_base_type != 'char' \
-            and detail.particle.bit_count_for_coding > 0 \
-            and (detail.particle.max_value - detail.particle.min_value + 1 <= 4096)
-
         if detail.particle.is_enum:
             if detail.particle.is_array:
                 type_content = self.__get_content_encode_enum_array(grammar.element_typename, detail, level)
             else:
                 type_content = self.__get_content_encode_enum(grammar.element_typename, detail, level)
         elif detail.particle.integer_base_type and detail.particle.integer_base_type != 'char':
-            if type_is_restricted_int:  # max 12 bits (0..4095)
+            if detail.particle.type_is_restricted_int:  # max 12 bits (0..4095)
                 type_content = self.__get_content_encode_restricted(grammar.element_typename, detail, level)
             elif detail.particle.integer_base_type == 'boolean':
                 type_content = self.__get_content_encode_boolean(grammar.element_typename, detail, level)
