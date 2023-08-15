@@ -172,6 +172,22 @@ class Particle:
 
         return result
 
+    @property
+    def type_is_restricted_int(self) -> bool:
+        """
+        If the associated schema datatype is directly or indirectly derived from xsd:integer
+        and the bounded range determined by its minInclusiveXS2, minExclusiveXS2, maxInclusiveXS2
+        and maxExclusiveXS2 facets has 4096 or fewer values.
+
+        Note: Strictly and according to EXI, xsd:byte falls under this, but is not recognized here,
+        because self.{min,max}value are not set.
+        """
+        return (self.integer_base_type
+                and self.integer_base_type != 'boolean'
+                and self.integer_base_type != 'char'
+                and self.bit_count_for_coding > 0
+                and (self.max_value - self.min_value + 1 <= 4096))
+
     def get_translated_type(self, translation_dict) -> str:
         result = self.typename
 
