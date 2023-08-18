@@ -397,6 +397,13 @@ class ExiBaseCoderCode:
                         grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.END))
 
             def _add_particle_or_choice_list_to_details(element, grammar, particle, previous_choice_list):
+                """
+                If a particle is part of a choice group, this adds all the group's particles
+                the the grammar at once, and remembers which group was being handled, so that
+                the subsequent particles aren't added again.
+
+                Otherwise, it just adds the particle.
+                """
                 choice_list = self._get_choice_options(element, particle)
                 if choice_list:
                     if choice_list[1] != previous_choice_list:
