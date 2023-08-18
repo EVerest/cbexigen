@@ -390,25 +390,23 @@ class DatatypeHeader:
         return temp.render(comment=comment,
                            elements=self.analyzer_data.known_prototypes)
 
-    def __get_define_list(self, element: ElementData):
+    def __append_to_global_define_list(self, element: ElementData):
         # TODO: check if particle is in OCCURRENCE_LIMITS_CORRECTED, should then result in an array definition
-        define_list = {}
 
         for particle in element.particles:
             if particle.is_array:
                 if not self.__is_array_define_in_global_list(particle):
-                    # define_list[particle.prefixed_define_for_array] = particle.max_occurs
                     self.__global_define_list[particle.prefixed_define_for_array] = particle.max_occurs
             if particle.define_for_base_type != '':
                 if not self.__is_base_type_define_in_global_list(particle):
                     if particle.max_length > 0:
-                        # define_list[particle.prefixed_define_for_base_type] = particle.max_length
-                        self.__global_define_list[particle.prefixed_define_for_base_type] = particle.max_length
+                        if particle.base_type == 'string':
+                            self.__global_define_list[particle.prefixed_define_for_base_type] = \
+                                f'{particle.max_length} + ASCII_EXTRA_CHAR'
+                        else:
+                            self.__global_define_list[particle.prefixed_define_for_base_type] = particle.max_length
                     else:
-                        # define_list[particle.prefixed_define_for_base_type] = particle.define_max_value
                         self.__global_define_list[particle.prefixed_define_for_base_type] = particle.define_max_value
-
-        return define_list
 
     def generate_file(self):
         if self.h_params is None:
@@ -485,15 +483,14 @@ class DatatypeHeader:
                     log_write_error('Module datatypes: Generator loop aborted! Index larger than existing elements.')
                     break
             else:
-                define_list = self.__get_define_list(element)
+                self.__append_to_global_define_list(element)
                 struct_content = self.__get_struct_content(element)
                 # avoid empty structs
                 if struct_content == '':
                     struct_content += '    int _unused;'
 
-                temp = self.generator.get_template('BaseStructWithDefine.jinja')
-                content += temp.render(defines=define_list,
-                                       struct_name=element.prefixed_type,
+                temp = self.generator.get_template('BaseStructWithFullComment.jinja')
+                content += temp.render(struct_name=element.prefixed_type,
                                        content=struct_content,
                                        element_comment=element.element_comment,
                                        particle_comment=element.particle_comment)
