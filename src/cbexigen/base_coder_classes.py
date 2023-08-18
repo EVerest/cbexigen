@@ -233,6 +233,24 @@ class ExiBaseCoderCode:
 
         return result
 
+    @staticmethod
+    def _get_choice_sequence(element: ElementData, particle: Particle) -> []:
+        """
+        Return an ordered list of all particles belonging to the same choice sequence as
+        the given particle.
+        """
+        if particle.parent_has_choice_sequence:
+            for choice_obj in element.choices:
+                choice_sequence = choice_obj.choice_sequences[particle.parent_choice_sequence_number - 1]
+                for choice_item in choice_sequence:
+                    if particle.name == choice_item[0]:  # first element is name, second element is index
+                        li: list[Particle] = [element.particle_from_name(x[0]) for x in choice_sequence]
+                        return li
+            log_write_error(f"failed to find choice sequence for of {particle.name}")
+
+        # particle is not in a choice sequence, or fallback on failure to find
+        return []
+
     def _get_choice_options(self, element: ElementData, particle: Particle):
         """
         Return a list containing:
@@ -332,23 +350,6 @@ class ExiBaseCoderCode:
                         return True
             return False
 
-        def _get_choice_sequence(element: ElementData, particle: Particle) -> []:
-            """
-            Return an ordered list of all particles belonging to the same choice sequence as
-            the given particle.
-            """
-            if particle.parent_has_choice_sequence:
-                for choice_obj in element.choices:
-                    choice_sequence = choice_obj.choice_sequences[particle.parent_choice_sequence_number - 1]  # list of [name, index] list
-                    for choice_item in choice_sequence:
-                        if particle.name == choice_item[0]:  # first element is name, second element is index
-                            li: list[Particle] = [element.particle_from_name(x[0]) for x in choice_sequence]
-                            return li
-                log_write_error(f"failed to find choice sequence for of {particle.name}")
-
-            # particle is not in a choice sequence, or fallback on failure to find
-            return []
-
         def _debug_element_particle_properties(element: ElementData):
             particle: Particle
             for particle in element.particles:
@@ -375,7 +376,7 @@ class ExiBaseCoderCode:
                     log_write(f"\tmax_occurs_old: {particle.max_occurs_old}")
                 if particle.parent_has_choice_sequence:
                     log_write(f"\tparent is in a sequence which is choice, number {particle.parent_choice_sequence_number}")
-                    log_write([x.name if x is not None else '' for x in _get_choice_sequence(element, particle)])
+                    log_write([x.name if x is not None else '' for x in self._get_choice_sequence(element, particle)])
 
         # _debug_element_particle_properties(element)
 
