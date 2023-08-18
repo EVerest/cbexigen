@@ -1,8 +1,5 @@
 {{ element_comment }}
 {{ particle_comment }}
-{%- for key, value in defines.items() %}
-#define {{ key }} {{ value }}
-{%- endfor %}
 struct {{ struct_name }} {
 {{ content }}
 };
