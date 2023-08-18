@@ -499,8 +499,15 @@ class ExiBaseCoderCode:
                     log_write(f"\tmax_occurs_old: {particle.max_occurs_old}")
                 if particle.parent_has_choice_sequence:
                     log_write("\tis in a sequence which is choice, " +
-                              f"number {particle.parent_choice_sequence_number}")
-                    log_write([x.name if x is not None else '' for x in self._get_choice_sequence(element, particle)])
+                              f"number {particle.parent_choice_sequence_number}:")
+                    log_write("\t\t" + repr([x.name if x is not None else '' for x in self._get_choice_sequence(element, particle)]))
+                    choice_options = self.ChoiceOptions(element, particle)
+                    num_part_to_skip = choice_options.number_of_particles_to_skip
+                    if num_part_to_skip:
+                        log_write(f"\tparticles to skip: {choice_options.number_of_particles_to_skip}")
+                    if choice_options.particles:
+                        log_write("\tis in a resulting choice, " +
+                                  f"{choice_options.item_names}")
 
         # _debug_element_particle_properties(element)
 
