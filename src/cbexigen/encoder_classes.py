@@ -383,7 +383,9 @@ class ExiEncoderCode(ExiBaseCoderCode):
             else:
                 log_write_error(f"Unhandled fallthrough type: '{detail.particle.name}': {grammar.element_typename}")
         else:
-            if detail.particle.simple_type_is_string:
+            if detail.particle.is_complex:
+                type_content = self.__get_content_encode_element(grammar.element_typename, detail, level)
+            elif detail.particle.simple_type_is_string:
                 type_content = self.__get_content_encode_string(grammar.element_typename, detail, level)
             elif detail.particle.typename == 'nonNegativeInteger' and detail.particle.type_short == 'unsignedLong':
                 type_content = self.__get_content_encode_long_int(grammar.element_typename, detail, level)
