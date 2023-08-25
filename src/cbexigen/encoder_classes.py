@@ -443,6 +443,30 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
         return self.left_trim_lf(content)
 
+    def __get_event_content_for_optional_array_element(self, detail: ElementGrammarDetail, grammar, option, level):
+        event_comment = f'// Event: {detail.flag} ({detail.particle.name}, {detail.particle.typename})' \
+                        f'; next={detail.next_grammar} (optional array)'
+        type_parameter = CONFIG_PARAMS['encode_function_prefix'] + detail.particle.prefixed_name
+        index_parameter = detail.particle.name + '_currentIndex'
+        length_parameter = (f'{grammar.element_typename}->{detail.particle.name}'
+                            f'.{detail.particle.length_parameter_name}')
+
+        temp = self.generator.get_template('EncodeEventOptionalArrayElement.jinja')
+        content = temp.render(option=option,
+                              index_parameter=index_parameter,
+                              length_parameter=length_parameter,
+                              bits_to_write=grammar.bits_to_write,
+                              value_to_write=detail.event_index,
+                              event_comment=event_comment,
+                              type_content=self.__get_type_content(grammar, detail, 5),
+                              add_debug_code=self.get_status_for_add_debug_code(detail.particle.prefixed_name),
+                              type_parameter=type_parameter,
+                              indent=self.indent, level=level)
+
+        content += '\n'
+
+        return self.left_trim_lf(content)
+
     def __get_event_content_for_optional_element(self, detail: ElementGrammarDetail, grammar, option, level):
         content = ''
 
@@ -526,10 +550,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                         else:
                             content += self.__get_event_content_for_array_element(detail, grammar, option, level)
                     elif detail.is_optional_array:
-                        # TODO
-                        content += (self.indent * level) + '// tbd optional array\n'
-                        content += (self.indent * level) + 'if (1 == 0)\n'
-                        content += (self.indent * level) + '{\n' + (self.indent * level) + '}\n'
+                        content += self.__get_event_content_for_optional_array_element(detail, grammar, option, level)
                     else:
                         content += self.__get_event_content_for_optional_element(detail, grammar, option, level)
 
