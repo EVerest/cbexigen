@@ -531,10 +531,26 @@ class SchemaAnalyzer(object):
 
     def __get_particle_list(self, element: XsdElement, subst_list):
         particles = []
+        child_count = sum(1 for _ in element.iterchildren())
 
         for child in element.iterchildren():
+            adjust_min_occurs = False
+            if child.parent.model is not None:
+                if child.parent.model == 'sequence':
+                    adjust_min_occurs = child.parent.min_occurs < child.min_occurs
+
             if child.name is None:
                 particle = self.__get_particle_from_any(child)
+
+                # Currently exists an optional sequence with just one element just in xmldsig schema.
+                # This only changes the occurrence of the ObjectType so far.
+                if adjust_min_occurs and child_count == 1:
+                    particle.parent_model_changed_restrictions = True
+
+                    particle.min_occurs_old = particle.min_occurs
+                    particle.min_occurs = child.parent.min_occurs
+                    particle.max_occurs_old = particle.max_occurs
+
                 particles.append(particle)
                 continue
 
