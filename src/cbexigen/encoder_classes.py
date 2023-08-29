@@ -490,13 +490,12 @@ class ExiEncoderCode(ExiBaseCoderCode):
         if detail.flag == GrammarFlag.END:
             content += self.__get_event_content_for_end_element(detail, grammar.bits_to_write, False, level)
         else:
-            if detail.particle is not None:
+            if detail.particle is not None and not (detail.is_any and detail.any_is_dummy):
                 event_comment = f'// Event: {detail.flag} ({detail.particle.name}, {detail.particle.typename})' \
                                 f'; next={detail.next_grammar}'
                 type_parameter = CONFIG_PARAMS['encode_function_prefix'] + detail.particle.prefixed_name
                 if detail.particle.parent_has_choice_sequence:
-                    parameter = f'{grammar.element_typename}->choice_{detail.particle.parent_choice_sequence_number}.' \
-                                f'{detail.particle.name}'
+                    parameter = f'{grammar.element_typename}->choice_{detail.particle.parent_choice_sequence_number}'
                 else:
                     parameter = grammar.element_typename + '->' + detail.particle.name
 
@@ -512,12 +511,17 @@ class ExiEncoderCode(ExiBaseCoderCode):
                                        indent=self.indent, level=level)
             else:
                 # unsupported particle which appears in the event list
-                event_comment = f'// Event: {detail.particle_name} (index={detail.event_index}); next={detail.next_grammar}'
-
-                temp = self.generator.get_template('EncodeEventOptionalElementNone.jinja')
-                content += temp.render(option=option,
-                                       event_comment=event_comment,
-                                       indent=self.indent, level=level)
+                if detail.is_any and detail.any_is_dummy:
+                    event_comment = f'// No code for unsupported generic event: {detail.particle_name} (index={detail.event_index})'
+                    temp = self.generator.get_template('EncodeEventOptionalElementNoEvent.jinja')
+                    content += temp.render(event_comment=event_comment,
+                                           indent=self.indent, level=level)
+                else:
+                    event_comment = f'// Event: {detail.particle_name} (index={detail.event_index}); next={detail.next_grammar}'
+                    temp = self.generator.get_template('EncodeEventOptionalElementNone.jinja')
+                    content += temp.render(option=option,
+                                           event_comment=event_comment,
+                                           indent=self.indent, level=level)
 
         content += '\n'
 
@@ -553,10 +557,26 @@ class ExiEncoderCode(ExiBaseCoderCode):
                 else:
                     content += self.__get_event_content_for_single_element(first, grammar, level)
             else:
+                option = 0
+                end_index = -1
+                detail: ElementGrammarDetail
                 for index, detail in enumerate(grammar.details):
-                    option = index
-                    if option == grammar.details_count - 1:
+                    if detail.flag == GrammarFlag.END:
+                        # ensure that the END detail gets encoded last, even if not final detail due to ANY
+                        end_index = index
+                        continue
+
+                    if index == grammar.details_count - 1 and option != 0 and not detail.is_any:
+                        # the final detail gets just "else"
                         option = -1
+
+                    # FIXME / HACK: 'PGPKeyPacket' is regarded as optional by the grammar generation, due to
+                    # incorrect handling of choices of sequences - force it here
+                    # if detail.particle_name == 'PGPKeyPacket':
+                    #     option = -1
+                    #     log_write_error("FIXME / HACK: forcing 'PGPKeyPacket' particle to be non-optional - fix the grammar!")
+
+                    # log_write_error(f"__get_event_content(): option = {option} for grammar '{grammar.element_typename}', index {detail.event_index}, detail '{detail.particle_name}'")
 
                     if detail.is_mandatory_array:
                         if option >= 0:
@@ -567,6 +587,14 @@ class ExiEncoderCode(ExiBaseCoderCode):
                         content += self.__get_event_content_for_optional_array_element(detail, grammar, option, level)
                     else:
                         content += self.__get_event_content_for_optional_element(detail, grammar, option, level)
+                    if not (detail.is_any and detail.any_is_dummy):
+                        # increment only if code was created
+                        option += 1
+
+                if end_index >= 0:
+                    # finally, place code for END detail at and of block
+                    option = -1
+                    content += self.__get_event_content_for_optional_element(grammar.details[end_index], grammar, option, level)
 
         return self.trim_lf(content)
 
