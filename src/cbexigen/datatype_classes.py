@@ -95,7 +95,11 @@ class DatatypeHeader:
             err = False
             value = str(self.__global_define_list[particle.prefixed_define_for_base_type])
             if particle.max_length > 0:
-                if value == str(particle.max_length):
+                str_length = str(particle.max_length)
+                if particle.base_type == 'string':
+                    str_length += ' + ASCII_EXTRA_CHAR'
+
+                if value == str_length:
                     result = True
                 else:
                     err = True
