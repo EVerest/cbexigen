@@ -117,6 +117,27 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
         return decode_content
 
+    def __get_content_decode_base64_binary_simple(self, element_typename, detail: ElementGrammarDetail, level):
+        decode_comment = '// decode exi type: base64Binary (simple)'
+        type_value = f'{element_typename}->{detail.particle.name}'
+        type_content = type_value + f'.{detail.particle.value_parameter_name}'
+        type_content_len = type_value + f'.{detail.particle.length_parameter_name}'
+
+        type_define = detail.particle.prefixed_define_for_base_type
+        next_grammar_id = detail.next_grammar
+
+        temp = self.generator.get_template('DecodeTypeBase64BinarySimple.jinja')
+        decode_content = temp.render(decode_comment=decode_comment,
+                                     type_value=type_value,
+                                     type_content=type_content,
+                                     type_content_len=type_content_len,
+                                     type_define=type_define,
+                                     type_option=detail.particle.is_optional,
+                                     next_grammar_id=next_grammar_id,
+                                     indent=self.indent, level=level)
+
+        return decode_content
+
     def __get_content_decode_base64_binary(self, element_typename, detail: ElementGrammarDetail, level):
         decode_comment = '// decode exi type: base64Binary'
         if detail.particle.is_attribute:
@@ -498,7 +519,11 @@ class ExiDecoderCode(ExiBaseCoderCode):
             elif detail.particle.typename == 'hexBinary':
                 type_content = self.__get_content_decode_hex_binary(grammar.element_typename, detail, level)
             elif detail.particle.typename == 'base64Binary':
-                type_content = self.__get_content_decode_base64_binary(grammar.element_typename, detail, level)
+                if detail.particle.is_simple_content:
+                    type_content = self.__get_content_decode_base64_binary_simple(grammar.element_typename,
+                                                                                  detail, level)
+                else:
+                    type_content = self.__get_content_decode_base64_binary(grammar.element_typename, detail, level)
             elif detail.particle.typename == 'integer':
                 if detail.particle.integer_bit_size == 64:
                     if not detail.particle.integer_is_unsigned:

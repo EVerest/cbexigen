@@ -1,0 +1,13 @@
+{{ indent * level }}{{ decode_comment }}
+{{ indent * level }}error = exi_basetypes_decoder_uint_16(stream, &{{ type_content_len }});
+{{ indent * level }}if (error == 0)
+{{ indent * level }}{
+{{ indent * (level + 1) }}error = exi_basetypes_decoder_bytes(stream, {{ type_content_len }}, &{{ type_content }}[0], {{ type_define }});
+{{ indent * (level + 1) }}if (error == 0)
+{{ indent * (level + 1) }}{
+{%- if type_option == 1 %}
+{{ indent * (level + 2) }}{{ type_value }}_isUsed = 1u;
+{%- endif %}
+{{ indent * (level + 2) }}grammar_id = {{ next_grammar_id }};
+{{ indent * (level + 1) }}}
+{{ indent * level }}}
