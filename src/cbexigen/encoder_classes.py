@@ -103,6 +103,20 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
         return self.trim_lf(content)
 
+    def __get_content_encode_base64_binary_simple(self, element_typename, detail: ElementGrammarDetail, level):
+        size_parameter = f'{detail.particle.prefixed_define_for_base_type}'
+        length_parameter = f'{element_typename}->{detail.particle.name}.{detail.particle.length_parameter_name}'
+        value_parameter = f'{element_typename}->{detail.particle.name}.{detail.particle.value_parameter_name}'
+
+        temp = self.generator.get_template('EncodeTypeBase64BinarySimple.jinja')
+        content = temp.render(length_parameter=length_parameter,
+                              value_parameter=value_parameter,
+                              size_parameter=size_parameter,
+                              next_grammar=detail.next_grammar,
+                              indent=self.indent, level=level)
+
+        return self.trim_lf(content)
+
     def __get_content_encode_base64_binary(self, element_typename, detail: ElementGrammarDetail, level):
         size_parameter = f'{detail.particle.prefixed_define_for_base_type}'
         type_array_index = detail.particle.name + '_currentIndex'
@@ -391,7 +405,11 @@ class ExiEncoderCode(ExiBaseCoderCode):
             elif detail.particle.typename == 'hexBinary':
                 type_content = self.__get_content_encode_hex_binary(grammar.element_typename, detail, level)
             elif detail.particle.typename == 'base64Binary':
-                type_content = self.__get_content_encode_base64_binary(grammar.element_typename, detail, level)
+                if detail.particle.is_simple_content:
+                    type_content = self.__get_content_encode_base64_binary_simple(grammar.element_typename,
+                                                                                  detail, level)
+                else:
+                    type_content = self.__get_content_encode_base64_binary(grammar.element_typename, detail, level)
             elif detail.particle.typename == 'integer':
                 if detail.particle.integer_bit_size == 64:
                     if not detail.particle.integer_is_unsigned:
