@@ -1,0 +1,25 @@
+{{ element_comment }}
+static int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ parameter_name }}) {
+{{ indent * level }}// Element has no particles, so the function just decodes END Element
+{{ indent * level }}(void){{ parameter_name }};
+{{ indent * level }}uint32_t eventCode;
+
+{%- if add_debug_code == 1 %}
+
+{{ indent * level }}if (stream->status_callback)
+{{ indent * level }}{
+{{ indent * (level + 1) }}stream->status_callback({{ function_name|upper }}, 0, 0, 0);
+{{ indent * level }}}
+{%- endif %}
+
+{{ indent * level }}int error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
+{{ indent * level }}if (error == 0)
+{{ indent * level }}{
+{{ indent * (level + 1) }}if (eventCode != 0)
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}error = EXI_ERROR__UNKNOWN_EVENT_CODE;
+{{ indent * (level + 1) }}}
+{{ indent * level }}}
+
+{{ indent * level }}return error;
+}
