@@ -20,6 +20,7 @@ class ElementGrammarDetail:
     array_index: int = -1
     event_index: int = -1
     next_grammar: int = -1
+    any_is_dummy: bool = True
 
     @property
     def is_optional(self):

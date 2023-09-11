@@ -459,16 +459,33 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
         return decode_content
 
+    def __get_content_decode_no_event(self, element_typename, detail: ElementGrammarDetail, level):
+        decode_comment = '// decode: event not accepted'
+        temp = self.generator.get_template('DecodeTypeNoEvent.jinja')
+        decode_content = temp.render(decode_comment=decode_comment,
+                                     indent=self.indent, level=level)
+
+        return decode_content
+
+    def __get_content_decode_not_implemented(self, element_typename, detail: ElementGrammarDetail, level):
+        decode_comment = f"// tbd! decode: '{detail.particle.type_short}', base type '{detail.particle.typename}"
+        temp = self.generator.get_template('DecodeTypeNotImplemented.jinja')
+        decode_content = temp.render(decode_comment=decode_comment,
+                                     indent=self.indent, level=level)
+
+        return decode_content
+
     def __get_type_content(self, grammar: ElementGrammar, detail: ElementGrammarDetail, level):
         if detail.particle is None:
             temp = self.generator.get_template('BaseDecodeEndElement.jinja')
             return temp.render(next_grammar=detail.next_grammar, indent=self.indent, level=level)
 
-        type_content = f"{self.indent * level}// tbd! decode: '{detail.particle.type_short}', " + \
-                       f"base type '{detail.particle.typename}'\n"
-        type_content += f"{self.indent * level}error = EXI_ERROR__DECODER_NOT_IMPLEMENTED;\n"
+        # default content for types not covered below
+        type_content = self.__get_content_decode_not_implemented(grammar.element_typename, detail, level)
 
-        if detail.particle.is_enum:
+        if detail.is_any and detail.any_is_dummy:
+            type_content = self.__get_content_decode_no_event(grammar.element_typename, detail, level)
+        elif detail.particle.is_enum:
             if detail.particle.is_array:
                 type_content = self.__get_content_decode_enum_array(grammar.element_typename, detail, level)
             else:
@@ -538,14 +555,12 @@ class ExiDecoderCode(ExiBaseCoderCode):
         event_content = ''
 
         if grammar.details[0].flag != GrammarFlag.ERROR:
-            end_id = -1
             detail: ElementGrammarDetail = None
-            for index, detail in enumerate(grammar.details):
+            for detail in grammar.details:
                 if detail.flag == GrammarFlag.END:
-                    end_id = index
-                    continue
-
-                if detail.particle is not None:
+                    event_comment = f'// Event: {detail.flag}; ' + \
+                                    f'next={detail.next_grammar}'
+                elif detail.particle is not None:
                     event_comment = f'// Event: {detail.flag} ({detail.particle.name}, ' + \
                                     f'{detail.particle.type_short} ({detail.particle.typename})); ' + \
                                     f'next={detail.next_grammar}'
@@ -563,17 +578,6 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                              # type_parameter=type_parameter,
                                              indent=self.indent, level=level)
                 event_content += '\n'
-
-            if end_id >= 0:
-                event_comment = f'// Event: {grammar.details[end_id].flag}; '
-                event_comment += f'set next={grammar.details[end_id].next_grammar}'
-                temp = self.generator.get_template('BaseDecodeCaseEventId.jinja')
-                event_content += temp.render(event_id=grammar.details[end_id].event_index,
-                                             event_id_comment=event_comment,
-                                             type_content=self.__get_type_content(grammar, grammar.details[end_id], 5),
-                                             indent=self.indent, level=level)
-
-            event_content += '\n'
 
         return self.trim_lf(event_content)
 

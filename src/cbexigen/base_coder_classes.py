@@ -2,6 +2,7 @@
 # Copyright (c) 2022 - 2023 chargebyte GmbH
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 
+import copy
 from typing import List
 from cbexigen import tools_generator, tools
 from cbexigen.elementData import Particle, ElementData, Choice
@@ -232,30 +233,171 @@ class ExiBaseCoderCode:
 
         return result
 
-    def _get_choice_options(self, element: ElementData, particle: Particle):
+    @staticmethod
+    def _get_choice_sequence(element: ElementData, particle: Particle) -> []:
         """
-        Return a list containing:
+        Return an ordered list of all particles belonging to the same choice sequence as
+        the given particle.
+        """
+        if particle.parent_has_choice_sequence:
+            for choice_obj in element.choices:
+                choice_sequence = choice_obj.choice_sequences[particle.parent_choice_sequence_number - 1]
+                for choice_item in choice_sequence:
+                    if particle.name == choice_item[0]:  # first element is name, second element is index
+                        li: list[Particle] = [element.particle_from_name(x[0]) for x in choice_sequence]
+                        return li
+            log_write_error(f"failed to find choice sequence for of {particle.name}")
+
+        # particle is not in a choice sequence, or fallback on failure to find
+        return []
+
+    class ChoiceOptions:
+        """
+        create:
         - an ordered list of all particles (proper or abstract) belonging to the same choice
             group as the given particle.
         - a list of the choice group item names (for comparison)
         - the min_occurs of this particle group
         - the max_occurs of this particle group
         """
-        if element.has_choice:
-            element_choice: Choice
-            for element_choice in element.choices:  # choice object from list of choice objects
-                for choice_item in element_choice.choice_items:  # list of choice names from choice object
-                    if particle.name == choice_item[0]:  # first element is name, second element is index
-                        li: list[Particle] = [element.particle_from_name(x[0]) for x in element_choice.choice_items]
-                        return [li, element_choice.choice_items, element_choice.min_occurs, element_choice.multi_choice_max]  # FIXME choice occurrences
-        elif element.has_abstract_sequence:
-            for abstract_choice_list, min_occurs, max_occurs in element.abstract_sequences:
-                for choice_item in abstract_choice_list:
-                    if particle.name == choice_item:
-                        li: list[Particle] = [element.particle_from_name(x) for x in abstract_choice_list]
-                        return [li, abstract_choice_list, min_occurs, max_occurs]
-        # particle is not a choice, or fallback on failure to find
-        return []
+        def __init__(self, element: ElementData, particle: Particle) -> None:
+            self._parent_choice_sequence_number = -1
+            self._is_last_particle_in_choice_sequence = False
+            self._is_followed_by_mandatory_particles_in_choice_sequence = False
+            self._particles_to_skip_in_same_choice_seq = 0
+
+            self.particles: list[Particle] = []
+            self.item_names = []
+            self.min_occurs = -1
+            self.max_occurs = -1
+            self.choice_sequences = []
+            # in which of the choices is this particle contained
+            self.choice_index = -1
+            self.choice: Choice = None
+
+            if element.has_choice:
+                element_choice: Choice
+
+                if particle.parent_has_choice_sequence:
+                    self._parent_choice_sequence_number = particle.parent_choice_sequence_number
+                    for element_choice_index, element_choice in enumerate(element.choices):
+                        if element_choice.choice_sequence_count < self._parent_choice_sequence_number:
+                            continue
+                        # this choice has sufficient sequences
+                        if particle.name in [x[0] for x in element_choice.choice_sequences[self._parent_choice_sequence_number - 1]]:
+                            # we actually are in the given choice sequence
+                            self.choice = element_choice
+                            self.choice_sequences = element_choice.choice_sequences
+                            choice_sequence = element_choice.choice_sequences[self._parent_choice_sequence_number - 1]
+                            # find our index within this choice sequence
+                            part_choice_sequence_index = -1
+                            for i, part in enumerate(choice_sequence):
+                                if particle.name == part[0]:
+                                    part_choice_sequence_index = i
+                                    break
+                            if part_choice_sequence_index == -1:
+                                log_write_error(f"Failed to find particle '{particle.name}' in its own choice sequence")
+                            if part_choice_sequence_index == 0:
+                                # remember in which of the choices this sequence was found
+                                self.choice_index = element_choice_index
+                                # if this particle is the first in a choice sequence, it's a choice
+                                # so the first particles from all sequences are the choice
+                                for choice_sequence_index, choice_sequence in enumerate(element_choice.choice_sequences):
+                                    self.particles.append(element.particle_from_name(choice_sequence[0][0]))
+                                    self.item_names.append(choice_sequence[0][0])
+                                self.min_occurs = element_choice.min_occurs
+                                self.max_occurs = element_choice.multi_choice_max
+                            else:
+                                self.min_occurs = particle.min_occurs
+                                self.max_occurs = particle.max_occurs
+
+                            is_counting = False
+                            particles_in_same_choice_seq = \
+                                [x for x in element.particles
+                                 if x.parent_choice_sequence_number == self._parent_choice_sequence_number]
+                            for part in particles_in_same_choice_seq:
+                                if particle.min_occurs >= 1:
+                                    self._is_followed_by_mandatory_particles_in_choice_sequence = True
+                                    break
+                                if part == particle:
+                                    is_counting = True
+                                    continue
+                                if not is_counting:
+                                    continue
+                                # if part.name in the choice sequence and part index > particle index
+                                # first, find myself in sequence, THEN count the ones after
+                                if part.min_occurs_old == 0 or part.min_occurs == 0:
+                                    self._particles_to_skip_in_same_choice_seq += 1
+                                else:
+                                    self._particles_to_skip_in_same_choice_seq = 0
+                                    break
+
+                            if part_choice_sequence_index == len(choice_sequence) - 1:
+                                self._is_last_particle_in_choice_sequence = True
+
+                            break
+                    return
+
+                for element_choice_index, element_choice in enumerate(element.choices):  # choice object from list of choice objects
+                    if element_choice.choice_sequence_count:
+                        log_write_error("FIXME evaluate choice of sequences:")
+                        log_write_error(element_choice.choice_sequences)
+                        for sequence_index, sequence_item in enumerate(element_choice.choice_sequences):
+                            # the choice initially consists of the first elements of the sequences
+                            if len(sequence_item) < 1:
+                                log_write_error(f"choice of sequences: sequence {sequence_index} is empty")
+                            else:
+                                self.particles.append(element.particle_from_name(sequence_item[0][0]))
+                                self.item_names.append(sequence_item[0][0])
+                            log_write_error(self.item_names)
+                        self.min_occurs = element_choice.min_occurs
+                        self.max_occurs = element_choice.multi_choice_max
+                        return  # FIXME choice occurrences
+
+                    for choice_item in element_choice.choice_items:  # list of choice names from choice object
+                        if particle.name == choice_item[0]:
+                            self.particles = [element.particle_from_name(x[0]) for x in element_choice.choice_items]
+                            self.item_names = element_choice.choice_items
+                            self.min_occurs = element_choice.min_occurs
+                            self.max_occurs = element_choice.multi_choice_max
+                            self.choice_index = element_choice_index
+                            self.choice = element_choice
+                            return
+            elif element.has_abstract_sequence:
+                for abstract_choice_list, _min_occurs, _max_occurs in element.abstract_sequences:
+                    for choice_item in abstract_choice_list:
+                        if particle.name == choice_item:
+                            self.particles = [element.particle_from_name(x) for x in abstract_choice_list]
+                            self.item_names = abstract_choice_list
+                            self.min_occurs = _min_occurs
+                            self.max_occurs = _max_occurs
+                            return
+            # particle is not a choice, or fallback on failure to find
+            # return
+
+        @property
+        def number_of_particles_to_skip(self) -> int:
+            # return the number of particles in the subsequent parallel choice sequences,
+            # which need to be skipped when ignoring parallel sequences (which are aligned
+            # linearly)
+            # or
+            # if not the last particle in the choice sequence and the remaining are optional,
+            # the number of particles until the end of the choice
+            if not self.choice or not self.choice.choice_sequence_count:
+                return 0
+            if not self._is_last_particle_in_choice_sequence:
+                return 0
+            # PGPKeyPacket occurrence in the first of two sequences must not return > 0
+            # FIXME obsolete?
+            if self._is_followed_by_mandatory_particles_in_choice_sequence:
+                return 0
+
+            result = self._particles_to_skip_in_same_choice_seq
+            # note: sequence_index is 1-based, not 0-based
+            # add the number of particles in the parallel choice sequences
+            for seq in self.choice.choice_sequences[self._parent_choice_sequence_number:]:
+                result += len(seq)
+            return result
 
     def append_end_and_unknown_grammars(self, typename):
         grammar = self.create_empty_grammar()
@@ -294,12 +436,14 @@ class ExiBaseCoderCode:
             self.append_to_element_grammars(grammar, element.typename)
             return
 
+        # find the last mandatory particle's index
         index_last_nonoptional_particle = -1
         particle: Particle  # type hint
         for particle_index, particle in enumerate(element.particles):
             # FIXME this could be done backwards with a "break"
-            choices = self._get_choice_options(element, particle)
-            combined_min_occurs_from_choice = choices[2] if choices else particle.min_occurs
+            choice_options = self.ChoiceOptions(element, particle)
+            combined_min_occurs_from_choice = \
+                choice_options.min_occurs if choice_options.particles else particle.min_occurs
             if combined_min_occurs_from_choice == 1:
                 index_last_nonoptional_particle = particle_index
 
@@ -331,23 +475,6 @@ class ExiBaseCoderCode:
                         return True
             return False
 
-        def _get_choice_sequence(element: ElementData, particle: Particle) -> []:
-            """
-            Return an ordered list of all particles belonging to the same choice sequence as
-            the given particle.
-            """
-            if particle.parent_has_choice_sequence:
-                for choice_obj in element.choices:
-                    choice_sequence = choice_obj.choice_sequences[particle.parent_choice_sequence_number - 1]  # list of [name, index] list
-                    for choice_item in choice_sequence:
-                        if particle.name == choice_item[0]:  # first element is name, second element is index
-                            li: list[Particle] = [element.particle_from_name(x[0]) for x in choice_sequence]
-                            return li
-                log_write_error(f"failed to find choice sequence for of {particle.name}")
-
-            # particle is not in a choice sequence, or fallback on failure to find
-            return []
-
         def _debug_element_particle_properties(element: ElementData):
             particle: Particle
             for particle in element.particles:
@@ -359,22 +486,30 @@ class ExiBaseCoderCode:
                 if particle.max_occurs_old != -1 and not particle.parent_has_sequence:
                     log_write(f"\tpeculiar: max_occurs_old: {particle.max_occurs_old}")
                 if _particle_is_in_choice(element, particle):
-                    group = []
-                    group, choice_name_list, min_o, max_o = self._get_choice_options(element, particle)
-                    log_write(f"\tis in a choice group, min_occurs = {min_o}, max_occurs = {max_o}")
-                    log_write([x.name if x is not None else '' for x in group])
+                    choice_options = self.ChoiceOptions(element, particle)
+                    log_write(f"\tis in a choice group, min_occurs = {choice_options.min_occurs}, " +
+                              f"max_occurs = {choice_options.max_occurs}")
+                    log_write([x.name if x is not None else '' for x in choice_options.particles])
                 if _particle_is_in_abstract_choice(element, particle):
-                    group = []
-                    group, choice_name_list, min_o, max_o = self._get_choice_options(element, particle)
-                    log_write(f"\tis in an abstract choice group, min_occurs = {min_o}, max_occurs = {max_o}")
-                    log_write([x.name if x is not None else '' for x in group])
+                    choice_options = self.ChoiceOptions(element, particle)
+                    log_write(f"\tis in an abstract choice group, min_occurs = {choice_options.min_occurs}, " +
+                              f"max_occurs = {choice_options.max_occurs}")
+                    log_write([x.name if x is not None else '' for x in choice_options.particles])
                 if particle.parent_has_sequence:
                     log_write("\tis in a sequence")
                     log_write(f"\tmin_occurs_old: {particle.min_occurs_old}")
                     log_write(f"\tmax_occurs_old: {particle.max_occurs_old}")
                 if particle.parent_has_choice_sequence:
-                    log_write(f"\tparent is in a sequence which is choice, number {particle.parent_choice_sequence_number}")
-                    log_write([x.name if x is not None else '' for x in _get_choice_sequence(element, particle)])
+                    log_write("\tis in a sequence which is choice, " +
+                              f"number {particle.parent_choice_sequence_number}:")
+                    log_write("\t\t" + repr([x.name if x is not None else '' for x in self._get_choice_sequence(element, particle)]))
+                    choice_options = self.ChoiceOptions(element, particle)
+                    num_part_to_skip = choice_options.number_of_particles_to_skip
+                    if num_part_to_skip:
+                        log_write(f"\tparticles to skip: {choice_options.number_of_particles_to_skip}")
+                    if choice_options.particles:
+                        log_write("\tis in a resulting choice, " +
+                                  f"{choice_options.item_names}")
 
         # _debug_element_particle_properties(element)
 
@@ -386,7 +521,8 @@ class ExiBaseCoderCode:
             # we push the grammar to a list below, and assign a new object to this variable;
             # this assignment does not apply globally if the grammar is passed in
             nonlocal grammar
-            if particle_index > index_last_nonoptional_particle:
+            choice_options = self.ChoiceOptions(element, particle)
+            if particle_index + choice_options.number_of_particles_to_skip > index_last_nonoptional_particle:
                 # all the following particles are optional, so END needs to be an expected event
                 # at the beginning of the event/grammar detail list
                 if not particle_is_part_of_sequence:
@@ -395,13 +531,20 @@ class ExiBaseCoderCode:
                     if str(particle.parent_sequence[0]) == particle.name:
                         grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.END))
 
-            def _add_particle_or_choice_list_to_details(element, grammar, particle, previous_choice_list):
-                choice_list = self._get_choice_options(element, particle)
-                if choice_list:
-                    if choice_list[1] != previous_choice_list:
-                        for choice in choice_list[0]:
+            def _add_particle_or_choice_list_to_details(element: ElementData, grammar: ElementGrammar, particle: Particle, previous_choice_list):
+                """
+                If a particle is part of a choice group, this adds all the group's particles
+                to the grammar at once, and remembers which group was being handled, so that
+                the subsequent particles aren't added again.
+
+                Otherwise, it just adds the particle.
+                """
+                choice_options = self.ChoiceOptions(element, particle)
+                if choice_options.particles and not (choice_options.choice_sequences and particle.parent_choice_sequence_number > 1):
+                    if choice_options.item_names != previous_choice_list:
+                        for choice in choice_options.particles:
                             grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=choice))
-                        previous_choice_list.extend(choice_list[1])
+                        previous_choice_list.extend(choice_options.item_names)
                 else:
                     grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=part))
                     previous_choice_list.clear()
@@ -409,7 +552,12 @@ class ExiBaseCoderCode:
             previous_choice_list = []  # to check whether this choice has already been handled
 
             # for the current particle, check all successors in the particle list
+            part: Particle
+            n_to_skip = set()
             for n, part in enumerate(element.particles[particle_index:], start=particle_index):
+                if n in n_to_skip:
+                    # a list of particles in the linear list not to be considered
+                    continue
                 if part.max_occurs == 1 and not part.max_occurs_changed:
                     if part.parent_has_sequence:
                         particle_is_part_of_sequence = True
@@ -421,7 +569,7 @@ class ExiBaseCoderCode:
                             if not element.particles[n + 1].parent_has_sequence:
                                 particle_is_part_of_sequence = False
 
-                                if part.min_occurs_old == 1 or (n == len(element.particles) - 1):
+                                if part.min_occurs_old == 1:
                                     self.append_to_element_grammars(grammar, element.typename)
                                     grammar = self.create_empty_grammar()
                                     break  # end of grammar for current particle
@@ -438,14 +586,22 @@ class ExiBaseCoderCode:
                                     grammar = self.create_empty_grammar()
                                     break  # end of grammar for current particle
 
-                    # not-optional or last particle in element: end of grammar list
-                    choice_for_part = self._get_choice_options(element, part)
-                    part_min = choice_for_part[2] if choice_for_part else 0
-                    # FIXME: do these need to be >= 1?
+                    # non-optional or last particle in element: end of grammar list
+                    choice_options = self.ChoiceOptions(element, part)
+                    part_min = choice_options.min_occurs if choice_options.particles else 0
                     if part.min_occurs == 1 or part_min == 1 or (n == len(element.particles) - 1):
                         self.append_to_element_grammars(grammar, element.typename)
                         grammar = self.create_empty_grammar()
                         break  # end of grammar for current particle
+                    if part.parent_has_choice_sequence:
+                        if (n == len(element.particles) - 1 - choice_options.number_of_particles_to_skip):
+                            grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.END))
+                            self.append_to_element_grammars(grammar, element.typename)
+                            grammar = self.create_empty_grammar()
+                            break  # end of grammar for current particle
+                        for i in range(choice_options.number_of_particles_to_skip):
+                            n_to_skip.add(n+1+i)
+                            log_write_error(f"Skipping subsequent particles {n_to_skip} for particle '{part.name}'")
                 elif part.max_occurs > 1 or part.max_occurs_changed:
                     if part.max_occurs < 25:
                         _max = part.max_occurs
@@ -488,19 +644,65 @@ class ExiBaseCoderCode:
 
         previous_choice_list = []
         for particle_index, particle in enumerate(element.particles):
-            choice_list = self._get_choice_options(element, particle)
-            if choice_list and choice_list[1] == previous_choice_list:
+            choice_options = self.ChoiceOptions(element, particle)
+            if choice_options.particles and choice_options.item_names == previous_choice_list:
                 # skip if particle in same choice group as a previously processed one
                 element.particles_next_grammar_ids[particle_index] = self.grammar_id
                 continue
             else:
                 previous_choice_list.clear()
-                if choice_list:
-                    previous_choice_list.extend(choice_list[1])
+                if choice_options.particles:
+                    previous_choice_list.extend(choice_options.item_names)
 
             _add_subsequent_grammar_details(element, particle, particle_index,
                                             index_last_nonoptional_particle, particle_is_part_of_sequence)
             grammar = self.create_empty_grammar()
+
+        # at this point, the grammar detail lists for this element's grammars are complete
+
+        grammar: ElementGrammar
+        # reorder: ANY as last real particle(s)
+        for grammar in self.element_grammars:
+            self.__expand_any_grammar(grammar)
+
+    def __expand_any_grammar(self, grammar):
+        # take the list of grammars details
+        # for every 'ANY' particle detail (there can theoretically be multiple):
+        #    move it to the end, instead of alphabetically
+        #    add an extra grammar detail after the 'END' detail (needs to be countable)
+        #
+        # FIXME: make the appended 'ANY' detail a special pseudo detail (different handling)
+        sorted_element_grammar_details: list[ElementGrammarDetail] = []
+        any_type_details: list[ElementGrammarDetail] = []
+        end_details: list[ElementGrammarDetail] = []
+        grammar_detail: ElementGrammarDetail
+        for grammar_detail in grammar.details:
+            if grammar_detail.flag == GrammarFlag.END:
+                end_details.append(grammar_detail)
+            elif grammar_detail.is_any:
+                any_type_details.append(grammar_detail)
+            else:
+                sorted_element_grammar_details.append(grammar_detail)
+        if end_details:
+            # generic/dummy ANYs first, then END, then implemented string/binary ANYs
+            sorted_element_grammar_details.extend(any_type_details)
+            sorted_element_grammar_details.extend(end_details)
+            # sorted_element_grammar_details.extend(any_type_details)
+            for any_detail in any_type_details:
+                # create new property for duplicated events
+                # TBD any_detail.property = foo
+                final_any_detail: ElementGrammarDetail = copy.copy(any_detail)
+                final_any_detail.any_is_dummy = False
+                sorted_element_grammar_details.append(final_any_detail)
+        else:
+            # assumption: without an END, only the implemented string/binary ANYs get event codes
+            # (no such case within V2G, cannot be confirmed, needs to be checked in EXI standard)
+            for any_detail in any_type_details:
+                any_detail.any_is_dummy = False
+            sorted_element_grammar_details.extend(any_type_details)
+
+        # overwrite the original list
+        grammar.details = sorted_element_grammar_details
 
     def generate_event_info(self, grammars: List[ElementGrammar], element: ElementData):
         len_grammars = len(grammars)
@@ -514,9 +716,10 @@ class ExiBaseCoderCode:
                 log_write_error(f'ERROR! Empty item list. Grammar {grammar.grammar_id}')
                 continue
 
-            # case 1: just one element, START
+            # case 1: just one element, START as singular grammar detail
             if len_details == 1 and grammar.details[0].flag == GrammarFlag.START:
                 grammar.details[0].event_index = 0
+                # the next grammar must be that of the subsequent particle
                 grammar.details[0].next_grammar = grammars[idx_grammar + 1].grammar_id
                 self.log(', '.join([
                                  f'Grammar ID={grammar.grammar_id}',
@@ -530,20 +733,34 @@ class ExiBaseCoderCode:
                 end_elem_detail_index = -1
                 event_code = 0
                 grammar_detail: ElementGrammarDetail  # type hint
+                # first, find the index of the END grammar (used below)
                 for grammar_detail_index, grammar_detail in enumerate(grammar.details):
                     if grammar_detail.flag == GrammarFlag.END:
                         end_elem_detail_index = grammar_detail_index
-                        continue
+                        break
 
-                    if grammar_detail.flag == GrammarFlag.START:
-                        grammar_detail.event_index = event_code
+                for grammar_detail_index, grammar_detail in enumerate(grammar.details):
+                    grammar_detail.event_index = grammar_detail_index
 
-                        if grammar_detail_index < len_details:
+                    if grammar_detail.flag == GrammarFlag.END:
+                        # the next grammar is the ERROR grammar
+                        grammar_detail.next_grammar = self.grammar_unknown
+                        self.log(', '.join([
+                                        f'Grammar ID={grammar.grammar_id}',
+                                        f'eventCode={grammar_detail.event_index}',
+                                        GrammarFlag.END,
+                                        f'next ID={grammar_detail.next_grammar}',
+                                    ]))
+
+                    elif grammar_detail.flag == GrammarFlag.START:
+                        if grammar_detail_index < len_details:  # FIXME this is always true
                             if end_elem_detail_index >= 0 and len_details == 2:
                                 grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
                             else:
                                 # find the particle's index in the element
+                                # FIXME can this break on repeated occurrences, as in PGPKeyDataType?
                                 part_index: int = None
+                                part: Particle
                                 for part_index, part in enumerate(element.particles):
                                     if grammar_detail.particle == part:
                                         break
@@ -553,15 +770,18 @@ class ExiBaseCoderCode:
                                         # particle is the last one, or is in the same choice group as the last one
                                         if pindex == len(element.particles) - 1:
                                             return True
-                                        choice_group = self._get_choice_options(element, element.particles[-1])
-                                        if choice_group and choice_group[0]:
-                                            if element.particles[pindex] in choice_group[0]:
+                                        choice_options = self.ChoiceOptions(element, element.particles[-1])
+                                        if choice_options.particles:
+                                            if element.particles[pindex] in choice_options.particles:
+                                                return True
+                                        if choice_options.choice_sequences:
+                                            if pindex == len(element.particles) - 1 - choice_options.number_of_particles_to_skip:
                                                 return True
                                         return False
 
                                     if _is_final_particle(element, part_index):
                                         # next grammar is always END for the final particle
-                                        grammar_detail.next_grammar = grammars[-2].grammar_id
+                                        grammar_detail.next_grammar = self.grammar_end_element
                                     else:
                                         grammar_detail.next_grammar = element.particles_next_grammar_ids[part_index]
                                 else:
@@ -587,16 +807,6 @@ class ExiBaseCoderCode:
                     else:
                         # the END element gets ERROR as next grammar
                         grammar_detail.next_grammar = grammars[len_grammars - 1].grammar_id
-
-                if end_elem_detail_index >= 0:
-                    grammar.details[end_elem_detail_index].event_index = event_code
-                    grammar.details[end_elem_detail_index].next_grammar = grammars[len_grammars - 1].grammar_id
-                    self.log(', '.join([
-                                     f'Grammar ID={grammar.grammar_id}',
-                                     f'eventCode={grammar.details[end_elem_detail_index].event_index}',
-                                     GrammarFlag.END,
-                                     f'next ID={grammar.details[end_elem_detail_index].next_grammar}',
-                                 ]))
 
     # ---------------------------------------------------------------------------
     # general generator functions
