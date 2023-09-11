@@ -682,7 +682,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                    indent=self.indent, level=1)
             content += '\n\n'
         else:
-            temp = self.generator.get_template('BaseEmptyFunction.jinja')
+            temp = self.generator.get_template('DecodeEmptyFunction.jinja')
             content += temp.render(element_comment=element.element_comment,
                                    function_name=CONFIG_PARAMS['decode_function_prefix'] + element.prefixed_type,
                                    struct_type=element.prefixed_type, parameter_name=typename,
