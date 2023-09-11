@@ -60,6 +60,9 @@ iso20_array_optimizations = {
     # gdb's stack overflows on the original struct site - no other
     # reason to restrict this currently
     'PriceRuleStackType': 64,
+    # Workaround for missing loop implementation of large arrays (https://github.com/EVerest/cbexigen/issues/28).
+    'ParameterSetType': 5,
+    'ParameterType': 5,
 }
 
 # general C code style
