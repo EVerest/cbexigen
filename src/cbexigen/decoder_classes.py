@@ -561,12 +561,17 @@ class ExiDecoderCode(ExiBaseCoderCode):
                     event_comment = f'// Event: {detail.flag}; ' + \
                                     f'next={detail.next_grammar}'
                 elif detail.particle is not None:
-                    event_comment = f'// Event: {detail.flag} ({detail.particle.name}, ' + \
-                                    f'{detail.particle.type_short} ({detail.particle.typename})); ' + \
-                                    f'next={detail.next_grammar}'
+                    if detail.particle.abstract or detail.particle.abstract_type:
+                        event_comment = (f'// Abstract element or type: {detail.particle.name}, '
+                                         f'{detail.particle.type_short} ({detail.particle.typename})')
+                    else:
+                        event_comment = f'// Event: {detail.flag} ({detail.particle.name}, ' + \
+                                        f'{detail.particle.type_short} ({detail.particle.typename})); ' + \
+                                        f'next={detail.next_grammar}'
                 else:
                     # unsupported particle which appears in the event list
                     event_comment = f'// Event: {detail.flag} (None); next={detail.next_grammar}'
+
                 # currently not used, should be removed if it seems not to be useful!
                 # add_debug_code = self.get_status_for_add_debug_code(grammar.element_typename)
                 # type_parameter = CONFIG_PARAMS['decode_function_prefix'] + grammar.element_typename

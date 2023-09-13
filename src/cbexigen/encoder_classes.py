@@ -491,8 +491,12 @@ class ExiEncoderCode(ExiBaseCoderCode):
             content += self.__get_event_content_for_end_element(detail, grammar.bits_to_write, False, level)
         else:
             if detail.particle is not None and not (detail.is_any and detail.any_is_dummy):
-                event_comment = f'// Event: {detail.flag} ({detail.particle.name}, {detail.particle.typename})' \
-                                f'; next={detail.next_grammar}'
+                if detail.particle.abstract or detail.particle.abstract_type:
+                    event_comment = (f'// Abstract element or type: {detail.flag} '
+                                     f'({detail.particle.typename}); next={detail.next_grammar}')
+                else:
+                    event_comment = (f'// Event: {detail.flag} ({detail.particle.name}, {detail.particle.typename})'
+                                     f'; next={detail.next_grammar}')
                 type_parameter = CONFIG_PARAMS['encode_function_prefix'] + detail.particle.prefixed_name
                 if detail.particle.parent_has_choice_sequence:
                     parameter = f'{grammar.element_typename}->choice_{detail.particle.parent_choice_sequence_number}'
@@ -533,7 +537,11 @@ class ExiEncoderCode(ExiBaseCoderCode):
         if detail.flag == GrammarFlag.END:
             content += self.__get_event_content_for_end_element(detail, grammar.bits_to_write, True, level)
         else:
-            event_comment = f'// Event: {detail.flag} ({detail.particle.typename}); next={detail.next_grammar}'
+            if detail.particle.abstract or detail.particle.abstract_type:
+                event_comment = (f'// Abstract element or type: {detail.flag} '
+                                 f'({detail.particle.typename}); next={detail.next_grammar}')
+            else:
+                event_comment = f'// Event: {detail.flag} ({detail.particle.typename}); next={detail.next_grammar}'
             type_parameter = CONFIG_PARAMS['encode_function_prefix'] + detail.particle.prefixed_name
             temp = self.generator.get_template('EncodeEventSingleElement.jinja')
             content += temp.render(bits_to_write=grammar.bits_to_write,

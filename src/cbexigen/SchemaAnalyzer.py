@@ -1251,6 +1251,7 @@ class SchemaAnalyzer(object):
                                 base_type=element.base_type,
                                 type=element.type,
                                 type_short=element.type_short,
+                                abstract=True,
                                 min_occurs=0,
                                 max_occurs=1)
             replacement_list.append(part_new)
