@@ -517,7 +517,8 @@ class ExiBaseCoderCode:
 
         def _add_subsequent_grammar_details(element: ElementData, particle: Particle,
                                             particle_index: int, index_last_nonoptional_particle: int,
-                                            particle_is_part_of_sequence: bool):
+                                            particle_is_part_of_sequence: bool,
+                                            is_recursion: bool = False):
             # we push the grammar to a list below, and assign a new object to this variable;
             # this assignment does not apply globally if the grammar is passed in
             nonlocal grammar
@@ -590,15 +591,19 @@ class ExiBaseCoderCode:
                     choice_options = self.ChoiceOptions(element, part)
                     part_min = choice_options.min_occurs if choice_options.particles else 0
                     if part.min_occurs == 1 or part_min == 1 or (n == len(element.particles) - 1):
-                        self.append_to_element_grammars(grammar, element.typename)
-                        grammar = self.create_empty_grammar()
-                        break  # end of grammar for current particle
+                        if not is_recursion:
+                            # end of grammar for current particle
+                            self.append_to_element_grammars(grammar, element.typename)
+                            grammar = self.create_empty_grammar()
+                        break
                     if part.parent_has_choice_sequence:
                         if (n == len(element.particles) - 1 - choice_options.number_of_particles_to_skip):
                             grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.END))
-                            self.append_to_element_grammars(grammar, element.typename)
-                            grammar = self.create_empty_grammar()
-                            break  # end of grammar for current particle
+                            if not is_recursion:
+                                # end of grammar for current particle
+                                self.append_to_element_grammars(grammar, element.typename)
+                                grammar = self.create_empty_grammar()
+                            break
                         for i in range(choice_options.number_of_particles_to_skip):
                             n_to_skip.add(n+1+i)
                             log_write_error(f"Skipping subsequent particles {n_to_skip} for particle '{part.name}'")
@@ -611,12 +616,15 @@ class ExiBaseCoderCode:
                             if part.max_occurs >= 1 and part.max_occurs_changed:
                                 _max += 1
                         for m in range(0, _max):
-                            if m >= part.min_occurs and m > 0:  # optional, and grammar 0 already contains END
+                            _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list)
+                            if m >= part.min_occurs and m > 0:
+                                # this is an optional occurrence (and grammar 0 already contains END),
+                                # so recurse with the subsequent particles
                                 _add_subsequent_grammar_details(element, particle, n + 1,
                                                                 index_last_nonoptional_particle,
-                                                                particle_is_part_of_sequence)
+                                                                particle_is_part_of_sequence,
+                                                                is_recursion=True)
 
-                            _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list)
                             self.append_to_element_grammars(grammar, element.typename)
                             grammar = self.create_empty_grammar()
                     else:
