@@ -760,40 +760,39 @@ class ExiBaseCoderCode:
                                     ]))
 
                     elif grammar_detail.flag == GrammarFlag.START:
-                        if grammar_detail_index < len_details:  # FIXME this is always true
-                            if end_elem_detail_index >= 0 and len_details == 2:
-                                grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
-                            else:
-                                # find the particle's index in the element
-                                # FIXME can this break on repeated occurrences, as in PGPKeyDataType?
-                                part_index: int = None
-                                part: Particle
-                                for part_index, part in enumerate(element.particles):
-                                    if grammar_detail.particle == part:
-                                        break
+                        if end_elem_detail_index >= 0 and len_details == 2:
+                            grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
+                        else:
+                            # find the particle's index in the element
+                            # FIXME can this break on repeated occurrences, as in PGPKeyDataType?
+                            part_index: int = None
+                            part: Particle
+                            for part_index, part in enumerate(element.particles):
+                                if grammar_detail.particle == part:
+                                    break
 
-                                if part_index is not None:
-                                    def _is_final_particle(element: ElementData, pindex: int) -> bool:
-                                        # particle is the last one, or is in the same choice group as the last one
-                                        if pindex == len(element.particles) - 1:
+                            if part_index is not None:
+                                def _is_final_particle(element: ElementData, pindex: int) -> bool:
+                                    # particle is the last one, or is in the same choice group as the last one
+                                    if pindex == len(element.particles) - 1:
+                                        return True
+                                    choice_options = self.ChoiceOptions(element, element.particles[-1])
+                                    if choice_options.particles:
+                                        if element.particles[pindex] in choice_options.particles:
                                             return True
-                                        choice_options = self.ChoiceOptions(element, element.particles[-1])
-                                        if choice_options.particles:
-                                            if element.particles[pindex] in choice_options.particles:
-                                                return True
-                                        if choice_options.choice_sequences:
-                                            if pindex == len(element.particles) - 1 - choice_options.number_of_particles_to_skip:
-                                                return True
-                                        return False
+                                    if choice_options.choice_sequences:
+                                        if pindex == len(element.particles) - 1 - choice_options.number_of_particles_to_skip:
+                                            return True
+                                    return False
 
-                                    if _is_final_particle(element, part_index):
-                                        # next grammar is always END for the final particle
-                                        grammar_detail.next_grammar = self.grammar_end_element
-                                    else:
-                                        grammar_detail.next_grammar = element.particles_next_grammar_ids[part_index]
+                                if _is_final_particle(element, part_index):
+                                    # next grammar is always END for the final particle
+                                    grammar_detail.next_grammar = self.grammar_end_element
                                 else:
-                                    log_write_error("Failed to find element particle for " +
-                                                    f"{grammar_detail.particle.name}")
+                                    grammar_detail.next_grammar = element.particles_next_grammar_ids[part_index]
+                            else:
+                                log_write_error("Failed to find element particle for " +
+                                                f"{grammar_detail.particle.name}")
 
                         ptname = grammar_detail.particle.typename if grammar_detail.particle is not None else '(None)'
                         self.log(', '.join([
