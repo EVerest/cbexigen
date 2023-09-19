@@ -532,7 +532,9 @@ class ExiBaseCoderCode:
                     if str(particle.parent_sequence[0]) == particle.name:
                         grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.END))
 
-            def _add_particle_or_choice_list_to_details(element: ElementData, grammar: ElementGrammar, particle: Particle, previous_choice_list):
+            def _add_particle_or_choice_list_to_details(
+                    element: ElementData, grammar: ElementGrammar, particle: Particle, previous_choice_list,
+                    is_in_array_last: bool = False, is_in_array_not_last: bool = False):
                 """
                 If a particle is part of a choice group, this adds all the group's particles
                 to the grammar at once, and remembers which group was being handled, so that
@@ -544,10 +546,14 @@ class ExiBaseCoderCode:
                 if choice_options.particles and not (choice_options.choice_sequences and particle.parent_choice_sequence_number > 1):
                     if choice_options.item_names != previous_choice_list:
                         for choice in choice_options.particles:
-                            grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=choice))
+                            grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=choice,
+                                                                        is_in_array_last=is_in_array_last,
+                                                                        is_in_array_not_last=is_in_array_not_last))
                         previous_choice_list.extend(choice_options.item_names)
                 else:
-                    grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=part))
+                    grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=part,
+                                                                is_in_array_last=is_in_array_last,
+                                                                is_in_array_not_last=is_in_array_not_last))
                     previous_choice_list.clear()
 
             previous_choice_list = []  # to check whether this choice has already been handled
@@ -616,7 +622,12 @@ class ExiBaseCoderCode:
                             if part.max_occurs >= 1 and part.max_occurs_changed:
                                 _max += 1
                         for m in range(0, _max):
-                            _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list)
+                            if m < _max - 1:
+                                _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
+                                                                        is_in_array_not_last=True)
+                            else:
+                                _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
+                                                                        is_in_array_last=True)
                             if m >= part.min_occurs and m > 0:
                                 # this is an optional occurrence (and grammar 0 already contains END),
                                 # so recurse with the subsequent particles
@@ -770,6 +781,8 @@ class ExiBaseCoderCode:
 
                         def _is_final_particle(element: ElementData, pindex: int) -> bool:
                             # particle is the last one, or is in the same choice group as the last one
+                            if grammar_detail.is_in_array_not_last:
+                                return False
                             if pindex == len(element.particles) - 1:
                                 return True
                             choice_options = self.ChoiceOptions(element, element.particles[-1])
@@ -782,14 +795,25 @@ class ExiBaseCoderCode:
                             return False
 
                         if end_elem_detail_index >= 0 and len_details == 2:
-                            grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
+                            if grammar_detail.is_in_array_last:
+                                if _is_final_particle(element, part_index):
+                                    grammar_detail.next_grammar = self.grammar_end_element
+                                else:
+                                    grammar_detail.next_grammar = element.particles_next_grammar_ids[part_index]
+                            else:
+                                grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
                         else:
                             if part_index is not None:
                                 if _is_final_particle(element, part_index):
                                     # next grammar is always END for the final particle
                                     grammar_detail.next_grammar = self.grammar_end_element
                                 else:
-                                    grammar_detail.next_grammar = element.particles_next_grammar_ids[part_index]
+                                    if grammar_detail.is_in_array_not_last:
+                                        grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
+                                    elif grammar_detail.is_in_array_last:
+                                        grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
+                                    else:
+                                        grammar_detail.next_grammar = element.particles_next_grammar_ids[part_index]
                             else:
                                 log_write_error("Failed to find element particle for " +
                                                 f"{grammar_detail.particle.name}")
