@@ -1,4 +1,4 @@
-{%- if type_attribute == 0 %}
+{%- if type_simple == 0 %}
 {{ indent * level }}error = exi_basetypes_encoder_nbit_uint(stream, 1, 0);
 {{ indent * level }}if (error == EXI_ERROR__NO_ERROR)
 {{ indent * level }}{
@@ -15,7 +15,7 @@
 {%- if type_array == 1 %}
 {{ indent * (level + 3) }}{{ type_array_index }}++;
 {%- endif %}
-{%- if type_attribute == 0 %}
+{%- if type_simple == 0 %}
 {{ indent * (level + 3) }}// encode END Element
 {{ indent * (level + 3) }}error = exi_basetypes_encoder_nbit_uint(stream, 1, 0);
 {{ indent * (level + 3) }}if (error == EXI_ERROR__NO_ERROR)
