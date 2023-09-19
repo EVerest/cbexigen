@@ -17,6 +17,7 @@ class AnalyzerData:
     known_particles = {}
     known_enums = {}
     known_prototypes = {}
+    known_fragments = {}
 
     max_occurs_changed = {}
     namespace_elements = {}
@@ -25,6 +26,13 @@ class AnalyzerData:
     add_debug_code_enabled = 0
     debug_code_current_message_id = 1
     debug_code_messages = {}
+
+
+@dataclass
+class FragmentData:
+    name = ''
+    namespace = ''
+    type = ''
 
 
 OCCURRENCE_LIMITS_CORRECTED: Dict[str, int] = {

@@ -1,0 +1,34 @@
+{{ function_comment }}
+int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ parameter_name }}) {
+{{ indent }}uint32_t eventCode;
+{{ indent }}int error = exi_header_read_and_check(stream);
+
+{{ indent }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent }}{
+{{ indent * 2 }}{{ init_function }}({{ parameter_name }});
+
+{{ indent * 2 }}error = exi_basetypes_decoder_nbit_uint(stream, {{ bits_to_read }}, &eventCode);
+{{ indent * 2 }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * 2 }}{
+{{ indent * 3 }}switch(eventCode)
+{{ indent * 3 }}{
+{%- for comment, namespace, function, parameter in decode_functions %}
+{{ indent * 3 }}case {{ loop.index0 }}:
+{{ indent * 4 }}// {{ comment }} ({{ namespace }})
+{%- if parameter == '' %}
+{{ indent * 4 }}error = EXI_ERROR__NOT_IMPLEMENTED_YET;
+{%- else %}
+{{ indent * 4 }}error = {{ function }}(stream, &{{ parameter }});
+{{ indent * 4 }}{{ parameter }}_isUsed = 1u;
+{%- endif %}
+{{ indent * 4 }}break;
+{%- endfor %}
+{{ indent * 3 }}default:
+{{ indent * 4 }}error = EXI_ERROR__UNSUPPORTED_SUB_EVENT;
+{{ indent * 4 }}break;
+{{ indent * 3 }}}
+{{ indent * 2 }}}
+{{ indent }}}
+
+{{ indent }}return error;
+}

@@ -68,6 +68,49 @@ iso20_array_optimizations = {
     'ParameterType': 5,
 }
 
+# if fragment de- and encoder should be generated, set this value to 1.
+# Currently only complex elements can be added to the fragment coders.
+generate_fragments = 1
+# fragment structure definitions
+fragment_struct_name = 'exiFragment'
+fragment_parameter_name = 'exiFrag'
+# the name of this parameter must consist of the schema prefix (chosen below) plus "fragments"
+din_fragments = [
+    'SignedInfo',
+    'CertificateInstallationReq',
+    'CertificateInstallationRes',
+    'CertificateUpdateReq',
+    'CertificateUpdateRes',
+    'ChargeParameterDiscoveryRes',
+    'ContractAuthenticationReq',
+    'MeteringReceiptReq',
+]
+iso2_fragments = [
+    'SignedInfo',
+    'AuthorizationReq',
+    'CertificateInstallationReq',
+    'CertificateInstallationRes',
+    'CertificateUpdateReq',
+    'CertificateUpdateRes',
+    'ChargeParameterDiscoveryRes',
+    'MeteringReceiptReq',
+]
+iso20_fragments = [
+    'SignedInfo',
+    'AuthorizationReq',
+    'CertificateInstallationReq',
+    'CertificateInstallationRes',
+    'MeteringConfirmationReq',
+]
+iso20_ac_fragments = [
+    'SignedInfo',
+    'AC_ChargeParameterDiscoveryRes',
+]
+iso20_dc_fragments = [
+    'SignedInfo',
+    'DC_ChargeParameterDiscoveryRes',
+]
+
 # general C code style
 c_code_indent_chars = 4
 # these characters will be replaced by an underscore in generated code
