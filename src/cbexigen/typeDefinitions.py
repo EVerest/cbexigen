@@ -38,7 +38,7 @@ OCCURRENCE_LIMITS_CORRECTED: Dict[str, int] = {
     "RootCertificateID": 5,
     "Transform": 1,
     "SignatureProperty": 1,
-    "Reference": 1,
+    "Reference": 4,
     "PMaxScheduleEntry": 5,
     "KeyName": 1,
     "KeyValue": 1,
