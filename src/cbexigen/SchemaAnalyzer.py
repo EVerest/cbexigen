@@ -2,12 +2,14 @@
 # Copyright (c) 2022 - 2023 chargebyte GmbH
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 from typing import Union
+import re
 
 from xmlschema import XMLSchema11, XsdElement, XsdType, XsdAttribute
-from xmlschema.validators import XsdSimpleType, XsdComplexType, XsdGroup, XsdAnyElement, Xsd11AnyElement
+from xmlschema.validators import (XsdSimpleType, XsdComplexType, XsdGroup, XsdAnyElement, Xsd11AnyElement,
+                                  Xsd11AtomicRestriction)
 
 from cbexigen import tools
-from cbexigen.typeDefinitions import AnalyzerData, OCCURRENCE_LIMITS_CORRECTED
+from cbexigen.typeDefinitions import AnalyzerData, OCCURRENCE_LIMITS_CORRECTED, FragmentData
 from cbexigen.elementData import Particle, Choice, ElementData
 from cbexigen.tools_logging import log_write, log_write_dict, log_write_element, msg_write, \
     log_write_element_pos_data
@@ -30,6 +32,7 @@ class SchemaAnalyzer(object):
         self.__known_particles = analyzer_data.known_particles
         self.__known_enums = analyzer_data.known_enums
         self.__known_prototypes = analyzer_data.known_prototypes
+        self.__known_fragments = analyzer_data.known_fragments
 
         self.__max_occurs_changed = analyzer_data.max_occurs_changed
         self.__namespace_elements = analyzer_data.namespace_elements
@@ -958,6 +961,10 @@ class SchemaAnalyzer(object):
                 self.__get_child_tree(element, level)
                 count += 1
 
+        # Build list of all elements and types if enabled in config
+        if self.config['generate_fragments'] == 1:
+            self.__build_schema_fragment_list()
+
         # Build list of generate elements types
         self.__build_generate_elements_types_list()
 
@@ -998,6 +1005,59 @@ class SchemaAnalyzer(object):
                         self.__schema_builtin_types[value.local_name] = value.simple_type.base_type.local_name
                     else:
                         self.__schema_builtin_types[value.local_name] = value.simple_type.local_name
+
+    def __build_schema_fragment_list(self):
+        """
+            This function creates the list needed to generate the fragment struct and fragment coding functions.
+        """
+        def __get_fragment(fragment_element: XsdElement):
+            fragment = FragmentData()
+            fragment.name = fragment_element.local_name
+            if fragment_element.name.find('{') == 0 and fragment_element.name.find('}') > 0:
+                fragment.namespace = fragment_element.name[1:fragment_element.name.index('}')]
+            else:
+                fragment.namespace = fragment_element.default_namespace
+            if fragment_element.type.base_type is not None:
+                if fragment_element.type.base_type.local_name in tools.TYPE_TRANSLATION:
+                    fragment.type = tools.TYPE_TRANSLATION[fragment_element.type.base_type.local_name]
+                else:
+                    fragment.type = self.__get_type_name_short(fragment_element)
+            else:
+                fragment.type = self.__get_type_name_short(fragment_element)
+
+            return fragment
+
+        # Build the list for main struct or decoding function, probably something with exiDocument
+        def __print_child_recursive(element_list, child_element: XsdElement):
+            if child_element.local_name is not None:
+                element_list[child_element.name] = __get_fragment(child_element)
+
+            for subst_child in child_element.iter_substitutes():
+                __print_child_recursive(element_list, subst_child)
+
+            for sub_child in child_element.iterchildren():
+                __print_child_recursive(element_list, sub_child)
+
+        self.__known_fragments.clear()
+        fragments = {}
+        for element in self.__current_schema.elements.target_dict.values():
+            if element.default_namespace:
+                if element.name not in fragments.keys():
+                    fragments[element.name] = __get_fragment(element)
+
+        for global_element in self.__current_schema.iter_globals():
+            if isinstance(global_element, XsdComplexType) or isinstance(global_element, Xsd11AtomicRestriction):
+                continue
+
+            if global_element.name not in fragments.keys():
+                fragments[global_element.name] = __get_fragment(global_element)
+
+            for child in global_element.iterchildren():
+                __print_child_recursive(fragments, child)
+
+        # Sort the list of elements and types by 1. name and 2. namespace
+        sorted_by_name = dict(sorted(fragments.items(), key=lambda item: (item[1].name, item[1].namespace)))
+        self.__known_fragments.update(sorted_by_name)
 
     def __build_namespace_element_lists(self):
         """

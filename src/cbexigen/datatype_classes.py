@@ -5,10 +5,10 @@
 from xmlschema import XMLSchema11
 from cbexigen import tools, tools_generator, tools_logging
 from cbexigen.elementData import Particle, ElementData
-from cbexigen.tools_config import CONFIG_PARAMS
+from cbexigen.tools_config import CONFIG_PARAMS, get_config_module, get_fragment_parameter_for_schema
 from cbexigen.tools_logging import log_write_error, log_init_logger, log_write_logger, \
     log_deinit_logger, log_exists_logger
-from cbexigen.typeDefinitions import AnalyzerData
+from cbexigen.typeDefinitions import AnalyzerData, FragmentData
 
 
 # ---------------------------------------------------------------------------
@@ -27,7 +27,14 @@ class DatatypeHeader:
         self.logger_name = ''
         self.scheme = current_scheme
 
-        self.__is_iso20 = True if str(self.parameters['prefix']).startswith('iso20_') else False
+        self.__schema_prefix = self.parameters['prefix']
+        self.__is_iso20 = self.__schema_prefix.startswith('iso20_')
+
+        self.__fragments = []
+        self.__generate_fragment = False
+        if self.config['generate_fragments'] == 1:
+            self.__fragments = get_fragment_parameter_for_schema(self.__schema_prefix)
+            self.__generate_fragment = len(self.__fragments) > 0
 
         if self.logging_enabled:
             self.logger_name = str(self.h_params['filename'])
@@ -400,6 +407,35 @@ class DatatypeHeader:
                            element_comment=comment,
                            elements=elements)
 
+    def __get_fragment_content(self):
+        if not self.__generate_fragment:
+            return ''
+
+        elements = []
+        comment = '// elements of EXI fragment'
+        name = self.__schema_prefix + self.config['fragment_struct_name']
+
+        fragment: FragmentData
+        for fragment in self.analyzer_data.known_fragments.values():
+            if fragment.name in self.__fragments:
+                fragment_type = fragment.type
+                if fragment.type == 'AnonType':
+                    fragment_type = fragment.name
+
+                prefixed_type = f'{self.parameters["prefix"]}{fragment_type}'
+                if fragment_type in self.analyzer_data.known_elements.values():
+                    elements.append((prefixed_type, fragment.name))
+                else:
+                    log_write_error(f'Fragment {fragment.name} ({fragment.type}) '
+                                    f'is not in the list of known elements.')
+
+        temp = self.generator.get_template('BaseStructWithUnionAndUsed.jinja')
+        content = temp.render(struct_name=name,
+                              element_comment=comment,
+                              elements=elements)
+
+        return f'\n\n{content}'
+
     def __get_prototype_content(self):
         comment = '// init for structs'
 
@@ -409,6 +445,10 @@ class DatatypeHeader:
                 if element.prefixed_name not in self.analyzer_data.known_prototypes:
                     if element.prefixed_type not in self.analyzer_data.known_prototypes:
                         self.analyzer_data.known_prototypes[element.prefixed_type] = element.type_short
+
+        if self.__generate_fragment:
+            fragment_type = self.__schema_prefix + self.config['fragment_struct_name']
+            self.analyzer_data.known_prototypes[fragment_type] = self.config['fragment_parameter_name']
 
         # generate prototypes for elements
         temp = self.generator.get_template('BasePrototype.jinja')
@@ -534,6 +574,11 @@ class DatatypeHeader:
         prototype = self.__get_prototype_content()
         enum_code = self.__generate_functions_enum()
 
+        if self.__generate_fragment:
+            fragment_content = self.__get_fragment_content()
+            if fragment_content != '':
+                content += fragment_content
+
         # file
         try:
             temp = self.generator.get_template('BaseDatatypes.h.jinja')
@@ -565,7 +610,14 @@ class DatatypeCode:
         self.logging_enabled = enable_logging
         self.logger_name = ''
 
-        self.__is_iso20 = True if str(self.parameters['prefix']).startswith('iso20_') else False
+        self.__schema_prefix = self.parameters['prefix']
+        self.__is_iso20 = self.__schema_prefix.startswith('iso20_')
+
+        self.__fragments = []
+        self.__generate_fragment = False
+        if self.config['generate_fragments'] == 1:
+            self.__fragments = get_fragment_parameter_for_schema(self.__schema_prefix)
+            self.__generate_fragment = len(self.__fragments) > 0
 
         if self.logging_enabled:
             self.logger_name = str(self.c_params['filename'])
@@ -651,6 +703,40 @@ class DatatypeCode:
                            element_comment=comment,
                            elements=elements)
 
+    def __get_fragment_content(self):
+        comment = '// init for fragment'
+        struct_type = f'{self.__schema_prefix}{self.config["fragment_struct_name"]}'
+        parameter_name = self.config['fragment_parameter_name']
+        function_name = f'{self.config["init_function_prefix"]}{struct_type}'
+
+        ele = []
+        arr = []
+
+        fragment: FragmentData
+        for fragment in self.analyzer_data.known_fragments.values():
+            if fragment.name in self.__fragments:
+                fragment_type = fragment.type
+                if fragment.type == 'AnonType':
+                    fragment_type = fragment.name
+
+                if fragment_type in self.analyzer_data.known_elements.values():
+                    ele.append(fragment.name)
+                else:
+                    log_write_error(f'Fragment {fragment.name} ({fragment.type}) '
+                                    f'is not in the list of known elements.')
+
+        # generate init function with arrayLen = 0u and isUsed = 0u
+        temp = self.generator.get_template("BaseInitWithArrayLenAndUsed.jinja")
+        result = temp.render(function_name=function_name,
+                             struct_type=struct_type,
+                             parameter_name=parameter_name,
+                             element_comment=comment,
+                             elements=ele,
+                             arrays=arr)
+        result += '\n'
+
+        return result
+
     def __get_function_content(self):
         ele = []
         arr = []
@@ -721,6 +807,10 @@ class DatatypeCode:
         content = ''
         content += self.__get_root_content()
         content += self.__get_function_content()
+
+        if self.__generate_fragment:
+            content += '\n'
+            content += self.__get_fragment_content()
 
         # file
         try:

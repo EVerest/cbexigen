@@ -37,6 +37,11 @@ CONFIG_PARAMS: Dict[str, Union[str, int]] = {
     'choice_sequence_prefix': 'choice_',
     # do optimizations
     'apply_optimizations': 0,
+    # generate fragment de- and encoder
+    'generate_fragments': 0,
+    # fragment structure definitions
+    'fragment_struct_name': 'exiFragment',
+    'fragment_parameter_name': 'exiFrag',
     # general c-code style
     'c_code_indent_chars': 4,
     'c_replace_chars': [' ', '-'],
@@ -68,6 +73,17 @@ def get_config_module():
         __CONFIG_MODULE = importlib.import_module(config_module_name)
 
     return __CONFIG_MODULE
+
+
+def get_fragment_parameter_for_schema(schema_prefix):
+    fragments = []
+
+    config_module = get_config_module()
+    parameter = schema_prefix + 'fragments'
+    if hasattr(config_module, parameter):
+        fragments = getattr(config_module, parameter)
+
+    return fragments
 
 
 def check_config_parameters():
@@ -139,6 +155,19 @@ def process_config_parameters():
     # apply optimizations
     if hasattr(config_module, 'apply_optimizations'):
         CONFIG_PARAMS['apply_optimizations'] = config_module.apply_optimizations
+
+    ''' fragment de- and encoder '''
+    # apply fragments
+    if hasattr(config_module, 'generate_fragments'):
+        CONFIG_PARAMS['generate_fragments'] = config_module.generate_fragments
+
+    ''' fragment structure definitions '''
+    # fragment_struct_name
+    if hasattr(config_module, 'fragment_struct_name'):
+        CONFIG_PARAMS['fragment_struct_name'] = config_module.fragment_struct_name
+    # fragment_parameter_name
+    if hasattr(config_module, 'fragment_parameter_name'):
+        CONFIG_PARAMS['fragment_parameter_name'] = config_module.fragment_parameter_name
 
     ''' general c-code style '''
     # c_code_indent_chars (number of spaces)

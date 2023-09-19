@@ -32,6 +32,7 @@ class FileGenerator(object):
         self.__analyzer_data.known_particles.clear()
         self.__analyzer_data.known_prototypes.clear()
         self.__analyzer_data.known_enums.clear()
+        self.__analyzer_data.known_fragments.clear()
 
         self.__analyzer_data.max_occurs_changed.clear()
         self.__analyzer_data.namespace_elements.clear()
