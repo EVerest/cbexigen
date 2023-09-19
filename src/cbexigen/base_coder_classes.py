@@ -608,8 +608,7 @@ class ExiBaseCoderCode:
                         # if max_occurs was reduced to 1, make sure to create the proper grammar after the one occurence
                         # This should be done only if the caller is not the encoder
                         if self.__class__.__name__ != 'ExiEncoderCode':
-                            # FIXME: should also apply to max_occurs > 1?
-                            if part.max_occurs == 1 and part.max_occurs_changed:
+                            if part.max_occurs >= 1 and part.max_occurs_changed:
                                 _max += 1
                         for m in range(0, _max):
                             if m >= part.min_occurs and m > 0:  # optional, and grammar 0 already contains END
