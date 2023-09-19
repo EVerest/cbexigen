@@ -338,6 +338,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         type_length = type_value + f'.{detail.particle.length_parameter_name}'
         type_chars = type_value + f'.{detail.particle.value_parameter_name}'
         type_chars_size = detail.particle.prefixed_define_for_base_type
+        type_simple = detail.particle.is_attribute or detail.particle.is_simple_content
         next_grammar_id = detail.next_grammar
 
         if detail.particle.max_occurs > 1:
@@ -353,7 +354,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                      type_chars=type_chars,
                                      type_chars_size=type_chars_size,
                                      type_option=detail.particle.is_optional,
-                                     type_attribute=detail.particle.is_attribute,
+                                     type_simple=type_simple,
                                      type_array=detail.particle.max_occurs > 1,
                                      type_array_length=f'{element_typename}->{detail.particle.name}.arrayLen',
                                      type_array_define=detail.particle.prefixed_define_for_array,

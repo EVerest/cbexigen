@@ -4,7 +4,7 @@
 {{ indent * level }}{
 {%- set level = level + 1 %}
 {%- endif %}
-{%- if type_attribute == 0 %}
+{%- if type_simple == 0 %}
 {{ indent * level }}error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
 {{ indent * level }}if (error == 0)
 {{ indent * level }}{
@@ -43,7 +43,7 @@
 {{ indent * (level + 4) }}error = EXI_ERROR__STRINGVALUES_NOT_SUPPORTED;
 {{ indent * (level + 3) }}}
 {{ indent * (level + 2) }}}
-{%- if type_attribute == 0 %}
+{%- if type_simple == 0 %}
 {{ indent * (level + 1) }}}
 {{ indent * (level + 1) }}else
 {{ indent * (level + 1) }}{
