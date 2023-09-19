@@ -48,6 +48,9 @@ apply_optimizations = 1
 appHand_array_optimizations = {
     'AppProtocolType': 5
 }
+din_array_optimizations = {
+    'ReferenceType': 1
+}
 iso2_array_optimizations = {
     'PMaxScheduleEntryType': 12,
     'SalesTariffEntryType': 12,
