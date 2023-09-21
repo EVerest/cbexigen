@@ -593,4 +593,118 @@ c_files_to_generate = {
                               'iso20_DC_Datatypes.h', 'iso20_DC_Encoder.h']
         }
     },
+    'iso20_WPT_Datatypes': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_WPT.xsd',
+        'prefix': 'iso20_wpt_',
+        'type': 'converter',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_WPT_Datatypes.h',
+            'identifier': 'ISO20_WPT_DATATYPES_H',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h']
+        },
+        'c': {
+            'filename': 'iso20_WPT_Datatypes.c',
+            'identifier': 'ISO20_WPT_DATATYPES_C',
+            'include_std_lib': [],
+            'include_other': ['iso20_WPT_Datatypes.h']
+        }
+    },
+    'iso20_WPT_Decoder': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_WPT.xsd',
+        'prefix': 'iso20_wpt_',
+        'type': 'decoder',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_WPT_Decoder.h',
+            'identifier': 'ISO20_WPT_DECODER_H',
+            'include_std_lib': [],
+            'include_other': ['exi_bitstream.h', 'iso20_WPT_Datatypes.h']
+        },
+        'c': {
+            'filename': 'iso20_WPT_Decoder.c',
+            'identifier': 'ISO20_WPT_DECODER_C',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h', 'exi_types_decoder.h', 'exi_basetypes_decoder.h',
+                              'exi_error_codes.h', 'exi_header.h', 'iso20_WPT_Datatypes.h',
+                              'iso20_WPT_Decoder.h']
+        }
+    },
+    'iso20_WPT_Encoder': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_WPT.xsd',
+        'prefix': 'iso20_wpt_',
+        'type': 'encoder',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_WPT_Encoder.h',
+            'identifier': 'ISO20_WPT_ENCODER_H',
+            'include_std_lib': [],
+            'include_other': ['exi_bitstream.h', 'iso20_WPT_Datatypes.h']
+        },
+        'c': {
+            'filename': 'iso20_WPT_Encoder.c',
+            'identifier': 'ISO20_WPT_ENCODER_C',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h', 'exi_basetypes_encoder.h', 'exi_error_codes.h', 'exi_header.h',
+                              'iso20_WPT_Datatypes.h', 'iso20_WPT_Encoder.h']
+        }
+    },
+    'iso20_ACDP_Datatypes': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_ACDP.xsd',
+        'prefix': 'iso20_acdp_',
+        'type': 'converter',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_ACDP_Datatypes.h',
+            'identifier': 'ISO20_ACDP_DATATYPES_H',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h']
+        },
+        'c': {
+            'filename': 'iso20_ACDP_Datatypes.c',
+            'identifier': 'ISO20_ACDP_DATATYPES_C',
+            'include_std_lib': [],
+            'include_other': ['iso20_ACDP_Datatypes.h']
+        }
+    },
+    'iso20_ACDP_Decoder': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_ACDP.xsd',
+        'prefix': 'iso20_acdp_',
+        'type': 'decoder',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_ACDP_Decoder.h',
+            'identifier': 'ISO20_ACDP_DECODER_H',
+            'include_std_lib': [],
+            'include_other': ['exi_bitstream.h', 'iso20_ACDP_Datatypes.h']
+        },
+        'c': {
+            'filename': 'iso20_ACDP_Decoder.c',
+            'identifier': 'ISO20_ACDP_DECODER_C',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h', 'exi_types_decoder.h', 'exi_basetypes_decoder.h',
+                              'exi_error_codes.h', 'exi_header.h', 'iso20_ACDP_Datatypes.h',
+                              'iso20_ACDP_Decoder.h']
+        }
+    },
+    'iso20_ACDP_Encoder': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_ACDP.xsd',
+        'prefix': 'iso20_acdp_',
+        'type': 'encoder',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_ACDP_Encoder.h',
+            'identifier': 'ISO20_ACDP_ENCODER_H',
+            'include_std_lib': [],
+            'include_other': ['exi_bitstream.h', 'iso20_ACDP_Datatypes.h']
+        },
+        'c': {
+            'filename': 'iso20_ACDP_Encoder.c',
+            'identifier': 'ISO20_ACDP_ENCODER_C',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h', 'exi_basetypes_encoder.h', 'exi_error_codes.h', 'exi_header.h',
+                              'iso20_ACDP_Datatypes.h', 'iso20_ACDP_Encoder.h']
+        }
+    },
 }
