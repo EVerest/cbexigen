@@ -23,6 +23,7 @@ class ElementGrammarDetail:
     any_is_dummy: bool = True
     is_in_array_last: bool = False
     is_in_array_not_last: bool = False
+    is_extra_grammar: bool = False
 
     @property
     def is_optional(self):
