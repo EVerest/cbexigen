@@ -22,6 +22,8 @@ class FileGenerator(object):
         self.__analyzer_data.add_debug_code_enabled = tools_conf.CONFIG_PARAMS['add_debug_code']
         self.__analyzer_data.debug_code_current_message_id = 1
 
+        self.files_created = []
+
     def __analyzer_data_clear(self):
         self.__analyzer_data.schema_identifier = ''
         self.__analyzer_data.root_elements.clear()
@@ -237,6 +239,10 @@ class FileGenerator(object):
                 # h-file has to be generated
                 tools_logging.msg_write('GENERATING: ' + h_config['filename'], True)
                 self.__generate(True, params)
+                self.files_created.append(
+                    {'folder': params['folder'],
+                     'filename': h_config['filename'],
+                     'type': 'h'})
 
             c_config = params.get('c', None)
             if c_config is not None:
@@ -247,5 +253,9 @@ class FileGenerator(object):
                 # c-file has to be generated
                 tools_logging.msg_write('GENERATING: ' + c_config['filename'], True)
                 self.__generate(False, params)
+                self.files_created.append(
+                    {'folder': params['folder'],
+                     'filename': c_config['filename'],
+                     'type': 'c'})
 
                 self.__generate_debug_files(params)

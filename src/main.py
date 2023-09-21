@@ -39,6 +39,8 @@ def analyze_schema(argv):
 
     gen = Generator.FileGenerator()
     gen.generate_files()
+    for f in gen.files_created:
+        print(Path(f.get('folder'), f.get('filename')), repr(f))
 
 
 if __name__ == '__main__':
