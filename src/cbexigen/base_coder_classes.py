@@ -517,7 +517,8 @@ class ExiBaseCoderCode:
 
         def _add_subsequent_grammar_details(element: ElementData, particle: Particle,
                                             particle_index: int, index_last_nonoptional_particle: int,
-                                            particle_is_part_of_sequence: bool):
+                                            particle_is_part_of_sequence: bool,
+                                            is_recursion: bool = False):
             # we push the grammar to a list below, and assign a new object to this variable;
             # this assignment does not apply globally if the grammar is passed in
             nonlocal grammar
@@ -531,7 +532,9 @@ class ExiBaseCoderCode:
                     if str(particle.parent_sequence[0]) == particle.name:
                         grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.END))
 
-            def _add_particle_or_choice_list_to_details(element: ElementData, grammar: ElementGrammar, particle: Particle, previous_choice_list):
+            def _add_particle_or_choice_list_to_details(
+                    element: ElementData, grammar: ElementGrammar, particle: Particle, previous_choice_list,
+                    is_in_array_last: bool = False, is_in_array_not_last: bool = False):
                 """
                 If a particle is part of a choice group, this adds all the group's particles
                 to the grammar at once, and remembers which group was being handled, so that
@@ -543,10 +546,14 @@ class ExiBaseCoderCode:
                 if choice_options.particles and not (choice_options.choice_sequences and particle.parent_choice_sequence_number > 1):
                     if choice_options.item_names != previous_choice_list:
                         for choice in choice_options.particles:
-                            grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=choice))
+                            grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=choice,
+                                                                        is_in_array_last=is_in_array_last,
+                                                                        is_in_array_not_last=is_in_array_not_last))
                         previous_choice_list.extend(choice_options.item_names)
                 else:
-                    grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=part))
+                    grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=part,
+                                                                is_in_array_last=is_in_array_last,
+                                                                is_in_array_not_last=is_in_array_not_last))
                     previous_choice_list.clear()
 
             previous_choice_list = []  # to check whether this choice has already been handled
@@ -590,15 +597,19 @@ class ExiBaseCoderCode:
                     choice_options = self.ChoiceOptions(element, part)
                     part_min = choice_options.min_occurs if choice_options.particles else 0
                     if part.min_occurs == 1 or part_min == 1 or (n == len(element.particles) - 1):
-                        self.append_to_element_grammars(grammar, element.typename)
-                        grammar = self.create_empty_grammar()
-                        break  # end of grammar for current particle
+                        if not is_recursion:
+                            # end of grammar for current particle
+                            self.append_to_element_grammars(grammar, element.typename)
+                            grammar = self.create_empty_grammar()
+                        break
                     if part.parent_has_choice_sequence:
                         if (n == len(element.particles) - 1 - choice_options.number_of_particles_to_skip):
                             grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.END))
-                            self.append_to_element_grammars(grammar, element.typename)
-                            grammar = self.create_empty_grammar()
-                            break  # end of grammar for current particle
+                            if not is_recursion:
+                                # end of grammar for current particle
+                                self.append_to_element_grammars(grammar, element.typename)
+                                grammar = self.create_empty_grammar()
+                            break
                         for i in range(choice_options.number_of_particles_to_skip):
                             n_to_skip.add(n+1+i)
                             log_write_error(f"Skipping subsequent particles {n_to_skip} for particle '{part.name}'")
@@ -611,12 +622,20 @@ class ExiBaseCoderCode:
                             if part.max_occurs >= 1 and part.max_occurs_changed:
                                 _max += 1
                         for m in range(0, _max):
-                            if m >= part.min_occurs and m > 0:  # optional, and grammar 0 already contains END
+                            if m < _max - 1:
+                                _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
+                                                                        is_in_array_not_last=True)
+                            else:
+                                _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
+                                                                        is_in_array_last=True)
+                            if m >= part.min_occurs and m > 0:
+                                # this is an optional occurrence (and grammar 0 already contains END),
+                                # so recurse with the subsequent particles
                                 _add_subsequent_grammar_details(element, particle, n + 1,
                                                                 index_last_nonoptional_particle,
-                                                                particle_is_part_of_sequence)
+                                                                particle_is_part_of_sequence,
+                                                                is_recursion=True)
 
-                            _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list)
                             self.append_to_element_grammars(grammar, element.typename)
                             grammar = self.create_empty_grammar()
                     else:
@@ -752,40 +771,52 @@ class ExiBaseCoderCode:
                                     ]))
 
                     elif grammar_detail.flag == GrammarFlag.START:
-                        if grammar_detail_index < len_details:  # FIXME this is always true
-                            if end_elem_detail_index >= 0 and len_details == 2:
-                                grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
+                        # find the particle's index in the element
+                        # FIXME can this break on repeated occurrences, as in PGPKeyDataType?
+                        part_index: int = None
+                        part: Particle
+                        for part_index, part in enumerate(element.particles):
+                            if grammar_detail.particle == part:
+                                break
+
+                        def _is_final_particle(element: ElementData, pindex: int) -> bool:
+                            # particle is the last one, or is in the same choice group as the last one
+                            if grammar_detail.is_in_array_not_last:
+                                return False
+                            if pindex == len(element.particles) - 1:
+                                return True
+                            choice_options = self.ChoiceOptions(element, element.particles[-1])
+                            if choice_options.particles:
+                                if element.particles[pindex] in choice_options.particles:
+                                    return True
+                            if choice_options.choice_sequences:
+                                if pindex == len(element.particles) - 1 - choice_options.number_of_particles_to_skip:
+                                    return True
+                            return False
+
+                        if end_elem_detail_index >= 0 and len_details == 2:
+                            if grammar_detail.is_in_array_last:
+                                if _is_final_particle(element, part_index):
+                                    grammar_detail.next_grammar = self.grammar_end_element
+                                else:
+                                    grammar_detail.next_grammar = element.particles_next_grammar_ids[part_index]
                             else:
-                                # find the particle's index in the element
-                                # FIXME can this break on repeated occurrences, as in PGPKeyDataType?
-                                part_index: int = None
-                                part: Particle
-                                for part_index, part in enumerate(element.particles):
-                                    if grammar_detail.particle == part:
-                                        break
-
-                                if part_index is not None:
-                                    def _is_final_particle(element: ElementData, pindex: int) -> bool:
-                                        # particle is the last one, or is in the same choice group as the last one
-                                        if pindex == len(element.particles) - 1:
-                                            return True
-                                        choice_options = self.ChoiceOptions(element, element.particles[-1])
-                                        if choice_options.particles:
-                                            if element.particles[pindex] in choice_options.particles:
-                                                return True
-                                        if choice_options.choice_sequences:
-                                            if pindex == len(element.particles) - 1 - choice_options.number_of_particles_to_skip:
-                                                return True
-                                        return False
-
-                                    if _is_final_particle(element, part_index):
-                                        # next grammar is always END for the final particle
-                                        grammar_detail.next_grammar = self.grammar_end_element
+                                grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
+                        else:
+                            if part_index is not None:
+                                if _is_final_particle(element, part_index):
+                                    # next grammar is always END for the final particle
+                                    grammar_detail.next_grammar = self.grammar_end_element
+                                else:
+                                    if grammar_detail.is_in_array_not_last:
+                                        grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
+                                    elif grammar_detail.is_in_array_last:
+                                        grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
                                     else:
                                         grammar_detail.next_grammar = element.particles_next_grammar_ids[part_index]
-                                else:
-                                    log_write_error("Failed to find element particle for " +
-                                                    f"{grammar_detail.particle.name}")
+                            else:
+                                log_write_error("Failed to find element particle for " +
+                                                f"{grammar_detail.particle.name}")
 
                         ptname = grammar_detail.particle.typename if grammar_detail.particle is not None else '(None)'
                         self.log(', '.join([

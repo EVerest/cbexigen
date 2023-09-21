@@ -21,6 +21,8 @@ class ElementGrammarDetail:
     event_index: int = -1
     next_grammar: int = -1
     any_is_dummy: bool = True
+    is_in_array_last: bool = False
+    is_in_array_not_last: bool = False
 
     @property
     def is_optional(self):
