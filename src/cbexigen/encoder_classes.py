@@ -492,6 +492,9 @@ class ExiEncoderCode(ExiBaseCoderCode):
             content += self.__get_event_content_for_end_element(detail, grammar.bits_to_write, False, level)
         else:
             if detail.particle is not None and not (detail.is_any and detail.any_is_dummy):
+                if detail.is_extra_grammar:
+                    option = -2
+
                 if detail.particle.abstract or detail.particle.abstract_type:
                     event_comment = (f'// Abstract element or type: {detail.flag} '
                                      f'({detail.particle.typename}); next={detail.next_grammar}')

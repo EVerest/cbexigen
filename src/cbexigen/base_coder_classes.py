@@ -534,7 +534,7 @@ class ExiBaseCoderCode:
 
             def _add_particle_or_choice_list_to_details(
                     element: ElementData, grammar: ElementGrammar, particle: Particle, previous_choice_list,
-                    is_in_array_last: bool = False, is_in_array_not_last: bool = False):
+                    is_in_array_last: bool = False, is_in_array_not_last: bool = False, is_extra_grammar = False):
                 """
                 If a particle is part of a choice group, this adds all the group's particles
                 to the grammar at once, and remembers which group was being handled, so that
@@ -548,12 +548,14 @@ class ExiBaseCoderCode:
                         for choice in choice_options.particles:
                             grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=choice,
                                                                         is_in_array_last=is_in_array_last,
-                                                                        is_in_array_not_last=is_in_array_not_last))
+                                                                        is_in_array_not_last=is_in_array_not_last,
+                                                                        is_extra_grammar=is_extra_grammar))
                         previous_choice_list.extend(choice_options.item_names)
                 else:
                     grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=part,
                                                                 is_in_array_last=is_in_array_last,
-                                                                is_in_array_not_last=is_in_array_not_last))
+                                                                is_in_array_not_last=is_in_array_not_last,
+                                                                is_extra_grammar=is_extra_grammar))
                     previous_choice_list.clear()
 
             previous_choice_list = []  # to check whether this choice has already been handled
@@ -618,16 +620,19 @@ class ExiBaseCoderCode:
                         _max = part.max_occurs
                         # if max_occurs was reduced to 1, make sure to create the proper grammar after the one occurence
                         # This should be done only if the caller is not the encoder
-                        if self.__class__.__name__ != 'ExiEncoderCode':
-                            if part.max_occurs >= 1 and part.max_occurs_changed:
-                                _max += 1
+                        add_extra = False
+                        if part.max_occurs >= 1 and part.max_occurs_changed:
+                            _max += 1
+                            add_extra = True
+
                         for m in range(0, _max):
                             if m < _max - 1:
                                 _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
                                                                         is_in_array_not_last=True)
                             else:
                                 _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
-                                                                        is_in_array_last=True)
+                                                                        is_in_array_last=True,
+                                                                        is_extra_grammar=add_extra)
                             if m >= part.min_occurs and m > 0:
                                 # this is an optional occurrence (and grammar 0 already contains END),
                                 # so recurse with the subsequent particles

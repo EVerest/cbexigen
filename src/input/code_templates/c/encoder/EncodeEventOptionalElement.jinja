@@ -1,4 +1,6 @@
-{%- if option == 0 %}
+{%- if option == -2 %}
+{{ indent * level }}if (1 == 0)
+{%- elif option == 0 %}
 {{ indent * level }}if ({{ parameter }}_isUsed == 1u)
 {%- elif option > 0 %}
 {{ indent * level }}else if ({{ parameter }}_isUsed == 1u)
