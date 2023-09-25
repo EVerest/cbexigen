@@ -469,6 +469,10 @@ class ExiEncoderCode(ExiBaseCoderCode):
         length_parameter = (f'{grammar.element_typename}->{detail.particle.name}'
                             f'.{detail.particle.length_parameter_name}')
 
+        if detail.particle.is_array:
+            length_parameter = (f'{grammar.element_typename}->{detail.particle.name}'
+                                f'.arrayLen')
+
         temp = self.generator.get_template('EncodeEventOptionalArrayElement.jinja')
         content = temp.render(option=option,
                               index_parameter=index_parameter,
