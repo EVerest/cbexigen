@@ -370,24 +370,25 @@ class DatatypeHeader:
         return struct_content
 
     def __get_root_content(self):
-        elements = {}
+        elements = []
         comment = '// root elements of EXI doc'
         name = self.parameters['prefix'] + self.config['root_struct_name']
         self.analyzer_data.known_prototypes[name] = self.config['root_parameter_name']
 
+        element: ElementData
         for element in self.analyzer_data.root_elements:
             if self.__is_iso20:
                 # TODO: The following if filters the simple types DigestValue, MgmtData and KeyName.
                 #       So it has to be checked if these types can be ignored here.
                 if element.type_definition == 'complex':
-                    elements[element.prefixed_type] = element.name_short
+                    elements.append((element.prefixed_type, element.name_short))
                     self.analyzer_data.known_prototypes[element.prefixed_type] = element.name_short
             else:
                 if element.base_type == '':
-                    elements[element.prefixed_name] = element.name_short
+                    elements.append((element.prefixed_type, element.name_short))
                     self.analyzer_data.known_prototypes[element.prefixed_name] = element.name_short
                 else:
-                    elements[element.prefixed_type] = element.type_short
+                    elements.append((element.prefixed_type, element.type_short))
                     self.analyzer_data.known_prototypes[element.prefixed_type] = element.type_short
 
         # generate struct for array with length variable
