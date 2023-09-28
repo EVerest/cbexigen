@@ -625,15 +625,15 @@ class ExiBaseCoderCode:
                             _max += 1
                             add_extra = True
 
-                        for m in range(0, _max):
-                            if m < _max - 1:
+                        for m in range(1, _max + 1):
+                            if m < _max:
                                 _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
                                                                         is_in_array_not_last=True)
                             else:
                                 _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
                                                                         is_in_array_last=True,
                                                                         is_extra_grammar=add_extra)
-                            if m >= part.min_occurs and m > 0:
+                            if m > part.min_occurs and m > 1:
                                 # this is an optional occurrence (and grammar 0 already contains END),
                                 # so recurse with the subsequent particles
                                 _add_subsequent_grammar_details(element, particle, n + 1,
