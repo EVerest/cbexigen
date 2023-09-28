@@ -618,7 +618,7 @@ class ExiBaseCoderCode:
                 elif part.max_occurs > 1 or part.max_occurs_changed:
                     if part.max_occurs < 25:
                         _max = part.max_occurs
-                        # if max_occurs was reduced to 1, make sure to create the proper grammar after the one occurence
+                        # if max_occurs was reduced, make sure to create the proper grammar after the one occurence
                         # This should be done only if the caller is not the encoder
                         add_extra = False
                         if part.max_occurs >= 1 and part.max_occurs_changed:
