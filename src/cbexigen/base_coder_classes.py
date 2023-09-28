@@ -534,6 +534,7 @@ class ExiBaseCoderCode:
 
             def _add_particle_or_choice_list_to_details(
                     element: ElementData, grammar: ElementGrammar, particle: Particle, previous_choice_list,
+                    flag=GrammarFlag.START,
                     is_in_array_last=False, is_in_array_not_last=False, is_extra_grammar=False):
                 """
                 If a particle is part of a choice group, this adds all the group's particles
@@ -546,13 +547,13 @@ class ExiBaseCoderCode:
                 if choice_options.particles and not (choice_options.choice_sequences and particle.parent_choice_sequence_number > 1):
                     if choice_options.item_names != previous_choice_list:
                         for choice in choice_options.particles:
-                            grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=choice,
+                            grammar.details.append(ElementGrammarDetail(flag=flag, particle=choice,
                                                                         is_in_array_last=is_in_array_last,
                                                                         is_in_array_not_last=is_in_array_not_last,
                                                                         is_extra_grammar=is_extra_grammar))
                         previous_choice_list.extend(choice_options.item_names)
                 else:
-                    grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=part,
+                    grammar.details.append(ElementGrammarDetail(flag=flag, particle=part,
                                                                 is_in_array_last=is_in_array_last,
                                                                 is_in_array_not_last=is_in_array_not_last,
                                                                 is_extra_grammar=is_extra_grammar))
