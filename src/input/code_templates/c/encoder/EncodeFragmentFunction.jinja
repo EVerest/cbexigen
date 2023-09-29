@@ -1,0 +1,42 @@
+{{ function_comment }}
+int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ parameter_name }})
+{
+{{ indent }}int error = exi_header_write(stream);
+
+{{ indent }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent }}{
+{%- for fragment, namespace, function, parameter in encode_functions %}
+{{ indent * 2 }}// {{ fragment }} ({{ namespace }})
+{%- if loop.first %}
+{%- if parameter == '' %}
+{{ indent * 2 }}if (0 == 1)
+{{ indent * 2 }}{
+{{ indent * 3 }}error = EXI_ERROR__NOT_IMPLEMENTED_YET;
+{{ indent * 2 }}}
+{%- else %}
+{{ indent * 2 }}if ({{ parameter }}_isUsed == 1)
+{%- endif %}
+{%- else %}
+{%- if parameter == '' %}
+{{ indent * 2 }}// event {{ loop.index0 }}
+{%- else %}
+{{ indent * 2 }}else if ({{ parameter }}_isUsed == 1)
+{{ indent * 2 }}{
+{{ indent * 3 }}// encode event {{ loop.index0 }}
+{{ indent * 3 }}error = exi_basetypes_encoder_nbit_uint(stream, {{ bits_to_encode }}, {{ loop.index0 }});
+{{ indent * 3 }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * 3 }}{
+{{ indent * 4 }}error = {{ function }}(stream, &{{ parameter }});
+{{ indent * 3 }}}
+{{ indent * 2 }}}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{{ indent * 2 }}else
+{{ indent * 2 }}{
+{{ indent * 3 }}error = EXI_ERROR__UNKNOWN_EVENT_FOR_ENCODING;
+{{ indent * 2 }}}
+{{ indent }}}
+
+{{ indent }}return error;
+}
