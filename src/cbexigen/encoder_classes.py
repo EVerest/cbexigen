@@ -7,7 +7,7 @@ from cbexigen.base_coder_classes import ExiBaseCoderHeader, ExiBaseCoderCode
 from cbexigen import tools_generator, tools
 from cbexigen.elementData import ElementData, Particle
 from cbexigen.elementGrammar import GrammarFlag, ElementGrammar, ElementGrammarDetail
-from cbexigen.tools_config import CONFIG_PARAMS
+from cbexigen.tools_config import CONFIG_PARAMS, get_fragment_parameter_for_schema
 from cbexigen.tools_logging import log_write_error
 
 # ---------------------------------------------------------------------------
@@ -19,18 +19,35 @@ class ExiEncoderHeader(ExiBaseCoderHeader):
     def __init__(self, parameters, enable_logging=True):
         super(ExiEncoderHeader, self).__init__(parameters=parameters, enable_logging=enable_logging)
 
-        self.__is_iso20 = True if str(self.parameters['prefix']).startswith('iso20_') else False
+        self.__schema_prefix = self.parameters['prefix']
+        self.__is_iso20 = self.__schema_prefix.startswith('iso20_')
+
+        self.__fragments = []
+        self.__generate_fragment = False
+        if self.config['generate_fragments'] == 1:
+            self.__fragments = get_fragment_parameter_for_schema(self.__schema_prefix)
+            self.__generate_fragment = len(self.__fragments) > 0
 
         self.__include_content = ''
         self.__code_content = ''
 
-    def __get_root_content(self):
-        content = '// main function for encoding\n'
+    def __get_main_function_content(self, generate_root=True):
+        if generate_root:
+            comment = '// main function for encoding'
+            parameter_name = self.config['root_parameter_name']
+            parameter_type = self.parameters['prefix'] + self.config['root_struct_name']
+            function_name = self.config['encode_function_prefix'] + parameter_type
+        else:
+            comment = '// encoding function for fragment'
+            parameter_name = self.config['fragment_parameter_name']
+            parameter_type = self.parameters['prefix'] + self.config['fragment_struct_name']
+            function_name = self.config['encode_function_prefix'] + parameter_type
 
-        name = self.parameters['prefix'] + self.config['root_struct_name']
-        content += 'int ' + self.config['encode_function_prefix'] + name + '('
-        content += 'exi_bitstream_t* stream, '
-        content += 'struct ' + name + '* ' + self.config['root_parameter_name'] + ');'
+        temp = self.generator.get_template('EncodeMainFunctionDeclaration.jinja')
+        content = temp.render(function_comment=comment,
+                              function_name=function_name,
+                              parameter_type=parameter_type,
+                              parameter_name=parameter_name)
 
         return content
 
@@ -53,7 +70,11 @@ class ExiEncoderHeader(ExiBaseCoderHeader):
         self.__include_content = tools_generator.get_includes_content(self.h_params)
 
         self.__code_content = '\n'
-        self.__code_content += self.__get_root_content()
+        self.__code_content += self.__get_main_function_content(generate_root=True)
+
+        if self.__generate_fragment:
+            self.__code_content += '\n'
+            self.__code_content += self.__get_main_function_content(generate_root=False)
 
         self.__render_file()
 
@@ -66,7 +87,14 @@ class ExiEncoderCode(ExiBaseCoderCode):
     def __init__(self, parameters, analyzer_data, enable_logging=True):
         super(ExiEncoderCode, self).__init__(parameters, analyzer_data, enable_logging)
 
-        self.__is_iso20 = True if str(self.parameters['prefix']).startswith('iso20_') else False
+        self.__schema_prefix = self.parameters['prefix']
+        self.__is_iso20 = self.__schema_prefix.startswith('iso20_')
+
+        self.__fragments = []
+        self.__generate_fragment = False
+        if self.config['generate_fragments'] == 1:
+            self.__fragments = get_fragment_parameter_for_schema(self.__schema_prefix)
+            self.__generate_fragment = len(self.__fragments) > 0
 
         self.__include_content = ''
         self.__code_content = ''
@@ -795,6 +823,37 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
         return root_content
 
+    def __get_fragment_content(self):
+        content = ''
+        comment = '// main function for encoding fragment'
+        fn_name = (f'{CONFIG_PARAMS["encode_function_prefix"]}{self.__schema_prefix}'
+                   f'{CONFIG_PARAMS["fragment_struct_name"]}')
+        struct_type = f'{self.__schema_prefix}{CONFIG_PARAMS["fragment_struct_name"]}'
+        parameter_name = CONFIG_PARAMS['fragment_parameter_name']
+
+        encode_fn = []
+        for fragment in self.analyzer_data.known_fragments.values():
+            if fragment.name in self.__fragments:
+                function = f'{CONFIG_PARAMS["encode_function_prefix"]}{self.__schema_prefix}{fragment.type}'
+                parameter = f'{parameter_name}->{fragment.name}'
+                encode_fn.append([fragment.name, fragment.namespace, function, parameter])
+            else:
+                encode_fn.append([fragment.name, fragment.namespace, '', ''])
+
+        encode_fn.sort()
+        bits = tools.get_bits_to_decode(len(self.analyzer_data.known_fragments))
+
+        temp = self.generator.get_template('EncodeFragmentFunction.jinja')
+        content += temp.render(function_comment=comment,
+                               function_name=fn_name,
+                               struct_type=struct_type, parameter_name=parameter_name,
+                               bits_to_encode=bits,
+                               encode_functions=encode_fn,
+                               indent=self.indent)
+        content += '\n'
+
+        return content
+
     def __render_file(self):
         try:
             temp = self.generator.get_template("DataTypesEncoder.c.jinja")
@@ -882,5 +941,11 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
         self.__code_content += '\n'
         self.__code_content += self.__get_root_content()
+
+        if self.__generate_fragment:
+            fragment_content = self.__get_fragment_content()
+            if fragment_content != '':
+                self.__code_content += '\n'
+                self.__code_content += fragment_content
 
         self.__render_file()
