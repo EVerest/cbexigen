@@ -436,6 +436,38 @@ class DatatypeHeader:
 
         return f'\n\n{content}'
 
+    def __get_xmldsig_fragment_content(self):
+        if not self.__generate_fragment:
+            return ''
+
+        self.log('')
+        self.log('Generate xmldsig fragment struct')
+
+        elements = []
+        comment = '// elements of xmldsig fragment'
+        name = self.__schema_prefix + self.config['xmldsig_fragment_struct_name']
+
+        fragment: FragmentData
+        for fragment in self.analyzer_data.known_fragments.values():
+            if 'xmldsig' in fragment.namespace.casefold():
+                fragment_type = fragment.type
+                if fragment.type == 'AnonType':
+                    fragment_type = fragment.name
+
+                prefixed_type = f'{self.parameters["prefix"]}{fragment_type}'
+                if fragment_type in self.analyzer_data.known_elements.values():
+                    elements.append((prefixed_type, fragment.name))
+                else:
+                    self.log(f'xmldsig Fragment {fragment.name} ({fragment.type}) '
+                             f'is not in the list of known elements.')
+
+        temp = self.generator.get_template('BaseStructWithUnionAndUsed.jinja')
+        content = temp.render(struct_name=name,
+                              element_comment=comment,
+                              elements=elements)
+
+        return f'\n\n{content}'
+
     def __get_prototype_content(self):
         comment = '// init for structs'
 
@@ -449,6 +481,8 @@ class DatatypeHeader:
         if self.__generate_fragment:
             fragment_type = self.__schema_prefix + self.config['fragment_struct_name']
             self.analyzer_data.known_prototypes[fragment_type] = self.config['fragment_parameter_name']
+            xmldsig_type = self.__schema_prefix + self.config['xmldsig_fragment_struct_name']
+            self.analyzer_data.known_prototypes[xmldsig_type] = self.config['xmldsig_fragment_parameter_name']
 
         # generate prototypes for elements
         temp = self.generator.get_template('BasePrototype.jinja')
@@ -578,6 +612,10 @@ class DatatypeHeader:
             fragment_content = self.__get_fragment_content()
             if fragment_content != '':
                 content += fragment_content
+
+            xmldsig_content = self.__get_xmldsig_fragment_content()
+            if xmldsig_content != '':
+                content += xmldsig_content
 
         # file
         try:
@@ -737,6 +775,43 @@ class DatatypeCode:
 
         return result
 
+    def __get_xmldsig_fragment_content(self):
+        self.log('')
+        self.log('Generate xmldsig fragment init function')
+
+        comment = '// init for xmldsig fragment'
+        struct_type = f'{self.__schema_prefix}{self.config["xmldsig_fragment_struct_name"]}'
+        parameter_name = self.config['xmldsig_fragment_parameter_name']
+        function_name = f'{self.config["init_function_prefix"]}{struct_type}'
+
+        ele = []
+        arr = []
+
+        fragment: FragmentData
+        for fragment in self.analyzer_data.known_fragments.values():
+            if 'xmldsig' in fragment.namespace.casefold():
+                fragment_type = fragment.type
+                if fragment.type == 'AnonType':
+                    fragment_type = fragment.name
+
+                if fragment_type in self.analyzer_data.known_elements.values():
+                    ele.append(fragment.name)
+                else:
+                    self.log(f'xmldsig Fragment {fragment.name} ({fragment.type}) '
+                             f'is not in the list of known elements.')
+
+        # generate init function with arrayLen = 0u and isUsed = 0u
+        temp = self.generator.get_template("BaseInitWithArrayLenAndUsed.jinja")
+        result = temp.render(function_name=function_name,
+                             struct_type=struct_type,
+                             parameter_name=parameter_name,
+                             element_comment=comment,
+                             elements=ele,
+                             arrays=arr)
+        result += '\n'
+
+        return result
+
     def __get_function_content(self):
         ele = []
         arr = []
@@ -811,6 +886,8 @@ class DatatypeCode:
         if self.__generate_fragment:
             content += '\n'
             content += self.__get_fragment_content()
+            content += '\n'
+            content += self.__get_xmldsig_fragment_content()
 
         # file
         try:

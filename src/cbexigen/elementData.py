@@ -3,7 +3,14 @@
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 
 from dataclasses import dataclass
+from enum import Enum
 from cbexigen.tools_config import CONFIG_PARAMS
+
+
+class ContentType(Enum):
+    root = 1
+    fragment = 2
+    xmldsig = 3
 
 
 @dataclass
