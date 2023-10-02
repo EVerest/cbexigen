@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2022 - 2023 - 2023 chargebyte GmbH
+# Copyright (c) 2022 - 2023 chargebyte GmbH
 # Copyright (C) 2023 Contributors to EVerest
 
 from xmlschema import XMLSchema11
 from cbexigen import tools, tools_generator, tools_logging
 from cbexigen.elementData import Particle, ElementData
-from cbexigen.tools_config import CONFIG_PARAMS, get_config_module, get_fragment_parameter_for_schema
+from cbexigen.tools_config import CONFIG_PARAMS, get_fragment_parameter_for_schema
 from cbexigen.tools_logging import log_write_error, log_init_logger, log_write_logger, \
     log_deinit_logger, log_exists_logger
 from cbexigen.typeDefinitions import AnalyzerData, FragmentData
