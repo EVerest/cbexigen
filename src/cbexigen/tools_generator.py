@@ -71,4 +71,3 @@ def get_particle_from_element_by_name(name, sequence, element: ElementData):
                 occurs += 1
 
     return result
-

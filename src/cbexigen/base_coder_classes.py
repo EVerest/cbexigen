@@ -534,7 +534,7 @@ class ExiBaseCoderCode:
 
             def _add_particle_or_choice_list_to_details(
                     element: ElementData, grammar: ElementGrammar, particle: Particle, previous_choice_list,
-                    is_in_array_last: bool = False, is_in_array_not_last: bool = False, is_extra_grammar = False):
+                    is_in_array_last=False, is_in_array_not_last=False, is_extra_grammar=False):
                 """
                 If a particle is part of a choice group, this adds all the group's particles
                 to the grammar at once, and remembers which group was being handled, so that
@@ -605,7 +605,7 @@ class ExiBaseCoderCode:
                             grammar = self.create_empty_grammar()
                         break
                     if part.parent_has_choice_sequence:
-                        if (n == len(element.particles) - 1 - choice_options.number_of_particles_to_skip):
+                        if n == len(element.particles) - 1 - choice_options.number_of_particles_to_skip:
                             grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.END))
                             if not is_recursion:
                                 # end of grammar for current particle

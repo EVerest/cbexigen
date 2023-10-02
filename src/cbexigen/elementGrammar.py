@@ -114,7 +114,7 @@ class ElementGrammar:
     def grammar_comment(self):
         comment = f'// Grammar: ID={self.grammar_id}; read/write bits={self.bits_to_read}; '
         detail_list = []
-        detail: ElementGrammarDetail = None  # type hint
+        detail: ElementGrammarDetail  # type hint
         for detail in self.details:
             detail_list.append(f'{detail.flag} ({detail.particle.name})'
                                if detail.particle is not None else f'{detail.flag}')

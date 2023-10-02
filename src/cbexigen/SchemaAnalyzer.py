@@ -2,7 +2,6 @@
 # Copyright (c) 2022 - 2023 chargebyte GmbH
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 from typing import Union
-import re
 
 from xmlschema import XMLSchema11, XsdElement, XsdType, XsdAttribute
 from xmlschema.validators import (XsdSimpleType, XsdComplexType, XsdGroup, XsdAnyElement, Xsd11AnyElement,
