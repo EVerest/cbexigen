@@ -74,17 +74,9 @@ generate_fragments = 1
 # fragment structure definitions
 fragment_struct_name = 'exiFragment'
 fragment_parameter_name = 'exiFrag'
+xmldsig_fragment_struct_name = 'xmldsigFragment'
+xmldsig_fragment_parameter_name = 'xmldsigFrag'
 # the name of this parameter must consist of the schema prefix (chosen below) plus "fragments"
-din_fragments = [
-    'SignedInfo',
-    'CertificateInstallationReq',
-    'CertificateInstallationRes',
-    'CertificateUpdateReq',
-    'CertificateUpdateRes',
-    'ChargeParameterDiscoveryRes',
-    'ContractAuthenticationReq',
-    'MeteringReceiptReq',
-]
 iso2_fragments = [
     'SignedInfo',
     'AuthorizationReq',
