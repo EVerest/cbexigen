@@ -111,10 +111,11 @@ class ExiEncoderCode(ExiBaseCoderCode):
     # generator helper functions
     # ---------------------------------------------------------------------------
     def get_function_declaration(self, element_name, is_forward_declaration):
+        # FIXME convert this to a Jinja template, must correspond exactly to BaseEncodeFunction.jinja
         content = 'static '
         content += 'int ' + self.config['encode_function_prefix'] + self.parameters['prefix'] + element_name + '('
         content += 'exi_bitstream_t* stream, '
-        content += 'struct ' + self.parameters['prefix'] + element_name + '* ' + element_name + ')'
+        content += 'const struct ' + self.parameters['prefix'] + element_name + '* ' + element_name + ')'
 
         if is_forward_declaration:
             content += ';'
