@@ -835,26 +835,21 @@ class DatatypeCode:
                 for particle in element.particles:
                     # TODO: check if particle is in OCCURRENCE_LIMITS_CORRECTED,
                     #       should then result in an array definition
-                    # TODO: if we have an array type with min_occurs == 0, then a isUsed should be created, too
                     if particle.max_occurs > 1:
                         arr.append(self.__get_type_member_array(particle))
                     elif particle.min_occurs == 0:
-                        if particle.type not in self.analyzer_data.known_enums:
-                            particle_type = tools_generator.get_particle_type(particle)
-                            if particle_type == 'string':
-                                arr.append(particle.name + '.charactersLen')
-                            elif particle_type == 'binary':
-                                if element.has_sequence:
-                                    seq = self.__get_sequence_from_optional_particle(particle.name, element)
-                                    if seq > 0:
-                                        arr.append(self.config['choice_sequence_prefix'] + str(seq) + '.' +
-                                                   particle.name + '.bytesLen')
-                                else:
-                                    arr.append(particle.name + '.bytesLen')
-                            else:
-                                ele.append(particle.name)
+                        if particle.parent_has_choice_sequence:
+                            if particle.parent_choice_sequence_number > 0:
+                                seq_ele = (f'{self.config["choice_sequence_prefix"]}'
+                                           f'{particle.parent_choice_sequence_number}')
+                                if seq_ele not in ele:
+                                    ele.append(seq_ele)
                         else:
                             ele.append(particle.name)
+
+                        if particle.type not in self.analyzer_data.known_enums:
+                            if particle.is_array:
+                                arr.append(self.__get_type_member_array(particle))
 
                 # generate init function with arrayLen = 0u and isUsed = 0u
                 temp = self.generator.get_template("BaseInitWithArrayLenAndUsed.jinja")
