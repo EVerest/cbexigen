@@ -1,5 +1,5 @@
 {{ element_comment }}
-static int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ parameter_name }}) {
+static int {{ function_name }}(exi_bitstream_t* stream, const struct {{ struct_type }}* {{ parameter_name }}) {
 {{ indent * level }}// Element has no particles, so the function just encodes END Element
 {{ indent * level }}(void){{ parameter_name }};
 
