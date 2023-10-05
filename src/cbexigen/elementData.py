@@ -29,7 +29,7 @@ class Particle:
     max_value: int = -1
     abstract: bool = False
     abstract_type: bool = False
-    max_occurs_changed: bool = False
+    max_occurs_was_changed: bool = False
     is_complex: bool = False
     is_substitute: bool = False
     is_enum: bool = False

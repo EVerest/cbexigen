@@ -568,7 +568,7 @@ class ExiBaseCoderCode:
                 if n in n_to_skip:
                     # a list of particles in the linear list not to be considered
                     continue
-                if part.max_occurs == 1 and not part.max_occurs_changed:
+                if part.max_occurs == 1 and not part.max_occurs_was_changed:
                     if part.parent_has_sequence:
                         particle_is_part_of_sequence = True
 
@@ -616,13 +616,14 @@ class ExiBaseCoderCode:
                         for i in range(choice_options.number_of_particles_to_skip):
                             n_to_skip.add(n+1+i)
                             log_write_error(f"Skipping subsequent particles {n_to_skip} for particle '{part.name}'")
-                elif part.max_occurs > 1 or part.max_occurs_changed:
+                elif part.max_occurs > 1 or part.max_occurs_was_changed:
                     if part.max_occurs < 25:
                         _max = part.max_occurs
                         # if max_occurs was reduced, make sure to create the proper grammar after the one occurence
                         # This should be done only if the caller is not the encoder
+                        # FIXME add code to understand whether we came from unlimited!
                         add_extra = False
-                        if part.max_occurs >= 1 and part.max_occurs_changed:
+                        if part.max_occurs >= 1 and part.max_occurs_was_changed:
                             _max += 1
                             add_extra = True
 
