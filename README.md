@@ -1,11 +1,11 @@
 # cbExiGen - The V2GTP EXI codec generator
 
-cbExiGen is a code generator which creates the codec library **cbV2G** for
+cbExiGen is a code generator that creates the codec library **cbV2G** for
 encoding and decoding messages using the Vehicle To Grid Transport Protocol
-(V2GTP). It is capable of processing XML schemas as defined in the standards
-DIN 70121, ISO 15118-2 and ISO 15118-20, and derivates of these. It creates
-a library capable of encoding and decoding the complete EXI message set of
-the defined protocols.
+(V2GTP). It is capable of processing XML schemas as defined in the
+standards DIN 70121, ISO 15118-2, and ISO 15118-20, as well as derivatives
+of these. It creates a library capable of encoding and decoding the
+complete EXI message set of the defined protocols.
 
 ---
 ## :exclamation: Call for ISO 15118-20 EXI streams :exclamation:
@@ -27,32 +27,32 @@ Thank you!
 ## What
 
 V2GTP is a protocol for "vehicle to grid" communication. It is used for
-control of power flow in charging electrical vehicles (EVs), for the
-communication between EV and EVSE (electical vehicle supply equipment, i.e.
-charging station).
+controlling power flow in charging electric vehicles (EVs) and for
+communication between EVs and EVSEs (electric vehicle supply equipment, i.e.
+charging stations).
 
-The protocol is originally defined in the global standard ISO 15118. Its
-popular implementations are
+The protocol is originally defined in the global standard ISO 15118.
+Popular implementations of this protocol include
 [DIN 70121](https://www.beuth.de/en/technical-rule/din-spec-70121/224350045),
 [ISO 15118-2](https://www.iso.org/standard/55366.html), and
 [ISO 15118-20](https://www.iso.org/standard/77845.html).
 
-The protocol is XML based, with the messages representable as XML, strictly
-defined using XML schemas. The message transfer uses EXI ([Efficient XML
-Interchange](http://www.w3.org/TR/exi/)), a compact binary representation of
-XML.
+The protocol is XML-based, with the messages representable as XML and
+strictly defined using XML schemas. The message transfer uses EXI
+([Efficient XML Interchange](http://www.w3.org/TR/exi/)), a compact binary
+representation of XML.
 
-The codec is not implemented directly, but using this code generator,
-because the standards are evolving, yet share common ground. A code
-generator allows modifying a schema e.g. to implement experimental
-extensions, and allows creating a codec for future standard variants. The
-generator also aids in optimizing the code, by improving the EXI grammar
-evaluation, and by implementing configurations for limited protocol coverage
-for reduced code size, without the need to manually modify many places
-within the complete library.
+The codec is not implemented directly but is generated using this code
+generator because the standards are evolving while sharing common ground. A
+code generator allows for modifying a schema, for example to implement
+experimental extensions, and enables the creation of a codec for future
+standard variants. The generator also aids in optimizing the code by
+improving the EXI grammar evaluation and implementing configurations for
+limited protocol coverage to reduce code size without the need for manual
+modifications in multiple places within the library.
 
-The code generator takes the standards' XML schema files as input, analyzes
-them, and creates the appropriate codec representation.
+The code generator takes the XML schema files of the standards as input,
+analyzes them, and creates the appropriate codec representation.
 
 This codec created by this code generator is designed to take a data
 representation of the message data - e.g. as structs or classes - and
