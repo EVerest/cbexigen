@@ -223,7 +223,7 @@ class ExiBaseCoderCode:
         if len(grammars) > 2:
             for grammar in grammars:
                 for detail in grammar.details:
-                    if detail.flag == GrammarFlag.START or detail.flag == GrammarFlag.LOOP:
+                    if detail.flag_is_start_or_loop:
                         has_start = True
                         break
 
@@ -754,8 +754,7 @@ class ExiBaseCoderCode:
                 continue
 
             # case 1: just one element, START as singular grammar detail
-            if len_details == 1 and \
-                    (grammar.details[0].flag == GrammarFlag.START or grammar.details[0].flag == GrammarFlag.LOOP):
+            if len_details == 1 and grammar.details[0].flag_is_start_or_loop:
                 grammar.details[0].event_index = 0
                 if grammar.details[0].flag == GrammarFlag.LOOP:
                     # the next grammar is this grammar in a loop scenario
@@ -794,7 +793,7 @@ class ExiBaseCoderCode:
                                         f'next ID={grammar_detail.next_grammar}',
                                     ]))
 
-                    elif grammar_detail.flag == GrammarFlag.START or grammar_detail.flag == GrammarFlag.LOOP:
+                    elif grammar_detail.flag_is_start_or_loop:
                         # find the particle's index in the element
                         # FIXME can this break on repeated occurrences, as in PGPKeyDataType?
                         part_index: int = None

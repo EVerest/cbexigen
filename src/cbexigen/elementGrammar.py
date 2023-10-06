@@ -58,6 +58,10 @@ class ElementGrammarDetail:
         return self.particle is not None and self.particle.is_any
 
     @property
+    def flag_is_start_or_loop(self):
+        return self.flag == GrammarFlag.START or self.flag == GrammarFlag.LOOP
+
+    @property
     def particle_name(self):
         return self.particle.name if self.particle else 'END' if self.flag == GrammarFlag.END else 'None'
 
