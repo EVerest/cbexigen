@@ -223,7 +223,7 @@ class ExiBaseCoderCode:
         if len(grammars) > 2:
             for grammar in grammars:
                 for detail in grammar.details:
-                    if detail.flag == GrammarFlag.START:
+                    if detail.flag == GrammarFlag.START or detail.flag == GrammarFlag.LOOP:
                         has_start = True
                         break
 
@@ -627,13 +627,25 @@ class ExiBaseCoderCode:
                             _max += 1
                             add_extra = True
 
+                        skip_to_end = False  # for LOOP, do not create
                         for m in range(1, _max + 1):
+                            if skip_to_end and m < _max:
+                                continue
                             if m < _max:
+                                # flag=Grammar.LOOP indicates that the _next_ grammar will be the same as this one
+                                # Do not loop on the mandatory elements of an array, it would require extra logic,
+                                # and we have no min_occurs larger than 2 anyway.
+                                # FIXME can I drop m < _max?
+                                if m > 1 and m > part.min_occurs - 1 and m < _max:
+                                    flag = GrammarFlag.LOOP
+                                    skip_to_end = True
+                                else:
+                                    flag = GrammarFlag.START
                                 _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
-                                                                        is_in_array_not_last=True)
+                                                                        flag=flag, is_in_array_not_last=True)
                             else:
                                 _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
-                                                                        is_in_array_last=True,
+                                                                        flag=flag, is_in_array_last=True,
                                                                         is_extra_grammar=add_extra)
                             if m > part.min_occurs and m > 1:
                                 # this is an optional occurrence (and grammar 0 already contains END),
@@ -742,10 +754,15 @@ class ExiBaseCoderCode:
                 continue
 
             # case 1: just one element, START as singular grammar detail
-            if len_details == 1 and grammar.details[0].flag == GrammarFlag.START:
+            if len_details == 1 and \
+                    (grammar.details[0].flag == GrammarFlag.START or grammar.details[0].flag == GrammarFlag.LOOP):
                 grammar.details[0].event_index = 0
-                # the next grammar must be that of the subsequent particle
-                grammar.details[0].next_grammar = grammars[idx_grammar + 1].grammar_id
+                if grammar.details[0].flag == GrammarFlag.LOOP:
+                    # the next grammar is this grammar in a loop scenario
+                    grammar.details[0].next_grammar = grammar.grammar_id
+                else:
+                    # the next grammar must be that of the subsequent particle
+                    grammar.details[0].next_grammar = grammars[idx_grammar + 1].grammar_id
                 self.log(', '.join([
                                  f'Grammar ID={grammar.grammar_id}',
                                  f'eventCode={grammar.details[0].event_index}',
@@ -777,7 +794,7 @@ class ExiBaseCoderCode:
                                         f'next ID={grammar_detail.next_grammar}',
                                     ]))
 
-                    elif grammar_detail.flag == GrammarFlag.START:
+                    elif grammar_detail.flag == GrammarFlag.START or grammar_detail.flag == GrammarFlag.LOOP:
                         # find the particle's index in the element
                         # FIXME can this break on repeated occurrences, as in PGPKeyDataType?
                         part_index: int = None
@@ -808,7 +825,10 @@ class ExiBaseCoderCode:
                                 else:
                                     grammar_detail.next_grammar = element.particles_next_grammar_ids[part_index]
                             else:
-                                grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
+                                if grammar_detail.flag == GrammarFlag.START:
+                                    grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
+                                else:
+                                    grammar_detail.next_grammar = grammar.grammar_id
                         else:
                             if part_index is not None:
                                 if _is_final_particle(element, part_index):

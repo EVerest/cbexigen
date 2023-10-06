@@ -664,7 +664,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
     def __get_event_content_namespace_element(self, element: ElementData, grammar: ElementGrammar, level):
         content = ''
 
-        if grammar.details[0].flag == GrammarFlag.START:
+        if grammar.details[0].flag == GrammarFlag.START or grammar.details[0].flag == GrammarFlag.LOOP:
             names = []
             for particle in element.particles:
                 names.append(particle.name)
