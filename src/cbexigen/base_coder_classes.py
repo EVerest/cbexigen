@@ -302,7 +302,7 @@ class ExiBaseCoderCode:
                                 self.choice_index = element_choice_index
                                 # if this particle is the first in a choice sequence, it's a choice
                                 # so the first particles from all sequences are the choice
-                                for choice_sequence_index, choice_sequence in enumerate(element_choice.choice_sequences):
+                                for choice_sequence in element_choice.choice_sequences:
                                     self.particles.append(element.particle_from_name(choice_sequence[0][0]))
                                     self.item_names.append(choice_sequence[0][0])
                                 self.min_occurs = element_choice.min_occurs
