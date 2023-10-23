@@ -1236,6 +1236,7 @@ class SchemaAnalyzer(object):
         parent_element.has_abstract_sequence = True
         # FIXME abstract_seq may need to inherit min/max_occurs(_old)
         parent_element.abstract_sequences.append((abstract_seq, min_occurs, max_occurs))
+        log_write(f'  Adding abstract sequence to {parent_element.name_short}: {abstract_seq}.')
 
     def __copy_particles_from_empty_content_elements(self, element: ElementData, parents):
         parent: ElementData
@@ -1467,7 +1468,7 @@ class SchemaAnalyzer(object):
 
                 element.has_abstract_sequence = True
                 element.abstract_sequences.append((abstract_seq, 1, 1))
-                log_write(f'  Add abstract sequence to {element.name_short}.')
+                log_write(f'  Adding abstract sequence to {element.name_short}: {abstract_seq}.')
 
                 for p_index, particle in enumerate(element.particles):
                     exist = [x for x in list_with_missing if x.name == particle.name]
