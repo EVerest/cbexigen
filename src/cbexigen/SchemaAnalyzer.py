@@ -983,6 +983,9 @@ class SchemaAnalyzer(object):
         # This is e.g. ChargeParameterDiscovery or ChargeLoop. There are missing the BPT elements.
         # The BPT elements are just derived and extended but not abstract.
         if self.__is_iso20:
+            # FIXME This duplicates the effort of the above call of __scan_elements_for_empty_content(),
+            # if a particle both is abstract and has derivations
+            # GitHub issue #52
             self.__scan_for_derived_and_extended_elements()
 
         # Adjust min_occurs for elements in choices
