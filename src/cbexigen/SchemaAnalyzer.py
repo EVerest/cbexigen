@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2022 - 2023 chargebyte GmbH
 # Copyright (c) 2022 - 2023 Contributors to EVerest
+from pathlib import Path
 from typing import Union
 
 from xmlschema import XMLSchema11, XsdElement, XsdType, XsdAttribute
 from xmlschema.validators import (XsdSimpleType, XsdComplexType, XsdGroup, XsdAnyElement, Xsd11AnyElement,
-                                  Xsd11AtomicRestriction)
+                                  Xsd11AtomicRestriction, Xsd11Element)
 
 from cbexigen import tools
 from cbexigen.typeDefinitions import AnalyzerData, OCCURRENCE_LIMITS_CORRECTED, FragmentData
@@ -1012,11 +1013,15 @@ class SchemaAnalyzer(object):
         def __get_fragment(fragment_element: XsdElement):
             fragment = FragmentData()
             fragment.name = fragment_element.local_name
+
             if fragment_element.name.find('{') == 0 and fragment_element.name.find('}') > 0:
                 fragment.namespace = fragment_element.name[1:fragment_element.name.index('}')]
             else:
                 fragment.namespace = fragment_element.default_namespace
-            if fragment_element.type.base_type is not None:
+
+            if fragment.name in ambiguous_names_list.keys():
+                fragment.type = ambiguous_names_list[fragment.name]
+            elif fragment_element.type.base_type is not None:
                 if fragment_element.type.base_type.local_name in tools.TYPE_TRANSLATION:
                     fragment.type = tools.TYPE_TRANSLATION[fragment_element.type.base_type.local_name]
                 else:
@@ -1029,7 +1034,8 @@ class SchemaAnalyzer(object):
         # Build the list for main struct or decoding function, probably something with exiDocument
         def __print_child_recursive(element_list, child_element: XsdElement):
             if child_element.local_name is not None:
-                element_list[child_element.name] = __get_fragment(child_element)
+                if child_element.name not in element_list.keys():
+                    element_list[child_element.name] = __get_fragment(child_element)
 
             for subst_child in child_element.iter_substitutes():
                 __print_child_recursive(element_list, subst_child)
@@ -1037,8 +1043,14 @@ class SchemaAnalyzer(object):
             for sub_child in child_element.iterchildren():
                 __print_child_recursive(element_list, sub_child)
 
+        config_module = get_config_module()
+        ambiguous_names_attr = self.__schema_prefix + 'ambiguous_element_names'
+        ambiguous_names_list = getattr(config_module, ambiguous_names_attr) \
+            if hasattr(config_module, ambiguous_names_attr) else {}
+
         self.__known_fragments.clear()
         fragments = {}
+
         for element in self.__current_schema.elements.target_dict.values():
             if element.default_namespace:
                 if element.name not in fragments.keys():
@@ -1053,6 +1065,27 @@ class SchemaAnalyzer(object):
 
             for child in global_element.iterchildren():
                 __print_child_recursive(fragments, child)
+
+        # There are unused elements in the ISO-20 schema that are not yet included in the list of all elements
+        # for the fragment decoder and encoder. These elements can be determined via the components.
+        # Therefore, we iterate through the components of the schema and the 1st level of imports and complete the list.
+        # TODO: As only ISO-20 is currently affected and the only import of the individual schemas is the
+        #       CommonTypes schema, recursive processing is not used here. This should be changed if necessary.
+        for component in self.__current_schema.iter_components():
+            if isinstance(component, Xsd11Element):
+                if component.name not in fragments.keys():
+                    fragment = __get_fragment(component)
+                    if len(ambiguous_names_list) > 0:
+                        if fragment.name in ambiguous_names_list:
+                            fragment.type = ambiguous_names_list[fragment.name]
+                    fragments[component.name] = fragment
+
+        for import_item in self.__current_schema.imports.values():
+            imported_schema = XMLSchema11(import_item.name, base_url=self.__schema_base, build=True)
+            for component in imported_schema.iter_components():
+                if isinstance(component, Xsd11Element):
+                    if component.name not in fragments.keys():
+                        fragments[component.name] = __get_fragment(component)
 
         # Sort the list of elements and types by 1. name and 2. namespace
         sorted_by_name = dict(sorted(fragments.items(), key=lambda item: (item[1].name, item[1].namespace)))
