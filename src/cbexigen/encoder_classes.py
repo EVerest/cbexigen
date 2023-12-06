@@ -834,6 +834,17 @@ class ExiEncoderCode(ExiBaseCoderCode):
     def __get_fragment_content(self):
         content = ''
         comment = '// main function for encoding fragment'
+        if not self.__is_iso20:
+            comment += ('\n/* NOTE! There may be problems when comparing the signature of the eMAID.\n'
+                        '   In the ISO 15118-2 schema there are two different types with problematic names,\n'
+                        '   EMAIDType and eMAIDType. The fragment de- and encoder of e.g. openV2G considers\n'
+                        '   this type as generic type EXISchemaInformedElementFragmentGrammar. '
+                        'We treat it as a complex type.\n'
+                        '   We have not yet been able to determine why this particular type has to be coded as '
+                        'a generic type,\n   and only for the fragment decoder and encoder.\n'
+                        '   This is why we have not yet adapted our fragment coders, '
+                        'and it can lead to the problem mentioned. */')
+
         fn_name = (f'{CONFIG_PARAMS["encode_function_prefix"]}{self.__schema_prefix}'
                    f'{CONFIG_PARAMS["fragment_struct_name"]}')
         struct_type = f'{self.__schema_prefix}{CONFIG_PARAMS["fragment_struct_name"]}'
@@ -849,6 +860,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                 encode_fn.append([fragment.name, fragment.namespace, '', ''])
 
         encode_fn.sort()
+        end_fragment = len(encode_fn) + 1
         bits = tools.get_bits_to_decode(len(self.analyzer_data.known_fragments))
 
         temp = self.generator.get_template('EncodeFragmentFunction.jinja')
@@ -857,6 +869,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                                struct_type=struct_type, parameter_name=parameter_name,
                                bits_to_encode=bits,
                                encode_functions=encode_fn,
+                               end_fragment=end_fragment,
                                indent=self.indent)
         content += '\n'
 
@@ -881,6 +894,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                     encode_fn.append([fragment.name, fragment.namespace, '', ''])
 
         encode_fn.sort()
+        end_fragment = len(encode_fn) + 1
         bits = tools.get_bits_to_decode(len(encode_fn))
 
         temp = self.generator.get_template('EncodeFragmentFunction.jinja')
@@ -889,6 +903,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                                struct_type=struct_type, parameter_name=parameter_name,
                                bits_to_encode=bits,
                                encode_functions=encode_fn,
+                               end_fragment=end_fragment,
                                indent=self.indent)
         content += '\n'
 

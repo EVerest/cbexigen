@@ -26,6 +26,19 @@ int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ pa
 {{ indent * 4 }}error = EXI_ERROR__UNSUPPORTED_SUB_EVENT;
 {{ indent * 4 }}break;
 {{ indent * 3 }}}
+
+{{ indent * 3 }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * 3 }}{
+{{ indent * 4 }}// End Fragment
+{{ indent * 4 }}error = exi_basetypes_decoder_nbit_uint(stream, {{ bits_to_read }}, &eventCode);
+{{ indent * 4 }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * 4 }}{
+{{ indent * 5 }}if (eventCode != {{ end_fragment }})
+{{ indent * 5 }}{
+{{ indent * 6 }}error = EXI_ERROR__INCORRECT_END_FRAGMENT_VALUE;
+{{ indent * 5 }}}
+{{ indent * 4 }}}
+{{ indent * 3 }}}
 {{ indent * 2 }}}
 {{ indent }}}
 

@@ -44,6 +44,12 @@ int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ pa
 {{ indent * 2 }}{
 {{ indent * 3 }}error = EXI_ERROR__UNKNOWN_EVENT_FOR_ENCODING;
 {{ indent * 2 }}}
+
+{{ indent * 2 }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * 2 }}{
+{{ indent * 3 }}// End Fragment
+{{ indent * 3 }}error = exi_basetypes_encoder_nbit_uint(stream, {{ bits_to_encode }}, {{ end_fragment }});
+{{ indent * 2 }}}
 {{ indent }}}
 
 {{ indent }}return error;
