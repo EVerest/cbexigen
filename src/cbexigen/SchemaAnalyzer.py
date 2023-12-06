@@ -1074,11 +1074,7 @@ class SchemaAnalyzer(object):
         for component in self.__current_schema.iter_components():
             if isinstance(component, Xsd11Element):
                 if component.name not in fragments.keys():
-                    fragment = __get_fragment(component)
-                    if len(ambiguous_names_list) > 0:
-                        if fragment.name in ambiguous_names_list:
-                            fragment.type = ambiguous_names_list[fragment.name]
-                    fragments[component.name] = fragment
+                    fragments[component.name] = __get_fragment(component)
 
         for import_item in self.__current_schema.imports.values():
             imported_schema = XMLSchema11(import_item.name, base_url=self.__schema_base, build=True)
