@@ -1,1 +1,1 @@
-xmlschema[codegen]==1.11.3
+xmlschema[codegen]~=3.0.2
