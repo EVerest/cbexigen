@@ -282,6 +282,15 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
         return content
 
+    def __get_content_encode_signed(self, element_typename, detail, level):
+        value_parameter = f'{element_typename}->{detail.particle.name}'
+
+        temp = self.generator.get_template('EncodeTypeSigned.jinja')
+        content = temp.render(value_parameter=value_parameter,
+                              next_grammar=detail.next_grammar,
+                              indent=self.indent, level=level)
+        return content
+
     def __get_content_encode_string(self, element_typename, detail: ElementGrammarDetail, level):
         length_parameter = f'{element_typename}->{detail.particle.name}.{detail.particle.length_parameter_name}'
         value_parameter = f'{element_typename}->{detail.particle.name}.{detail.particle.value_parameter_name}'
@@ -420,6 +429,8 @@ class ExiEncoderCode(ExiBaseCoderCode):
                 type_content = self.__get_content_encode_int(grammar.element_typename, detail, level)
             elif detail.particle.integer_base_type == 'uint64':
                 type_content = self.__get_content_encode_long_int(grammar.element_typename, detail, level)
+            elif detail.particle.integer_base_type == 'signed':
+                type_content = self.__get_content_encode_signed(grammar.element_typename, detail, level)
             else:
                 log_write_error(f"Unhandled numeric type: '{detail.particle.name}': "
                                 f"'{detail.particle.type_short}', " +

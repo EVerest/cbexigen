@@ -21,6 +21,7 @@ TYPE_TRANSLATION_C = {
     'uint16': 'uint16_t',
     'uint32': 'uint32_t',
     'uint64': 'uint64_t',
+    'signed': 'exi_signed_t',
 }
 
 TYPE_TRANSLATION = {
@@ -29,7 +30,7 @@ TYPE_TRANSLATION = {
     'byte': 'int8',
     'short': 'int16',
     'int': 'int32',
-    'integer': 'int32',
+    'integer': 'signed',
     'long': 'int64',
     'decimal': 'integer',  # FIXME special type
     'unsignedByte': 'uint8',
