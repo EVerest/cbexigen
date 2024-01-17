@@ -58,6 +58,26 @@ int exi_basetypes_convert_64_to_unsigned(exi_unsigned_t* exi_unsigned, uint64_t 
     return (exi_unsigned->octets_count <= EXI_BASETYPES_UINT64_MAX_OCTETS) ? EXI_ERROR__NO_ERROR : EXI_ERROR__OCTET_COUNT_LARGER_THAN_TYPE_SUPPORTS;
 }
 
+int exi_basetypes_convert_to_signed(exi_signed_t* exi_signed, int32_t value, size_t max_octets)
+{
+    if (value < 0) {
+        exi_signed->is_negative = 1;
+        return exi_basetypes_convert_to_unsigned(&exi_signed->data, -value, max_octets);
+    }
+    exi_signed->is_negative = 0;
+    return exi_basetypes_convert_to_unsigned(&exi_signed->data, value, max_octets);
+}
+
+int exi_basetypes_convert_64_to_signed(exi_signed_t* exi_signed, int64_t value)
+{
+    if (value < 0) {
+        exi_signed->is_negative = 1;
+        return exi_basetypes_convert_64_to_unsigned(&exi_signed->data, -value);
+    }
+    exi_signed->is_negative = 0;
+    return exi_basetypes_convert_64_to_unsigned(&exi_signed->data, value);
+}
+
 int exi_basetypes_convert_from_unsigned(exi_unsigned_t* exi_unsigned, uint32_t* value, size_t max_octets)
 {
     if (exi_unsigned->octets_count > max_octets)
@@ -96,5 +116,21 @@ int exi_basetypes_convert_64_from_unsigned(exi_unsigned_t* exi_unsigned, uint64_
     }
 
     return EXI_ERROR__NO_ERROR;
+}
+
+int exi_basetypes_convert_from_signed(exi_signed_t* exi_signed, int32_t* value, size_t max_octets)
+{
+    uint32_t uValue = 0;
+    int res = exi_basetypes_convert_from_unsigned(&exi_signed->data, &uValue, max_octets);
+    *value = (exi_signed->is_negative == 0) ? uValue : -uValue;
+    return res;
+}
+
+int exi_basetypes_convert_64_from_signed(exi_signed_t* exi_signed, int64_t* value)
+{
+    uint64_t uValue = 0;
+    int res = exi_basetypes_convert_64_from_unsigned(&exi_signed->data, &uValue);
+    *value = (exi_signed->is_negative == 0) ? uValue : -uValue;
+    return res;
 }
 {% endblock %}
