@@ -14,6 +14,7 @@ file(GLOB_RECURSE CBV2G_TEST_SOURCES
     ./unit/sap/*.cpp
     ./unit/iso20/common/*.cpp
     ./unit/iso2/*.cpp
+    ./unit/xmldsig/*.cpp
 )
 
 add_executable(test-${PROJECT_NAME}
