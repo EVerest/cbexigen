@@ -13,7 +13,7 @@ protected:
     using Document_t = XmlFragmentDocT;
     uint8_t m_data[512] = {0};
     exi_bitstream_t m_stream;
-    int encode_xmldsigFragment(exi_bitstream_t* stream, Document_t*);
+    virtual int encode_xmldsigFragment(exi_bitstream_t* stream, void* document) = 0;
     template <typename StrT>
     static void setExiStr(StrT& out, std::string_view setStr)
     {
@@ -26,16 +26,8 @@ protected:
         out.bytesLen = Len - 1;
         memcpy(out.bytes, setStr, Len - 1);
     }
+    void WhenEncodingKnownSupportedAppProtocolRequest_ThenResultMatchesExpected();
 };
-class Test_SignedInfo_Fragment_ISO2: public Test_SignedInfo_Fragment<iso2_xmldsigFragment> {
-protected:
-    int encode_xmldsigFragment(exi_bitstream_t* stream, Document_t* document)
-    {
-        return encode_iso2_xmldsigFragment(stream, document);
-    }
-};
-
-
 
 /** \brief Fragment encode
  * \param xml_input
@@ -59,7 +51,8 @@ protected:
  *   </ns0:Reference>
  * </ns0:SignedInfo>
  */
-TEST_F(Test_SignedInfo_Fragment_ISO2, WhenEncodingKnownSupportedAppProtocolRequest_ThenResultMatchesExpected) {
+template <typename T>
+void Test_SignedInfo_Fragment<T>::WhenEncodingKnownSupportedAppProtocolRequest_ThenResultMatchesExpected() {
     static constexpr uint8_t expected[] =
         "\x80\x81\x12\xb4\x3a\x3a\x38\x1d\x17\x97\xbb\xbb\xbb\x97\x3b\x99\x97\x37\xb9\x33\x97\xaa\x29\x17\xb1\xb0\xb7"
         "\x37\xb7\x34\xb1\xb0\xb6\x16\xb2\xbc\x34\x97\xa1\xab\x43\xa3\xa3\x81\xd1\x79\x7b\xbb\xbb\xb9\x73\xb9\x99\x73"
@@ -115,4 +108,38 @@ TEST_F(Test_SignedInfo_Fragment_ISO2, WhenEncodingKnownSupportedAppProtocolReque
     ASSERT_EQ(len, streamLen);
     const auto memcpyRes = memcmp(m_data, expected, sizeof(expected) - 1);
     ASSERT_EQ(memcpyRes, 0);
+}
+
+class Test_SignedInfo_Fragment_ISO2: public Test_SignedInfo_Fragment<iso2_xmldsigFragment> {
+protected:
+    int encode_xmldsigFragment(exi_bitstream_t* stream, void* document) final
+    {
+        return encode_iso2_xmldsigFragment(stream, (Document_t*)document);
+    }
+};
+class Test_SignedInfo_Fragment_ISO20DC: public Test_SignedInfo_Fragment<iso20_dc_xmldsigFragment> {
+protected:
+    int encode_xmldsigFragment(exi_bitstream_t* stream, void* document) final
+    {
+        return encode_iso20_dc_xmldsigFragment(stream, (Document_t*)document);
+    }
+};
+class Test_SignedInfo_Fragment_ISO20AC: public Test_SignedInfo_Fragment<iso20_ac_xmldsigFragment> {
+protected:
+    int encode_xmldsigFragment(exi_bitstream_t* stream, void* document) final
+    {
+        return encode_iso20_ac_xmldsigFragment(stream, (Document_t*)document);
+    }
+};
+
+TEST_F(Test_SignedInfo_Fragment_ISO2, WhenEncodingKnownSupportedAppProtocolRequest_ThenResultMatchesExpected) {
+    WhenEncodingKnownSupportedAppProtocolRequest_ThenResultMatchesExpected();
+}
+
+TEST_F(Test_SignedInfo_Fragment_ISO20AC, WhenEncodingKnownSupportedAppProtocolRequest_ThenResultMatchesExpected) {
+    WhenEncodingKnownSupportedAppProtocolRequest_ThenResultMatchesExpected();
+}
+
+TEST_F(Test_SignedInfo_Fragment_ISO20DC, WhenEncodingKnownSupportedAppProtocolRequest_ThenResultMatchesExpected) {
+    WhenEncodingKnownSupportedAppProtocolRequest_ThenResultMatchesExpected();
 }
