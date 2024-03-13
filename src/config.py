@@ -72,8 +72,8 @@ iso20_array_optimizations = {
     # reason to restrict this currently
     'PriceRuleStackType': 64,
     # Workaround for missing loop implementation of large arrays (https://github.com/EVerest/cbexigen/issues/28).
-    'ParameterSetType': 5,
-    'ParameterType': 5,
+    'ParameterSetType': 4,
+    'ParameterType': 8
 }
 
 # if fragment de- and encoder should be generated, set this value to 1.
