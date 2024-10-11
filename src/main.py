@@ -15,6 +15,12 @@ def analyze_schema(argv):
     parser = argparse.ArgumentParser(description="Usage of exi codec generator")
     parser.add_argument("--config_file", type=Path, default="config.py",
                         help="Specifies the generator configuration parameter file")
+    parser.add_argument("--auto-download-public-xsd", type=bool, default=False,
+                        help="Automatically download ISO15118-2 and -20 schemas. \
+                              Note: by setting this option to true and hence downloading \
+                              the schema files, YOU accept the ISO Customer Licence Agreement \
+                              (“Licence Agreement”), clauses 1. ISOs Copyright, \
+                              7. Termination, 8. Limitations, and 9. Governing Law.")
     args = parser.parse_args(argv[1:])
     config = vars(args)
 
@@ -36,6 +42,13 @@ def analyze_schema(argv):
         exit(2)
 
     log_init(config_module.log_file_name)
+
+    if args.auto_download_public_xsd:
+        print('Auto downloading xsd schema files from https://standards.iso.org. \
+              YOU accept the ISO Customer Licence Agreement \
+              (“Licence Agreement”), clauses 1. ISOs Copyright, \
+              7. Termination, 8. Limitations, and 9. Governing Law.')
+        conf.download_schemas()
 
     gen = Generator.FileGenerator()
     gen.generate_files()

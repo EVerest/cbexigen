@@ -8,6 +8,7 @@ import importlib
 from typing import Union, Dict
 from pathlib import Path
 
+import urllib.request
 
 CONFIG_ARGS: Dict[str, Union[str, Path]] = {
     'program_dir': '',
@@ -184,3 +185,55 @@ def process_config_parameters():
     # c_replace_chars (replace with underscore)
     if hasattr(config_module, 'c_replace_chars'):
         CONFIG_PARAMS['c_replace_chars'] = config_module.c_replace_chars
+
+
+ISO2_SCHEMAS_URL = "https://standards.iso.org/iso/15118/-2/ed-2/en/"
+ISO20_SCHEMAS_URL = "https://standards.iso.org/iso/15118/-20/ed-1/en/"
+
+
+def download_schemas():
+    config_module = get_config_module()
+
+    iso2_schema_full_name = Path(
+        CONFIG_ARGS['schema_base_dir'], config_module.c_files_to_generate['iso2_msgDefDatatypes']['schema'])
+    iso2_schema_path = iso2_schema_full_name.parent.resolve()
+
+    iso20_schema_full_name = Path(
+        CONFIG_ARGS['schema_base_dir'], config_module.c_files_to_generate['iso20_CommonMessages_Datatypes']['schema'])
+    iso20_schema_path = iso20_schema_full_name.parent.resolve()
+
+    if not iso2_schema_path.exists():
+        iso2_schema_path.mkdir(parents=True, exist_ok=True)
+
+    if not iso20_schema_path.exists():
+        iso20_schema_path.mkdir(parents=True, exist_ok=True)
+
+    iso2_schema_files_names = ['V2G_CI_AppProtocol.xsd', 'V2G_CI_MsgDef.xsd', 'V2G_CI_MsgBody.xsd',
+                               'V2G_CI_MsgDataTypes.xsd', 'V2G_CI_MsgHeader.xsd', 'xmldsig-core-schema.xsd']
+
+    iso20_schema_files_names = ['V2G_CI_AC.xsd', 'V2G_CI_ACDP.xsd', 'V2G_CI_AppProtocol.xsd', 'V2G_CI_CommonMessages.xsd',
+                                'V2G_CI_CommonTypes.xsd', 'V2G_CI_DC.xsd', 'V2G_CI_WPT.xsd', 'xmldsig-core-schema.xsd']
+
+    for schema in iso2_schema_files_names:
+        schema_file_path = iso2_schema_path / schema
+        if not schema_file_path.exists():
+            print(f"ISO15118-2 schema {schema} not found!. Downloading it...")
+            try:
+                urllib.request.urlretrieve(
+                    ISO2_SCHEMAS_URL + schema, schema_file_path.absolute().as_posix())
+            except Exception as err:
+                print(f"Error during downloading: {err=}, {type(err)=}")
+        else:
+            print(f"ISO15118-2 schema {schema} is already there. Skipping it.")
+
+    for schema in iso20_schema_files_names:
+        schema_file_path = iso20_schema_path / schema
+        if not schema_file_path.exists():
+            print(f"ISO15118-20 schema {schema} not found!. Downloading it...")
+            try:
+                urllib.request.urlretrieve(
+                    ISO20_SCHEMAS_URL + schema, schema_file_path.absolute().as_posix())
+            except Exception as err:
+                print(f"Error during downloading: {err=}, {type(err)=}")
+        else:
+            print(f"ISO15118-20 schema {schema} is already there. Skipping it.")
