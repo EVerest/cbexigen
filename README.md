@@ -58,7 +58,7 @@ This codec created by this code generator is designed to take a data
 representation of the message data - e.g. as structs or classes - and
 convert it to the binary EXI message representation, and vice versa.
 
-The codec only abstacts the data representation. It does *not* enforce
+The codec only abstracts the data representation. It does *not* enforce
 message order, message content (beyond what the XML schemas mandate) or
 other higher level requirements.
 
@@ -72,10 +72,12 @@ module [xmlschema](https://pypi.org/project/xmlschema/) and its dependencies,
 especially [jinja2](https://pypi.org/project/Jinja2/). See `requirements.txt`
 for precise details.
 
-In order to be able to produce a codec, the standard's XML schema files are
+In order to be able to produce a codec, the standards' XML schema files are
 required. These cannot be distributed with the code generator. They are
 available within the actual standard documents, partly distributed
-separately by the ISO, and also available openly from other sources.
+separately by the ISO, and also available openly from other sources. The
+ISO 15118 schemas can also be downloaded automatically by the code
+generator. (This is not yet possible for the DIN 70121 schemas.)
 
 ## Configuration
 
@@ -92,8 +94,8 @@ both DIN 70121, ISO 15118-2 and ISO 15118-20, as well as appHandshake and
 top-level V2GTP, with all their respective features. It uses schema files
 in `src/input/schemas/`. It outputs the codec to `src/output/c/`, creates
 logs in `src/output/log/`, and uses the prefixes `appHandshake`, `v2gtp`,
-`din`, `iso-2` and `common` for the respective codec folders, and similar
-prefixes for functions and data types.
+`din`, `iso-2`, `iso-20` and `common` for the respective codec folders, and
+similar prefixes for functions and data types.
 
 ## Running the code generator
 
@@ -107,6 +109,16 @@ To generate the codec, run
 ```
 $ python src/main.py
 ```
+
+If you have do not have the schema files available, instead run
+```
+$ python src/main.py --auto-download-public-xsd 1
+```
+to let the tool download the ISO 15118 schema files for you. **By using
+this option and hence downloading the schema files, YOU accept the ISO
+Customer Licence Agreement ("Licence Agreement"), clauses 1. ISOs
+Copyright, 7. Termination, 8. Limitations, and 9. Governing Law.** Note
+that this cannot download the DIN 70121 schemas.
 
 If you have your own config, instead run
 ```
