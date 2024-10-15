@@ -217,7 +217,7 @@ def download_schemas():
     for schema in iso2_schema_files_names:
         schema_file_path = iso2_schema_path / schema
         if not schema_file_path.exists():
-            print(f"ISO15118-2 schema {schema} not found!. Downloading it...")
+            print(f"ISO15118-2 schema {schema} not found! Downloading it...")
             try:
                 urllib.request.urlretrieve(
                     ISO2_SCHEMAS_URL + schema, schema_file_path.absolute().as_posix())
@@ -229,7 +229,7 @@ def download_schemas():
     for schema in iso20_schema_files_names:
         schema_file_path = iso20_schema_path / schema
         if not schema_file_path.exists():
-            print(f"ISO15118-20 schema {schema} not found!. Downloading it...")
+            print(f"ISO15118-20 schema {schema} not found! Downloading it...")
             try:
                 urllib.request.urlretrieve(
                     ISO20_SCHEMAS_URL + schema, schema_file_path.absolute().as_posix())
