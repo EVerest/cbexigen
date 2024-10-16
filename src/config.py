@@ -76,6 +76,28 @@ iso20_array_optimizations = {
     'ParameterType': 8
 }
 
+# optimizations for fields, which shall be excluded. The name to exclude and a list of parent elements [V2G2-771]
+#  - Id (attribute in SignedInfo)
+#  - ##any in SignedInfo – CanonicalizationMethod
+#  - HMACOutputLength in SignedInfo – SignatureMethod
+#  - ##other in SignedInfo – SignatureMethod
+#  - Type (attribute in SignedInfo-Reference)
+#  - ##other in SignedInfo – Reference – Transforms – Transform
+#  - XPath in SignedInfo – Reference – Transforms – Transform
+#  - ##other in SignedInfo – Reference – DigestMethod
+#  - Id (attribute in SignatureValue)
+#  - Object (in Signature)
+#  - KeyInfo
+iso2_field_optimizations = {
+    'Id': ['SignedInfo', 'SignatureValue'],  # remove Id from SignedInfo and SignatureValue
+    'ANY': ['CanonicalizationMethod', 'SignatureMethod', 'Transform', 'DigestMethod'],  # remove ##any from these elements
+    'HMACOutputLength': ['SignatureMethod'],  # remove HMACOutputLength from SignatureMethod
+    'Type': ['Reference'],  # remove Type from Reference
+    'XPath': ['Transform'],  # remove XPath from Transform
+    'Object': ['Signature'],  # remove Object from Signature
+    'KeyInfo': []  # remove generally
+}
+
 # if fragment de- and encoder should be generated, set this value to 1.
 # Currently only complex elements can be added to the fragment coders.
 # NOTE! There may be problems when comparing the signature of the eMAID.
@@ -119,6 +141,11 @@ iso20_ac_fragments = [
 iso20_dc_fragments = [
     'SignedInfo',
     'DC_ChargeParameterDiscoveryRes',
+]
+
+# mxldsig fragments which should be generated
+xmldsig_fragments = [
+    'SignedInfo'  # creates only signedInfo fragment
 ]
 
 # general C code style
