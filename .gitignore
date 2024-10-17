@@ -5,3 +5,4 @@ schemas
 venv
 *~
 test/*
+tests/build/
