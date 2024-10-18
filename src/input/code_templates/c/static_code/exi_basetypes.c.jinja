@@ -146,7 +146,7 @@ int exi_basetypes_convert_bytes_from_unsigned(const exi_unsigned_t* exi_unsigned
         total_offset += 7;
         if (total_offset >= 8) {
             if (*data_len >= data_size) {
-                return -1;
+                return EXI_ERROR__SUPPORTED_MAX_OCTETS_OVERRUN;
             }
             total_offset -= 8;
             data[*data_len] = temp & 0xFF;
@@ -157,12 +157,12 @@ int exi_basetypes_convert_bytes_from_unsigned(const exi_unsigned_t* exi_unsigned
     }
     if (total_offset != 0) {
         if (*data_len >= data_size) {
-            return -1;
+            return EXI_ERROR__SUPPORTED_MAX_OCTETS_OVERRUN;
         }
         data[*data_len] = temp & 0xFF;
         (*data_len)++;
     }
-    return 0;
+    return EXI_ERROR__NO_ERROR;
 }
 
 int exi_basetypes_convert_bytes_to_unsigned(exi_unsigned_t* exi_unsigned, const uint8_t* data, size_t data_len)
