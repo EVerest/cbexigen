@@ -285,9 +285,7 @@ int exi_basetypes_encoder_integer_64(exi_bitstream_t* stream, int64_t value)
 
 int exi_basetypes_encoder_signed(exi_bitstream_t* stream, const exi_signed_t* value)
 {
-    int error;
-
-    error = exi_basetypes_encoder_bool(stream, value->is_negative);
+    int error = exi_basetypes_encoder_bool(stream, value->is_negative);
     if (error != EXI_ERROR__NO_ERROR)
     {
         return error;
