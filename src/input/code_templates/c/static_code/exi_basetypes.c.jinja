@@ -21,7 +21,7 @@ int exi_basetypes_convert_to_unsigned(exi_unsigned_t* exi_unsigned, uint32_t val
         exi_unsigned->octets_count++;
         *current_octet = (uint8_t)(dummy & EXI_BASETYPES_OCTET_SEQ_VALUE_MASK);
 
-        dummy = dummy >> 7u;
+        dummy >>= 7u;
         if (dummy == 0)
         {
             break;
@@ -45,7 +45,7 @@ int exi_basetypes_convert_64_to_unsigned(exi_unsigned_t* exi_unsigned, uint64_t 
         exi_unsigned->octets_count++;
         *current_octet = (uint8_t)(dummy & EXI_BASETYPES_OCTET_SEQ_VALUE_MASK);
 
-        dummy = dummy >> 7u;
+        dummy >>= 7u;
         if (dummy == 0)
         {
             break;
@@ -186,7 +186,7 @@ int exi_basetypes_convert_bytes_to_unsigned(exi_unsigned_t* exi_unsigned, const 
         *current_octet |= EXI_BASETYPES_OCTET_SEQ_FLAG_MASK;
     }
     if (dummy_count > 0) {
-        *(current_octet-1) |= EXI_BASETYPES_OCTET_SEQ_FLAG_MASK;
+        *(current_octet - 1) |= EXI_BASETYPES_OCTET_SEQ_FLAG_MASK;
         exi_unsigned->octets_count++;
         *current_octet = (uint8_t)(dummy & EXI_BASETYPES_OCTET_SEQ_VALUE_MASK);
     }
