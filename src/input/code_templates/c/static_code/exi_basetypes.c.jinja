@@ -178,14 +178,10 @@ int exi_basetypes_convert_bytes_to_unsigned(exi_unsigned_t* exi_unsigned, const 
         }
         exi_unsigned->octets_count++;
         *current_octet = (uint8_t)(dummy & EXI_BASETYPES_OCTET_SEQ_VALUE_MASK);
+        *current_octet |= EXI_BASETYPES_OCTET_SEQ_FLAG_MASK;
 
         dummy >>= 7u;
         dummy_count -= 7;
-        if (n == data_len) {
-            break;
-        }
-
-        *current_octet |= EXI_BASETYPES_OCTET_SEQ_FLAG_MASK;
     }
     if (dummy_count > 0 && dummy != 0) {
         *(current_octet - 1) |= EXI_BASETYPES_OCTET_SEQ_FLAG_MASK;
