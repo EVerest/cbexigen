@@ -145,20 +145,22 @@ int exi_basetypes_convert_bytes_from_unsigned(const exi_unsigned_t* exi_unsigned
         temp += ((uint16_t)(*current_octet & EXI_BASETYPES_OCTET_SEQ_VALUE_MASK) << total_offset);
         total_offset += 7;
         if (total_offset >= 8) {
-            if (data_size == *data_len) {
+            if (*data_len >= data_size) {
                 return EXI_ERROR__ENCODED_INTEGER_SIZE_LARGER_THAN_DESTINATION;
             }
             total_offset -= 8;
-            data[(*data_len)++] = temp & 0xFF;
+            data[*data_len] = temp & 0xFF;
+            (*data_len)++;
             temp >>= 8;
         }
         current_octet++;
     }
     if (total_offset != 0) {
-        if (data_size == *data_len) {
+        if (*data_len >= data_size) {
             return EXI_ERROR__ENCODED_INTEGER_SIZE_LARGER_THAN_DESTINATION;
         }
-        data[(*data_len)++] = temp & 0xFF;
+        data[*data_len] = temp & 0xFF;
+        (*data_len)++;
     }
     return EXI_ERROR__NO_ERROR;
 }
