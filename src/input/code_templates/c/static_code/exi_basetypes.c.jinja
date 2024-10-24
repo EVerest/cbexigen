@@ -155,7 +155,7 @@ int exi_basetypes_convert_bytes_from_unsigned(const exi_unsigned_t* exi_unsigned
         }
         current_octet++;
     }
-    if (total_offset != 0) {
+    if (total_offset != 0 && (temp & 0xFF) != 0) {
         if (*data_len >= data_size) {
             return EXI_ERROR__ENCODED_INTEGER_SIZE_LARGER_THAN_DESTINATION;
         }
@@ -187,7 +187,7 @@ int exi_basetypes_convert_bytes_to_unsigned(exi_unsigned_t* exi_unsigned, const 
 
         *current_octet |= EXI_BASETYPES_OCTET_SEQ_FLAG_MASK;
     }
-    if (dummy_count > 0) {
+    if (dummy_count > 0 && dummy != 0) {
         *(current_octet - 1) |= EXI_BASETYPES_OCTET_SEQ_FLAG_MASK;
         exi_unsigned->octets_count++;
         *current_octet = (uint8_t)(dummy & EXI_BASETYPES_OCTET_SEQ_VALUE_MASK);
