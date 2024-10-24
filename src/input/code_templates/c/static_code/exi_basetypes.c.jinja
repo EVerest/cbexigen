@@ -134,6 +134,24 @@ int exi_basetypes_convert_64_from_signed(const exi_signed_t* exi_signed, int64_t
     return res;
 }
 
+static void _reverse_array(uint8_t* data, size_t data_size)
+{
+    if (!data || !data_size)
+    {
+        return;
+    }
+
+    size_t i = 0;
+    size_t j = data_size - 1;
+    while (i < j) {
+        const uint8_t temp = data[i];
+        data[i] = data[j];
+        data[j] = temp;
+        i++;
+        j--;
+    }
+}
+
 int exi_basetypes_convert_bytes_from_unsigned(const exi_unsigned_t* exi_unsigned, uint8_t* data, size_t* data_len, size_t data_size)
 {
     const uint8_t* current_octet = exi_unsigned->octets;
