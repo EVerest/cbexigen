@@ -365,6 +365,23 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
         return decode_content
 
+    def __get_content_decode_signed(self, element_typename, detail: ElementGrammarDetail, level):
+        type_value = f'{element_typename}->{detail.particle.name}'
+        next_grammar_id = detail.next_grammar
+
+        template_file = 'DecodeTypeSigned.jinja'
+        decode_comment = '// decode: signed'
+        if detail.particle.is_attribute:
+            decode_comment += ' (Attribute)'
+        temp = self.generator.get_template(template_file)
+        decode_content = temp.render(decode_comment=decode_comment,
+                                     type_value=type_value,
+                                     type_option=detail.particle.is_optional,
+                                     next_grammar_id=next_grammar_id,
+                                     indent=self.indent, level=level)
+
+        return decode_content
+
     def __get_content_decode_string(self, element_typename, detail: ElementGrammarDetail, level):
         decode_comment = '// decode: string (len, characters)'
         if detail.particle.is_attribute:
@@ -550,6 +567,8 @@ class ExiDecoderCode(ExiBaseCoderCode):
                 type_content = self.__get_content_decode_int(grammar.element_typename, detail, level)
             elif detail.particle.integer_base_type == 'uint64':
                 type_content = self.__get_content_decode_long_int(grammar.element_typename, detail, level)
+            elif detail.particle.integer_base_type == 'signed':
+                type_content = self.__get_content_decode_signed(grammar.element_typename, detail, level)
             else:
                 log_write_error(f"Unhandled numeric type: '{detail.particle.name}': "
                                 f"'{detail.particle.type_short}', " +
