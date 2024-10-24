@@ -180,6 +180,7 @@ int exi_basetypes_convert_bytes_from_unsigned(const exi_unsigned_t* exi_unsigned
         data[*data_len] = temp & 0xFF;
         (*data_len)++;
     }
+    _reverse_array(data, *data_len);
     return EXI_ERROR__NO_ERROR;
 }
 
@@ -189,9 +190,9 @@ int exi_basetypes_convert_bytes_to_unsigned(exi_unsigned_t* exi_unsigned, const 
     uint16_t dummy = 0;
     uint8_t dummy_count = 0;
 
-    for (size_t n = 0; n != data_len; n++, current_octet++) {
+    for (size_t n = 0; n < data_len; n++, current_octet++) {
         if (dummy_count <= 8) {
-            dummy |= (data[n] << dummy_count);
+            dummy |= (data[data_len - n - 1] << dummy_count);
             dummy_count += 8;
         }
         exi_unsigned->octets_count++;
