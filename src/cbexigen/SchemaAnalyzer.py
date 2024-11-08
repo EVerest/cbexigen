@@ -980,9 +980,9 @@ class SchemaAnalyzer(object):
         self.__scan_elements_for_empty_content()
         self.__scan_particles_for_empty_parent_type()
 
-        # In the 15118-20 AC and Dc schema some elements have not all possible particles.
+        # In the 15118-20 AC and DC schemas, some elements do not have all possible particles.
         # This is e.g. ChargeParameterDiscovery or ChargeLoop. There are missing the BPT elements.
-        # The BPT element are just derived and extended but not abstract.
+        # The BPT elements are just derived and extended but not abstract.
         if self.__is_iso20:
             self.__scan_for_derived_and_extended_elements()
 
@@ -1470,6 +1470,7 @@ class SchemaAnalyzer(object):
                         list_with_missing.append(particle)
                         log_write(f'    Adding abstract particle {particle.name} to missing list.')
 
+                    # get the base type, add it as particle
                     missing_element = find_base_type(particle.type_short)
                     if missing_element is not None:
                         part = self.__get_particle(missing_element)
@@ -1518,6 +1519,7 @@ class SchemaAnalyzer(object):
                 element.particles = new_list
                 log_write(f'  Replacing particle list of {element.name_short}.')
                 log_write('')
+        log_write('Done with scan for derived and extended elements')
 
     def __adjust_choice_elements(self):
         log_write('')
