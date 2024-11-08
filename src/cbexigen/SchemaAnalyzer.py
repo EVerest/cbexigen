@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2022 - 2023 chargebyte GmbH
 # Copyright (c) 2022 - 2023 Contributors to EVerest
-from pathlib import Path
 from typing import Union
 
 from xmlschema import XMLSchema11, XsdElement, XsdType, XsdAttribute
