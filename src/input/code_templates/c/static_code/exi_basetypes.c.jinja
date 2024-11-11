@@ -136,7 +136,7 @@ int exi_basetypes_convert_64_from_signed(const exi_signed_t* exi_signed, int64_t
 
 static void _reverse_array(uint8_t* data, size_t data_size)
 {
-    if (!data || !data_size)
+    if (!data_size)
     {
         return;
     }
