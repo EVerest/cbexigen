@@ -88,7 +88,7 @@ iso20_array_optimizations = {
 #  - Id (attribute in SignatureValue)
 #  - Object (in Signature)
 #  - KeyInfo
-iso2_field_optimizations = {
+field_optimizations = {
     'Id': ['SignedInfo', 'SignatureValue'],  # remove Id from SignedInfo and SignatureValue
     'ANY': ['CanonicalizationMethod', 'SignatureMethod', 'Transform', 'DigestMethod'],  # remove ##any from these elements
     'HMACOutputLength': ['SignatureMethod'],  # remove HMACOutputLength from SignatureMethod
@@ -97,6 +97,11 @@ iso2_field_optimizations = {
     'Object': ['Signature'],  # remove Object from Signature
     'KeyInfo': []  # remove generally
 }
+# protocol specific optimizations - use the protocol prefix
+# each key *overwrites* the entries from the key in field_optimizations
+# iso2_field_optimizations = {
+#     'bar': ['foo'] # remove bar from foo
+# }
 
 # if fragment de- and encoder should be generated, set this value to 1.
 # Currently only complex elements can be added to the fragment coders.

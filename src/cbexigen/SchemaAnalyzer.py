@@ -1555,10 +1555,14 @@ class SchemaAnalyzer(object):
 
     def __mark_field_optimizations(self):
         config_module = get_config_module()
-        parameter = self.__schema_prefix + 'field_optimizations'
+        parameter = 'field_optimizations'
+        optimizations = {}
         if hasattr(config_module, parameter):
-            optimizations = getattr(config_module, parameter)
-        else:
+            optimizations.update(getattr(config_module, parameter))
+        parameter = self.__schema_prefix + parameter
+        if hasattr(config_module, parameter):
+            optimizations.update(getattr(config_module, parameter))
+        if not optimizations:
             return
 
         for element in self.__generate_elements:
