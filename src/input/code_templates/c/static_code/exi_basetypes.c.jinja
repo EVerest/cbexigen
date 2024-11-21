@@ -154,6 +154,7 @@ static void _reverse_array(uint8_t* data, size_t data_size)
 
 int exi_basetypes_convert_bytes_from_unsigned(const exi_unsigned_t* exi_unsigned, uint8_t* data, size_t* data_len, size_t data_size)
 {
+    // raw EXI 7/8 integer byte stream with flags (exi_unsigned) to API exi_unsigned_t representation (data, data_len)
     const uint8_t* current_octet = exi_unsigned->octets;
     uint16_t temp = 0;
     *data_len = 0;
@@ -186,6 +187,7 @@ int exi_basetypes_convert_bytes_from_unsigned(const exi_unsigned_t* exi_unsigned
 
 int exi_basetypes_convert_bytes_to_unsigned(exi_unsigned_t* exi_unsigned, const uint8_t* data, size_t data_len)
 {
+    // API exi_unsigned_t representation (data, data_len) to raw EXI 7/8 integer byte stream with flags (exi_unsigned)
     uint8_t *current_octet = &exi_unsigned->octets[0];
     uint16_t dummy = 0;
     uint8_t dummy_count = 0;
