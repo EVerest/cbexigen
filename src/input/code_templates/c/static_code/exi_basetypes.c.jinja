@@ -191,6 +191,7 @@ int exi_basetypes_convert_bytes_to_unsigned(exi_unsigned_t* exi_unsigned, const 
     uint8_t *current_octet = &exi_unsigned->octets[0];
     uint16_t dummy = 0;
     uint8_t dummy_count = 0;
+    exi_unsigned->octets_count = 0;
 
     // FIXME: this should loop every seven output bits, not every eight
     //        input bits
