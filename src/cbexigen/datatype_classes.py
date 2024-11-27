@@ -36,6 +36,12 @@ class DatatypeHeader:
             self.__fragments = get_fragment_parameter_for_schema(self.__schema_prefix)
             self.__generate_fragment = len(self.__fragments) > 0
 
+        self.__xmldsigfragments = []
+        self.__generate_all_xmldsig_fragment = True
+        if self.config['generate_fragments'] == 1:
+            self.__xmldsigfragments = get_fragment_parameter_for_schema('xmldsig_')
+            self.__generate_all_xmldsig_fragment = len(self.__xmldsigfragments) == 0
+
         if self.logging_enabled:
             self.logger_name = str(self.h_params['filename'])
             if self.logger_name.casefold().endswith('.h') or self.logger_name.casefold().endswith('.c'):
@@ -276,12 +282,19 @@ class DatatypeHeader:
         return temp.render(indent=indent, level=indent_level,
                            sequence_comment=comment, sequence_name=name, sequence_content=content)
 
+    def __generate_optimized_struct(self, name, comment, indent_level=1):
+        indent = ' ' * self.config['c_code_indent_chars']
+        temp = self.generator.get_template('SubStructOptimized.jinja')
+        return temp.render(indent=indent, level=indent_level, name=name, comment=comment)
+
     def __get_particle_content(self, particle: Particle, elements, indent_level=1):
         content = ''
         last = None
 
+        if particle.is_optimized is True:
+            content += self.__generate_optimized_struct(particle.name, ": Optimized out element", indent_level)
         # particle type is in list, so a separate type is generated
-        if particle.type in self.analyzer_data.known_elements:
+        elif particle.type in self.analyzer_data.known_elements:
             if particle.max_occurs > 1:
                 # generate struct for array with length variable
                 if particle.is_enum:
@@ -449,7 +462,7 @@ class DatatypeHeader:
 
         fragment: FragmentData
         for fragment in self.analyzer_data.known_fragments.values():
-            if 'xmldsig' in fragment.namespace.casefold():
+            if 'xmldsig' in fragment.namespace.casefold() and (fragment.name in self.__xmldsigfragments or self.__generate_all_xmldsig_fragment is True):
                 fragment_type = fragment.type
                 if fragment.type == 'AnonType':
                     fragment_type = fragment.name
@@ -460,6 +473,8 @@ class DatatypeHeader:
                 else:
                     self.log(f'xmldsig Fragment {fragment.name} ({fragment.type}) '
                              f'is not in the list of known elements.')
+            else:
+                self.log(f"Skipped xmlsigFragment: {fragment.name}")
 
         temp = self.generator.get_template('BaseStructWithUnionAndUsed.jinja')
         content = temp.render(struct_name=name,
@@ -657,6 +672,12 @@ class DatatypeCode:
             self.__fragments = get_fragment_parameter_for_schema(self.__schema_prefix)
             self.__generate_fragment = len(self.__fragments) > 0
 
+        self.__xmldsigfragments = []
+        self.__generate_all_xmldsig_fragment = True
+        if self.config['generate_fragments'] == 1:
+            self.__xmldsigfragments = get_fragment_parameter_for_schema('xmldsig_')
+            self.__generate_all_xmldsig_fragment = len(self.__xmldsigfragments) == 0
+
         if self.logging_enabled:
             self.logger_name = str(self.c_params['filename'])
             if self.logger_name.casefold().endswith('.h') or self.logger_name.casefold().endswith('.c'):
@@ -789,7 +810,7 @@ class DatatypeCode:
 
         fragment: FragmentData
         for fragment in self.analyzer_data.known_fragments.values():
-            if 'xmldsig' in fragment.namespace.casefold():
+            if 'xmldsig' in fragment.namespace.casefold() and (fragment.name in self.__xmldsigfragments or self.__generate_all_xmldsig_fragment is True):
                 fragment_type = fragment.type
                 if fragment.type == 'AnonType':
                     fragment_type = fragment.name

@@ -28,6 +28,12 @@ class ExiDecoderHeader(ExiBaseCoderHeader):
             self.__fragments = get_fragment_parameter_for_schema(self.__schema_prefix)
             self.__generate_fragment = len(self.__fragments) > 0
 
+        self.__xmldsigfragments = []
+        self.__generate_all_xmldsig_fragment = True
+        if self.config['generate_fragments'] == 1:
+            self.__xmldsigfragments = get_fragment_parameter_for_schema('xmldsig_')
+            self.__generate_all_xmldsig_fragment = len(self.__xmldsigfragments) == 0
+
         self.__include_content = ''
         self.__code_content = ''
 
@@ -102,6 +108,11 @@ class ExiDecoderCode(ExiBaseCoderCode):
         if self.config['generate_fragments'] == 1:
             self.__fragments = get_fragment_parameter_for_schema(self.__schema_prefix)
             self.__generate_fragment = len(self.__fragments) > 0
+        self.__xmldsigfragments = []
+        self.__generate_all_xmldsig_fragment = True
+        if self.config['generate_fragments'] == 1:
+            self.__xmldsigfragments = get_fragment_parameter_for_schema('xmldsig_')
+            self.__generate_all_xmldsig_fragment = len(self.__xmldsigfragments) == 0
 
         self.__include_content = ''
         self.__code_content = ''
@@ -528,6 +539,14 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
         return decode_content
 
+    def __get_content_decode_optimized_out(self, element_typename, detail: ElementGrammarDetail, level):
+        decode_comment = f"// decode removed with optimization: '{detail.particle.type_short}', base type '{detail.particle.typename}"
+        temp = self.generator.get_template('DecodeTypeNotImplemented.jinja')
+        decode_content = temp.render(decode_comment=decode_comment,
+                                     indent=self.indent, level=level)
+
+        return decode_content
+
     def __get_type_content(self, grammar: ElementGrammar, detail: ElementGrammarDetail, level):
         if detail.particle is None:
             temp = self.generator.get_template('BaseDecodeEndElement.jinja')
@@ -536,7 +555,10 @@ class ExiDecoderCode(ExiBaseCoderCode):
         # default content for types not covered below
         type_content = self.__get_content_decode_not_implemented(grammar.element_typename, detail, level)
 
-        if detail.is_any and detail.any_is_dummy:
+        if detail.particle.is_optimized is True:
+            # use "not implemented" content when optimized
+            type_content = self.__get_content_decode_optimized_out(grammar.element_typename, detail, level)
+        elif detail.is_any and detail.any_is_dummy:
             type_content = self.__get_content_decode_no_event(grammar.element_typename, detail, level)
         elif detail.particle.is_enum:
             if detail.particle.is_array:
@@ -889,7 +911,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
         decode_fn = []
         for fragment in self.analyzer_data.known_fragments.values():
-            if 'xmldsig' in fragment.namespace.casefold():
+            if 'xmldsig' in fragment.namespace.casefold() and (fragment.name in self.__xmldsigfragments or self.__generate_all_xmldsig_fragment is True):
                 if fragment.type in self.analyzer_data.known_elements.values():
                     function = f'{CONFIG_PARAMS["decode_function_prefix"]}{self.__schema_prefix}{fragment.type}'
                     parameter = f'{parameter_name}->{fragment.name}'

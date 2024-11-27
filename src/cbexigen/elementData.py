@@ -35,6 +35,7 @@ class Particle:
     is_enum: bool = False
     is_attribute: bool = False
     is_simple_content: bool = False
+    is_optimized: bool = False
     enum_count: int = -1
     # additional flag if content model is choice and changed min occurrence
     content_model_changed_restrictions: bool = False
