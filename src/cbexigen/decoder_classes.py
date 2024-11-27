@@ -645,7 +645,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         grammar_content = ''
 
         for grammar in grammars:
-            if grammar.details[0].flag == GrammarFlag.START:
+            if grammar.details[0].flag_is_start_or_loop:
                 names = [particle.name for particle in element.particles]
                 names.sort()
 
@@ -700,7 +700,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
             add_debug_code = 0
             type_parameter = ''
             for detail in grammar.details:
-                if detail.flag == GrammarFlag.START and detail.particle is not None:
+                if detail.flag_is_start_or_loop and detail.particle is not None:
                     prefixed_type = detail.particle.prefixed_name
                     add_debug_code = self.get_status_for_add_debug_code(prefixed_type)
                     type_parameter = CONFIG_PARAMS['decode_function_prefix'] + prefixed_type

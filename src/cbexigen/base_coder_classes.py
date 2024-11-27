@@ -223,7 +223,7 @@ class ExiBaseCoderCode:
         if len(grammars) > 2:
             for grammar in grammars:
                 for detail in grammar.details:
-                    if detail.flag == GrammarFlag.START:
+                    if detail.flag_is_start_or_loop:
                         has_start = True
                         break
 
@@ -302,7 +302,7 @@ class ExiBaseCoderCode:
                                 self.choice_index = element_choice_index
                                 # if this particle is the first in a choice sequence, it's a choice
                                 # so the first particles from all sequences are the choice
-                                for choice_sequence_index, choice_sequence in enumerate(element_choice.choice_sequences):
+                                for choice_sequence in element_choice.choice_sequences:
                                     self.particles.append(element.particle_from_name(choice_sequence[0][0]))
                                     self.item_names.append(choice_sequence[0][0])
                                 self.min_occurs = element_choice.min_occurs
@@ -534,6 +534,7 @@ class ExiBaseCoderCode:
 
             def _add_particle_or_choice_list_to_details(
                     element: ElementData, grammar: ElementGrammar, particle: Particle, previous_choice_list,
+                    flag=GrammarFlag.START,
                     is_in_array_last=False, is_in_array_not_last=False, is_extra_grammar=False):
                 """
                 If a particle is part of a choice group, this adds all the group's particles
@@ -546,13 +547,13 @@ class ExiBaseCoderCode:
                 if choice_options.particles and not (choice_options.choice_sequences and particle.parent_choice_sequence_number > 1):
                     if choice_options.item_names != previous_choice_list:
                         for choice in choice_options.particles:
-                            grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=choice,
+                            grammar.details.append(ElementGrammarDetail(flag=flag, particle=choice,
                                                                         is_in_array_last=is_in_array_last,
                                                                         is_in_array_not_last=is_in_array_not_last,
                                                                         is_extra_grammar=is_extra_grammar))
                         previous_choice_list.extend(choice_options.item_names)
                 else:
-                    grammar.details.append(ElementGrammarDetail(flag=GrammarFlag.START, particle=part,
+                    grammar.details.append(ElementGrammarDetail(flag=flag, particle=part,
                                                                 is_in_array_last=is_in_array_last,
                                                                 is_in_array_not_last=is_in_array_not_last,
                                                                 is_extra_grammar=is_extra_grammar))
@@ -567,7 +568,7 @@ class ExiBaseCoderCode:
                 if n in n_to_skip:
                     # a list of particles in the linear list not to be considered
                     continue
-                if part.max_occurs == 1 and not part.max_occurs_changed:
+                if part.max_occurs == 1 and not part.max_occurs_was_changed:
                     if part.parent_has_sequence:
                         particle_is_part_of_sequence = True
 
@@ -615,25 +616,38 @@ class ExiBaseCoderCode:
                         for i in range(choice_options.number_of_particles_to_skip):
                             n_to_skip.add(n+1+i)
                             log_write_error(f"Skipping subsequent particles {n_to_skip} for particle '{part.name}'")
-                elif part.max_occurs > 1 or part.max_occurs_changed:
+                elif part.max_occurs > 1 or part.max_occurs_was_changed:
                     if part.max_occurs < 25:
                         _max = part.max_occurs
-                        # if max_occurs was reduced to 1, make sure to create the proper grammar after the one occurence
+                        # if max_occurs was reduced, make sure to create the proper grammar after the one occurence
                         # This should be done only if the caller is not the encoder
+                        # FIXME add code to understand whether we came from unlimited!
                         add_extra = False
-                        if part.max_occurs >= 1 and part.max_occurs_changed:
+                        if part.max_occurs >= 1 and part.max_occurs_was_changed:
                             _max += 1
                             add_extra = True
 
-                        for m in range(0, _max):
-                            if m < _max - 1:
+                        skip_to_end = False  # for LOOP, do not create
+                        for m in range(1, _max + 1):
+                            if skip_to_end and m < _max:
+                                continue
+                            if m < _max:
+                                # flag=Grammar.LOOP indicates that the _next_ grammar will be the same as this one
+                                # Do not loop on the mandatory elements of an array, it would require extra logic,
+                                # and we have no min_occurs larger than 2 anyway.
+                                # FIXME can I drop m < _max?
+                                if m > 1 and m > part.min_occurs - 1 and m < _max:
+                                    flag = GrammarFlag.LOOP
+                                    skip_to_end = True
+                                else:
+                                    flag = GrammarFlag.START
                                 _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
-                                                                        is_in_array_not_last=True)
+                                                                        flag=flag, is_in_array_not_last=True)
                             else:
                                 _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
-                                                                        is_in_array_last=True,
+                                                                        flag=flag, is_in_array_last=True,
                                                                         is_extra_grammar=add_extra)
-                            if m >= part.min_occurs and m > 0:
+                            if m > part.min_occurs and m > 1:
                                 # this is an optional occurrence (and grammar 0 already contains END),
                                 # so recurse with the subsequent particles
                                 _add_subsequent_grammar_details(element, particle, n + 1,
@@ -740,10 +754,14 @@ class ExiBaseCoderCode:
                 continue
 
             # case 1: just one element, START as singular grammar detail
-            if len_details == 1 and grammar.details[0].flag == GrammarFlag.START:
+            if len_details == 1 and grammar.details[0].flag_is_start_or_loop:
                 grammar.details[0].event_index = 0
-                # the next grammar must be that of the subsequent particle
-                grammar.details[0].next_grammar = grammars[idx_grammar + 1].grammar_id
+                if grammar.details[0].flag == GrammarFlag.LOOP:
+                    # the next grammar is this grammar in a loop scenario
+                    grammar.details[0].next_grammar = grammar.grammar_id
+                else:
+                    # the next grammar must be that of the subsequent particle
+                    grammar.details[0].next_grammar = grammars[idx_grammar + 1].grammar_id
                 self.log(', '.join([
                                  f'Grammar ID={grammar.grammar_id}',
                                  f'eventCode={grammar.details[0].event_index}',
@@ -775,7 +793,7 @@ class ExiBaseCoderCode:
                                         f'next ID={grammar_detail.next_grammar}',
                                     ]))
 
-                    elif grammar_detail.flag == GrammarFlag.START:
+                    elif grammar_detail.flag_is_start_or_loop:
                         # find the particle's index in the element
                         # FIXME can this break on repeated occurrences, as in PGPKeyDataType?
                         part_index: int = None
@@ -806,7 +824,10 @@ class ExiBaseCoderCode:
                                 else:
                                     grammar_detail.next_grammar = element.particles_next_grammar_ids[part_index]
                             else:
-                                grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
+                                if grammar_detail.flag == GrammarFlag.START:
+                                    grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
+                                else:
+                                    grammar_detail.next_grammar = grammar.grammar_id
                         else:
                             if part_index is not None:
                                 if _is_final_particle(element, part_index):
