@@ -175,7 +175,17 @@ int exi_basetypes_encoder_uint_64(exi_bitstream_t* stream, uint64_t value)
 
 int exi_basetypes_encoder_unsigned(exi_bitstream_t* stream, const exi_unsigned_t* value)
 {
-    return exi_basetypes_encoder_write_unsigned(stream, value);
+    int error;
+    exi_unsigned_t raw_exi_unsigned;
+
+    // convert integer API bytes to EXI coded 7/8 byte stream
+    error = exi_basetypes_convert_bytes_to_unsigned(&raw_exi_unsigned, value->octets, value->octets_count);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    return exi_basetypes_encoder_write_unsigned(stream, &raw_exi_unsigned);
 }
 
 /*****************************************************************************
