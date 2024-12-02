@@ -622,6 +622,7 @@ class DatatypeHeader:
             temp = self.generator.get_template('BaseDatatypes.h.jinja')
             code = temp.render(filename=self.h_params['filename'],
                                filekey=self.h_params['identifier'],
+                               description=self.h_params.get('description'),
                                include=include,
                                defines=defines,
                                enum_code=enum_code,
