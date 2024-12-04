@@ -398,10 +398,10 @@ class ElementData:
             comment_part += f'{particle.min_occurs}, {particle.max_occurs})'
 
             if particle.parent_has_sequence:
-                comment_part += f'(was {particle.min_occurs_old}, {particle.max_occurs_old})'
-                comment_part += f'(seq. {particle.parent_sequence})'
+                comment_part += f' (was {particle.min_occurs_old}, {particle.max_occurs_old})'
+                comment_part += f' (seq. {particle.parent_sequence})'
             elif particle.parent_model_changed_restrictions:
-                comment_part += f'(old {particle.min_occurs_old}, {particle.max_occurs_old})'
+                comment_part += f' (old {particle.min_occurs_old}, {particle.max_occurs_old})'
 
             comment_parts.append(comment_part)
 
