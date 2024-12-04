@@ -393,6 +393,7 @@ class ElementData:
     @property
     def particle_comment(self):
         comment_parts = []
+        particle: Particle
         for particle in self.particles:
             comment_part = f'{particle.name}, {particle.type_short} ('
             comment_part += f'{particle.min_occurs}, {particle.max_occurs})'
@@ -402,6 +403,8 @@ class ElementData:
                 comment_part += f' (seq. {particle.parent_sequence})'
             elif particle.parent_model_changed_restrictions:
                 comment_part += f' (old {particle.min_occurs_old}, {particle.max_occurs_old})'
+            elif particle.max_occurs_was_changed:
+                comment_part += f' (original max {"unbounded" if particle.max_occurs_old in [-1, None] else particle.max_occurs_old})'
 
             comment_parts.append(comment_part)
 
