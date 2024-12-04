@@ -35,6 +35,8 @@ class FragmentData:
     type = ''
 
 
+# Note: a corrected limit of 1 is default for all unbounded types, unless
+#       listed differently here
 OCCURRENCE_LIMITS_CORRECTED: Dict[str, int] = {
     "X509IssuerSerial": 1,
     "X509SKI": 1,

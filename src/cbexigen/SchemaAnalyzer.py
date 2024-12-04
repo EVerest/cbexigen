@@ -404,6 +404,7 @@ class SchemaAnalyzer(object):
             if element.max_occurs is not None:
                 particle.max_occurs = element.effective_max_occurs
             else:
+                # all unbounded arrays get limited to 1 here, unless noted in OCCURRENCE_LIMITS_CORRECTED
                 if element.local_name in OCCURRENCE_LIMITS_CORRECTED:
                     particle.max_occurs = OCCURRENCE_LIMITS_CORRECTED[element.local_name]
                 else:
