@@ -576,6 +576,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                     content += temp.render(event_comment=event_comment,
                                            indent=self.indent, level=level)
                 else:
+                    # currently unused
                     event_comment = f'// Event: {detail.particle_name} (index={detail.event_index}); next={detail.next_grammar}'
                     temp = self.generator.get_template('EncodeEventOptionalElementNone.jinja')
                     content += temp.render(option=option,
@@ -611,10 +612,12 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
     def __get_event_content(self, grammar: ElementGrammar, level):
         content = ''
+        first: ElementGrammarDetail
         first = grammar.details[0]
 
         if first.flag != GrammarFlag.ERROR:
             if grammar.details_count == 1:
+
                 if first.is_mandatory_array:
                     content += self.__get_event_content_for_array_element(first, grammar, 0, level)
                 else:
@@ -641,7 +644,9 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
                     # log_write_error(f"__get_event_content(): option = {option} for grammar '{grammar.element_typename}', index {detail.event_index}, detail '{detail.particle_name}'")
 
-                    if detail.is_mandatory_array:
+                    if detail.particle.was_array:
+                        content += self.__get_event_content_for_optional_element(detail, grammar, option, level)
+                    elif detail.is_mandatory_array:
                         if option >= 0:
                             content += self.__get_event_content_for_array_element(first, grammar, option, level)
                         else:

@@ -421,17 +421,28 @@ class ExiDecoderCode(ExiBaseCoderCode):
             decode_comment += ' (Attribute)'
         type_array = f'{element_typename}->{detail.particle.name}.{detail.particle.value_parameter_name}'
         type_array_len = f'{element_typename}->{detail.particle.name}.{detail.particle.length_parameter_name}'
+        type_loop_breakout = (
+            detail.flag == GrammarFlag.LOOP and
+            detail.particle.max_occurs_old is not None  # unbounded (max None) arrays don't need to break out of loop
+        )
+        array_length_from_schema = detail.particle.max_occurs
+        if detail.particle.max_occurs_old != -1:
+            array_length_from_schema = detail.particle.max_occurs_old
         decode_fn = f'{CONFIG_PARAMS["decode_function_prefix"]}{detail.particle.prefixed_type}'
         next_grammar_id = detail.next_grammar
+        next_grammar_id_breakout = detail.next_grammar_out
 
         temp = self.generator.get_template('DecodeTypeElementArray.jinja')
-        # FIXME support optional element arrays (need to define type_value as well)
+        # FIXME support optional element arrays (need to define type_option, type_value as well)
         decode_content = temp.render(decode_comment=decode_comment,
                                      type_define=detail.particle.prefixed_define_for_array,
                                      type_array=type_array,
                                      type_array_len=type_array_len,
+                                     type_array_len_schema=array_length_from_schema,
+                                     type_loop_breakout=type_loop_breakout,
                                      decode_fn=decode_fn,
                                      next_grammar_id=next_grammar_id,
+                                     next_grammar_id_breakout=next_grammar_id_breakout,
                                      indent=self.indent, level=level)
 
         return decode_content
@@ -464,6 +475,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         decode_content = temp.render(decode_comment=decode_comment,
                                      decode_fn=decode_fn,
                                      type_option=detail.particle.is_optional,
+                                     type_extra=detail.is_extra_grammar,
                                      type_value=type_value,
                                      next_grammar_id=next_grammar_id,
                                      indent=self.indent, level=level)
@@ -591,6 +603,8 @@ class ExiDecoderCode(ExiBaseCoderCode):
             elif detail.particle.typename == 'hexBinary':
                 type_content = self.__get_content_decode_hex_binary(grammar.element_typename, detail, level)
             elif detail.particle.typename == 'base64Binary':
+                # Note: DIN 70121's certificateType is the only non-complex unbounded array type, but as it is unused,
+                #       no special handling is added
                 if detail.particle.is_simple_content:
                     type_content = self.__get_content_decode_base64_binary_simple(grammar.element_typename,
                                                                                   detail, level)

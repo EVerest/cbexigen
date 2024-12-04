@@ -1,4 +1,8 @@
 {{ indent * level }}{{ decode_comment }}
+{%- if type_extra == 1 %}
+{{ indent * level }}// This element should not occur a further time, its representation was reduced to a single element
+{{ indent * level }}error = EXI_ERROR__ARRAY_OUT_OF_BOUNDS;
+{%- else %}
 {{ indent * level }}error = {{ decode_fn }}(stream, &{{ type_value }});
 {{ indent * level }}if (error == 0)
 {{ indent * level }}{
@@ -7,3 +11,4 @@
 {%- endif %}
 {{ indent * (level + 1) }}grammar_id = {{ next_grammar_id }};
 {{ indent * level }}}
+{%- endif %}
