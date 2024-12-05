@@ -889,7 +889,7 @@ class DatatypeCode:
         try:
             temp = self.generator.get_template("BaseDatatypes.c.jinja")
             code = temp.render(filename=self.c_params["filename"], filekey=self.c_params["identifier"],
-                               includes_code=includes, code=content)
+                               description=self.c_params.get('description'), includes_code=includes, code=content)
             tools.save_code_to_file(self.c_params["filename"], code, self.parameters['folder'])
         except KeyError as err:
             tools_logging.log_write_error(f'Exception in {self.__class__.__name__}.{self.generate_file.__name__} '
