@@ -618,47 +618,46 @@ class ExiBaseCoderCode:
                             log_write_error(f"Skipping subsequent particles {n_to_skip} for particle '{part.name}'")
                 else:
                     # arrays
-                    if True:  # FIXME remove and reindent
-                        _max = part.max_occurs_old if part.max_occurs_old is not None else part.max_occurs
-                        if part.max_occurs == 1:  # changed from array to 1
-                            _max = 2  # only create the one subsequent grammar (START, END)
-                        log_write(f'Handling {part.name} as arrays, _max = {_max}')
+                    _max = part.max_occurs_old if part.max_occurs_old is not None else part.max_occurs
+                    if part.max_occurs == 1:  # changed from array to 1
+                        _max = 2  # only create the one subsequent grammar (START, END)
+                    log_write(f'Handling {part.name} as arrays, _max = {_max}')
 
-                        add_extra = (part.max_occurs >= 1 and part.max_occurs_was_changed)
-                        skip_to_end = False  # for LOOP, do not create grammar for subsequent repetitions
-                        for m in range(1, _max + 1):
-                            if skip_to_end:
-                                continue
-                            if m < _max:
-                                # flag=Grammar.LOOP indicates that the _next_ grammar will be the same as this one
-                                #
-                                # Note: We do not loop on the mandatory elements of an array, it would require extra
-                                # logic, and we have no min_occurs larger than 2 (i.e. no large repetition of mandatory
-                                # elements) anyway in our existing standards.
+                    add_extra = (part.max_occurs >= 1 and part.max_occurs_was_changed)
+                    skip_to_end = False  # for LOOP, do not create grammar for subsequent repetitions
+                    for m in range(1, _max + 1):
+                        if skip_to_end:
+                            continue
+                        if m < _max:
+                            # flag=Grammar.LOOP indicates that the _next_ grammar will be the same as this one
+                            #
+                            # Note: We do not loop on the mandatory elements of an array, it would require extra
+                            # logic, and we have no min_occurs larger than 2 (i.e. no large repetition of mandatory
+                            # elements) anyway in our existing standards.
 
-                                if m > 1 and m > part.min_occurs - 1 and (part.max_occurs_old is None or m < part.max_occurs_old):
-                                    flag = GrammarFlag.LOOP
-                                    skip_to_end = True
-                                else:
-                                    flag = GrammarFlag.START
-                                _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
-                                                                        flag=flag, is_in_array_not_last=True)
+                            if m > 1 and m > part.min_occurs - 1 and (part.max_occurs_old is None or m < part.max_occurs_old):
+                                flag = GrammarFlag.LOOP
+                                skip_to_end = True
                             else:
-                                # final array grammar
                                 flag = GrammarFlag.START
-                                _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
-                                                                        flag=flag, is_in_array_last=True,
-                                                                        is_extra_grammar=add_extra)
-                            if m > part.min_occurs and m > 1:
-                                # this is an optional occurrence (and grammar 0 already contains END),
-                                # so recurse with the subsequent particles
-                                _add_subsequent_grammar_details(element, particle, n + 1,
-                                                                index_last_nonoptional_particle,
-                                                                particle_is_part_of_sequence,
-                                                                is_recursion=True)
+                            _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
+                                                                    flag=flag, is_in_array_not_last=True)
+                        else:
+                            # final array grammar
+                            flag = GrammarFlag.START
+                            _add_particle_or_choice_list_to_details(element, grammar, part, previous_choice_list,
+                                                                    flag=flag, is_in_array_last=True,
+                                                                    is_extra_grammar=add_extra)
+                        if m > part.min_occurs and m > 1:
+                            # this is an optional occurrence (and grammar 0 already contains END),
+                            # so recurse with the subsequent particles
+                            _add_subsequent_grammar_details(element, particle, n + 1,
+                                                            index_last_nonoptional_particle,
+                                                            particle_is_part_of_sequence,
+                                                            is_recursion=True)
 
-                            self.append_to_element_grammars(grammar, element.typename)
-                            grammar = self.create_empty_grammar()
+                        self.append_to_element_grammars(grammar, element.typename)
+                        grammar = self.create_empty_grammar()
 
                     break
 
