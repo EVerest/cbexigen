@@ -23,6 +23,8 @@ class Particle:
     top_level_type: str = None
     min_occurs: int = -1
     max_occurs: int = -1
+    min_occurs_old: int = -1
+    _max_occurs_old: int = -1  # hidden so that we can implement a verbose getter/setter
     min_length: int = -1
     max_length: int = -1
     min_value: int = 0
@@ -47,8 +49,6 @@ class Particle:
     parent_type_is_empty: bool = False
     has_simple_content: bool = False
     simple_content_names = []
-    min_occurs_old: int = -1
-    max_occurs_old: int = -1
     integer_min: int = -1
     integer_max: int = -1
     integer_bit_size: int = -1
@@ -56,6 +56,16 @@ class Particle:
     integer_is_unsigned: bool = False
     # additional info for the anyType particle
     process_content: str = None
+
+    @property
+    def max_occurs_old(self):
+        if self._max_occurs_old is None or self._max_occurs_old != -1:
+            return self._max_occurs_old
+        return self.max_occurs
+
+    @max_occurs_old.setter
+    def max_occurs_old(self, value):
+        self._max_occurs_old = value
 
     @property
     def typename(self) -> str:
@@ -116,6 +126,17 @@ class Particle:
     def is_array(self) -> bool:
         # an occurrence of more than 1 marks an array
         return self.max_occurs > 1
+
+    @property
+    def was_array(self) -> bool:
+        if self.is_array:
+            return False
+        if self.max_occurs_old is None:
+            return True
+        if self.max_occurs_old > 1:
+            return True
+
+        return False
 
     @property
     def is_optional(self) -> bool:
@@ -393,15 +414,18 @@ class ElementData:
     @property
     def particle_comment(self):
         comment_parts = []
+        particle: Particle
         for particle in self.particles:
             comment_part = f'{particle.name}, {particle.type_short} ('
             comment_part += f'{particle.min_occurs}, {particle.max_occurs})'
 
             if particle.parent_has_sequence:
-                comment_part += f'(was {particle.min_occurs_old}, {particle.max_occurs_old})'
-                comment_part += f'(seq. {particle.parent_sequence})'
+                comment_part += f' (was {particle.min_occurs_old}, {particle.max_occurs_old})'
+                comment_part += f' (seq. {particle.parent_sequence})'
             elif particle.parent_model_changed_restrictions:
-                comment_part += f'(old {particle.min_occurs_old}, {particle.max_occurs_old})'
+                comment_part += f' (old {particle.min_occurs_old}, {particle.max_occurs_old})'
+            elif particle.max_occurs_was_changed:
+                comment_part += f' (original max {"unbounded" if particle.max_occurs_old in [-1, None] else particle.max_occurs_old})'
 
             comment_parts.append(comment_part)
 

@@ -490,7 +490,9 @@ class DatatypeHeader:
                            elements=self.analyzer_data.known_prototypes)
 
     def __append_to_global_define_list(self, element: ElementData):
-        # TODO: check if particle is in OCCURRENCE_LIMITS_CORRECTED, should then result in an array definition
+        # TODO: check if particle is in OCCURRENCE_LIMITS_CORRECTED, should then result in an array definition;
+        #       for backwards compatibility, we stick with single elements for arrays reduced to size 1 in
+        #       OCCURRENCE_LIMITS_CORRECTED
 
         for particle in element.particles:
             if particle.is_array:

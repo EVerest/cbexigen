@@ -83,7 +83,7 @@ int decode_exi_type_integer{{ size }}(exi_bitstream_t* stream, int{{ size }}_t* 
         error = exi_basetypes_decoder_nbit_uint(stream, 1, &eventCode);
         if (error == 0)
         {
-            if(eventCode != 0)
+            if (eventCode != 0)
             {
                 /* deviants are not supported or also typecast and nillable */
                 error = EXI_ERROR__DEVIANTS_NOT_SUPPORTED;

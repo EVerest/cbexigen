@@ -10,7 +10,7 @@
 {{ indent * (level + 1) }}error = exi_basetypes_decoder_nbit_uint(stream, {{ bits_to_read }}, &eventCode);
 {{ indent * (level + 1) }}if (error == 0)
 {{ indent * (level + 1) }}{
-{{ indent * (level + 2) }}switch(eventCode)
+{{ indent * (level + 2) }}switch (eventCode)
 {{ indent * (level + 2) }}{
 {{ event_content }}
 {{ indent * (level + 2) }}default:

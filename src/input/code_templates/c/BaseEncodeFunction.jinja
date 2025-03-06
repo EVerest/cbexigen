@@ -17,9 +17,9 @@ static int {{ function_name }}(exi_bitstream_t* stream, const struct {{ struct_t
 {{ indent * level }}}
 {%- endif %}
 
-{{ indent * level }}while(!done)
+{{ indent * level }}while (!done)
 {{ indent * level }}{
-{{ indent * (level + 1) }}switch(grammar_id)
+{{ indent * (level + 1) }}switch (grammar_id)
 {{ indent * (level + 1) }}{
 {{ grammar_content }}
 {{ indent * (level + 1) }}default:

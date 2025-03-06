@@ -20,6 +20,7 @@ class ElementGrammarDetail:
     array_index: int = -1
     event_index: int = -1
     next_grammar: int = -1
+    next_grammar_out: int = -1
     any_is_dummy: bool = True
     is_in_array_last: bool = False
     is_in_array_not_last: bool = False
@@ -51,7 +52,7 @@ class ElementGrammarDetail:
         if self.particle is None:
             return False
 
-        return self.particle.min_occurs >= 1 and self.particle.max_occurs > 1
+        return self.particle.min_occurs >= 1 and self.particle.is_array
 
     @property
     def is_any(self):
