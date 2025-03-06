@@ -10,7 +10,7 @@ int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ pa
 {{ indent * 2 }}error = exi_basetypes_decoder_nbit_uint(stream, {{ bits_to_read }}, &eventCode);
 {{ indent * 2 }}if (error == 0)
 {{ indent * 2 }}{
-{{ indent * 3 }}switch(eventCode)
+{{ indent * 3 }}switch (eventCode)
 {{ indent * 3 }}{
 {%- for function, parameter in decode_functions %}
 {{ indent * 3 }}case {{ loop.index0 }}:

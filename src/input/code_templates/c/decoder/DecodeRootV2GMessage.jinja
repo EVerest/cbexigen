@@ -11,7 +11,7 @@ int {{ function_name }}(exi_bitstream_t* stream, struct {{ struct_type }}* {{ pa
 {{ indent * 2 }}error = exi_basetypes_decoder_nbit_uint(stream, {{ bits_to_encode }}, &eventCode);
 {{ indent * 2 }}if (error == EXI_ERROR__NO_ERROR)
 {{ indent * 2 }}{
-{{ indent * 3     }}switch(eventCode)
+{{ indent * 3     }}switch (eventCode)
 {{ indent * 3     }}{
 {{ indent * 3     }}case 0:
 {{ indent * 3     }}case {{ parameter_index }}:
