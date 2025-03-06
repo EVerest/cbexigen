@@ -59,7 +59,6 @@ class Particle:
 
     @property
     def max_occurs_old(self):
-        # return self._max_occurs_old
         if self._max_occurs_old is None or self._max_occurs_old != -1:
             return self._max_occurs_old
         return self.max_occurs

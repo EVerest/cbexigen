@@ -617,7 +617,6 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
         if first.flag != GrammarFlag.ERROR:
             if grammar.details_count == 1:
-
                 if first.is_mandatory_array:
                     content += self.__get_event_content_for_array_element(first, grammar, 0, level)
                 else:

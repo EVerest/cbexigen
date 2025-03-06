@@ -14,9 +14,13 @@
 {%- if type_loop_breakout == 1 %}
 {{ indent * level }}// LOOP breakout code for schema given maximum, regardless of ARRAY_SIZE definition
 {{ indent * level }}if ({{ type_array_len }} < {{ type_array_len_schema }})
+{{ indent * level }}{
 {{ indent * (level + 1) }}grammar_id = {{ next_grammar_id }};
+{{ indent * level }}}
 {{ indent * level }}else
+{{ indent * level }}{
 {{ indent * (level + 1) }}grammar_id = {{ next_grammar_id_breakout }};
+{{ indent * level }}}
 {%- else %}
 {{ indent * level }}grammar_id = {{ next_grammar_id }};
 {%- endif %}
