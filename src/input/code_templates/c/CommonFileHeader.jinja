@@ -12,11 +12,12 @@
  * The Code is generated! Changes may be overwritten.
  *
  *****************************************************/
-
+{% block description %}
 /**
   * @file {{ filename }}
-  * @brief Description goes here
+  * @brief {{ description or "Description goes here" }}
   *
   **/
+{% endblock description %}
 
 {%- block file_content %}{% endblock %}
