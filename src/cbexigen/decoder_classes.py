@@ -187,7 +187,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
             type_content = type_value + f'.{detail.particle.value_parameter_name}'
             type_content_len = type_value + f'.{detail.particle.length_parameter_name}'
         else:
-            if detail.particle.max_occurs > 1:
+            if detail.particle.is_array:
                 decode_comment += ' (Array)'
                 type_array_length = f'{element_typename}->{detail.particle.name}.arrayLen'
                 type_value = f'{element_typename}->{detail.particle.name}'
@@ -208,7 +208,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                      type_content_len=type_content_len,
                                      type_define=type_define,
                                      type_option=detail.particle.is_optional,
-                                     type_array=detail.particle.max_occurs > 1,
+                                     type_array=detail.particle.is_array,
                                      type_array_length=f'{element_typename}->{detail.particle.name}.arrayLen',
                                      type_array_define=detail.particle.prefixed_define_for_array,
                                      next_grammar_id=next_grammar_id,
@@ -393,7 +393,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         type_simple = detail.particle.is_attribute or detail.particle.is_simple_content
         next_grammar_id = detail.next_grammar
 
-        if detail.particle.max_occurs > 1:
+        if detail.particle.is_array:
             decode_comment += ' (Array)'
             type_array_length = f'{element_typename}->{detail.particle.name}.arrayLen'
             type_length = type_value + f'.array[{type_array_length}].{detail.particle.length_parameter_name}'
@@ -407,7 +407,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                      type_chars_size=type_chars_size,
                                      type_option=detail.particle.is_optional,
                                      type_simple=type_simple,
-                                     type_array=detail.particle.max_occurs > 1,
+                                     type_array=detail.particle.is_array,
                                      type_array_length=f'{element_typename}->{detail.particle.name}.arrayLen',
                                      type_array_define=detail.particle.prefixed_define_for_array,
                                      next_grammar_id=next_grammar_id,
