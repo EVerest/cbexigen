@@ -572,7 +572,7 @@ class SchemaAnalyzer(object):
             if self.__is_abstract(child):
                 # get substituted particles for child
                 qname = self.__get_name(child)
-                subst_group = self.__current_schema.substitution_groups.target_dict.get(qname)
+                subst_group = self.__current_schema.substitution_groups._target_dict.get(qname)
                 if subst_group:
                     for elem in subst_group:
                         particle = self.__get_abstract_particle(child, elem)
@@ -590,7 +590,7 @@ class SchemaAnalyzer(object):
         if self.__is_abstract_type(element):
             # get substituted particles for element
             qname = self.__get_name(element)
-            subst_group = self.__current_schema.substitution_groups.target_dict.get(qname)
+            subst_group = self.__current_schema.substitution_groups._target_dict.get(qname)
             if subst_group:
                 for elem in subst_group:
                     particle = self.__get_abstract_particle(element, elem)
@@ -850,7 +850,7 @@ class SchemaAnalyzer(object):
                     msg_write((level + 1) * "    " + "ABSTRACT TYPE is extension")
 
                 qname = self.__get_name(child)
-                sg = self.__current_schema.substitution_groups.target_dict.get(qname)
+                sg = self.__current_schema.substitution_groups._target_dict.get(qname)
                 if sg:
                     for substitute in sg:
                         substitute_type_name = self.__get_type_name(substitute)
@@ -925,7 +925,7 @@ class SchemaAnalyzer(object):
         self.__build_schema_builtin_types_list()
 
         if self.__is_iso20:
-            for element in self.__current_schema.elements.target_dict.values():
+            for element in self.__current_schema.elements._target_dict.values():
                 if element.prefixed_name.startswith('xs:'):
                     continue
 
@@ -1010,7 +1010,7 @@ class SchemaAnalyzer(object):
 
     def __build_schema_builtin_types_list(self):
         xs_namespace = self.__current_schema.namespaces['xs']
-        for value in self.__current_schema.types.target_dict.values():
+        for value in self.__current_schema.types._target_dict.values():
             if value.target_namespace == xs_namespace:
                 if value.__class__.__name__ == 'XsdAtomicBuiltin':
                     if value.simple_type.base_type is not None:
@@ -1063,7 +1063,7 @@ class SchemaAnalyzer(object):
         self.__known_fragments.clear()
         fragments = {}
 
-        for element in self.__current_schema.elements.target_dict.values():
+        for element in self.__current_schema.elements._target_dict.values():
             if element.default_namespace:
                 if element.name not in fragments.keys():
                     fragments[element.name] = __get_fragment(element)
@@ -1109,7 +1109,7 @@ class SchemaAnalyzer(object):
         current_namespace = self.__current_schema.get_schema('')
         for ele in current_namespace.elements.values():
             items = []
-            for value in current_namespace.elements.target_dict.values():
+            for value in current_namespace.elements._target_dict.values():
                 if value.default_namespace:
                     name = self.__get_type_name_short(value)
                     if name == '' or name in ['AnonType', 'string']:
@@ -1151,7 +1151,7 @@ class SchemaAnalyzer(object):
     def __build_generate_elements_types_list(self):
         xs_namespace = self.__current_schema.namespaces['xs']
         type_list = []
-        for value in self.__current_schema.types.target_dict.values():
+        for value in self.__current_schema.types._target_dict.values():
             if value.target_namespace != xs_namespace and value.content_type_label == 'element-only':
                 type_list.append(value.local_name)
 
@@ -1459,7 +1459,7 @@ class SchemaAnalyzer(object):
 
         def find_base_type(base_type_name):
             result = None
-            for item in self.__current_schema.elements.target_dict.values():
+            for item in self.__current_schema.elements._target_dict.values():
                 if item.prefixed_name.startswith('xs:'):
                     continue
                 if item.type.base_type is None:
