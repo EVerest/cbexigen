@@ -135,7 +135,7 @@ class DatatypeHeader:
         comment = '// enum for function numbers'
         enum_type = self.parameters['prefix'] + 'generatedFunctionNumbersType'
         items = []
-        for value in self.scheme.elements.target_dict.values():
+        for value in self.scheme.elements._target_dict.values():
             if value.default_namespace:
                 items.append(self.parameters['prefix'] + value.local_name)
         items.sort()
@@ -538,7 +538,7 @@ class DatatypeHeader:
                 else:
                     element_type = self.scheme.types.get(element.type_short)
                     if element_type is None:
-                        element_type = self.scheme.types.target_dict.get(element.type)
+                        element_type = self.scheme.types._target_dict.get(element.type)
                         if element_type is None:
                             continue
 
