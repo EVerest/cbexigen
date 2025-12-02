@@ -1,0 +1,42 @@
+{% extends "BaseHeader.jinja" %}
+
+{% block description %}
+/**
+  * @file {{ filename }}
+  * @brief Custom data types for ISO 15118-2 EXI parser
+  *
+  **/
+{% endblock description %}
+
+{% block includes %}
+#include <exi_basetypes.h>
+{% endblock %}
+
+{% block defines %}
+#define exiElementFrag_Id_CHARACTERS_SIZE 50 + EXTRA_CHAR
+#define exiElementFrag_CHARACTERS_GENERIC_CHARACTERS_SIZE 50 + EXTRA_CHAR
+{% endblock %}
+
+{% block content %}
+struct iso2_EXISchemaInformedElementFragmentGrammar {
+	/* Schema-informed Element Fragment Grammar for START_ELEMENT({urn:iso:15118:2:2013:MsgBody}eMAID) */
+	/* 4 ATTRIBUTE[STRING]({urn:iso:15118:2:2013:MsgDataTypes}Id) */
+	unsigned int Id_isUsed:1;
+	struct {
+		char characters[exiElementFrag_Id_CHARACTERS_SIZE];
+		uint16_t charactersLen;
+	} Id ;
+	/* 247 START_ELEMENT({urn:iso:15118:2:2013:MsgBody}eMAID) */
+	unsigned int CHARACTERS_GENERIC_isUsed:1;
+	struct {
+		char characters[exiElementFrag_CHARACTERS_GENERIC_CHARACTERS_SIZE];
+		uint16_t charactersLen;
+	} CHARACTERS_GENERIC ;
+
+
+	int _warning_;
+};
+
+void init_iso2_EXISchemaInformedElementFragmentGrammar(struct iso2_EXISchemaInformedElementFragmentGrammar* exiFrag);
+
+{% endblock %}
