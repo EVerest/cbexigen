@@ -192,15 +192,14 @@ class DatatypeHeader:
         # generate struct for array with length variable
         indent = ' ' * self.config['c_code_indent_chars']
         comment = self.__get_particle_comment(particle)
-        type_array = 1 if particle.max_occurs > 1 else 0
-        struct_def = particle.prefixed_define_for_array if particle.max_occurs > 1 else ''
+        struct_def = particle.prefixed_define_for_array if particle.is_array else ''
 
         temp = self.generator.get_template("SubStructCharWithUsed.jinja" if with_used else "SubStructChar.jinja")
         return temp.render(indent=indent, level=indent_level,
                            struct_name=particle.name,
                            struct_type="char",
                            type_def=particle.prefixed_define_for_base_type,
-                           type_array=type_array,
+                           type_array=particle.is_array,
                            struct_def=struct_def,
                            variable_comment=comment)
 
@@ -208,15 +207,14 @@ class DatatypeHeader:
         # generate struct for array with length variable
         indent = ' ' * self.config['c_code_indent_chars']
         comment = self.__get_particle_comment(particle)
-        type_array = 1 if particle.max_occurs > 1 else 0
-        struct_def = particle.prefixed_define_for_array if particle.max_occurs > 1 else ''
+        struct_def = particle.prefixed_define_for_array if particle.is_array else ''
 
         temp = self.generator.get_template("SubStructByteWithIsUsed.jinja" if with_used else "SubStructByte.jinja")
         return temp.render(indent=indent, level=indent_level,
                            struct_name=particle.name,
                            struct_type="uint8_t",
                            type_def=particle.prefixed_define_for_base_type,
-                           type_array=type_array,
+                           type_array=particle.is_array,
                            struct_def=struct_def,
                            variable_comment=comment)
 
@@ -282,7 +280,7 @@ class DatatypeHeader:
 
         # particle type is in list, so a separate type is generated
         if particle.type in self.analyzer_data.known_elements:
-            if particle.max_occurs > 1:
+            if particle.is_array:
                 # generate struct for array with length variable
                 if particle.is_enum:
                     content += self.__generate_enum_array_struct(particle)
@@ -333,7 +331,7 @@ class DatatypeHeader:
                 content += self.__generate_base64binary(particle, False, indent_level) + '\n'
             else:
                 # max_occurs > 1, generate array type
-                if particle.max_occurs > 1:
+                if particle.is_array:
                     content += self.__generate_array_struct(particle)
                 else:
                     content += self.__generate_variable(particle) + '\n'
@@ -837,7 +835,7 @@ class DatatypeCode:
                 for particle in element.particles:
                     # TODO: check if particle is in OCCURRENCE_LIMITS_CORRECTED,
                     #       should then result in an array definition
-                    if particle.max_occurs > 1:
+                    if particle.is_array:
                         arr.append(self.__get_type_member_array(particle))
                     elif particle.min_occurs == 0:
                         if particle.parent_has_choice_sequence:
