@@ -165,21 +165,38 @@ int exi_bitstream_write_bits(exi_bitstream_t* stream, size_t bit_count, uint32_t
         return EXI_ERROR__BIT_COUNT_LARGER_THAN_TYPE_SIZE;
     }
 
-    int error = EXI_ERROR__NO_ERROR;
-
-    for (size_t n = 0; n < bit_count; n++)
+    const size_t remaining_bits = 8 - stream->bit_count;
+    if (remaining_bits >= bit_count)
     {
-        uint8_t bit;
-        bit = (value & (1u << (bit_count - n - 1))) > 0;
+        stream->data[stream->byte_pos] |= (uint8_t)((value << (remaining_bits - bit_count)));
+        stream->bit_count += bit_count;
+        return EXI_ERROR__NO_ERROR;
+    }
+    stream->data[stream->byte_pos] |=
+        ((uint8_t)(value >> (bit_count - remaining_bits)) & (0xff >> stream->bit_count));
 
-        error = exi_bitstream_write_bit(stream, bit);
-        if (error != EXI_ERROR__NO_ERROR)
+    bit_count = (bit_count - (8 - stream->bit_count));
+    if ((stream->byte_pos) >= stream->data_size)
+    {
+        return EXI_ERROR__BYTE_BUFFER_TOO_SMALL;
+    }
+    stream->byte_pos++;
+    stream->data[stream->byte_pos] = 0;
+
+    while (bit_count >= EXI_BITSTREAM_MAX_BIT_COUNT)
+    {
+        bit_count = (bit_count - EXI_BITSTREAM_MAX_BIT_COUNT);
+        if ((stream->byte_pos) >= stream->data_size)
         {
-            break;
+            return EXI_ERROR__BYTE_BUFFER_TOO_SMALL;
         }
+        stream->data[(stream->byte_pos)++] = (uint8_t)(value >> (bit_count));
     }
 
-    return error;
+    stream->data[stream->byte_pos] = (uint8_t)value << (8 - bit_count);
+    stream->bit_count = bit_count;
+
+    return EXI_ERROR__NO_ERROR;
 }
 
 int exi_bitstream_write_octet(exi_bitstream_t* stream, uint8_t value)
@@ -196,19 +213,36 @@ int exi_bitstream_read_bits(exi_bitstream_t* stream, size_t bit_count, uint32_t*
         return EXI_ERROR__BIT_COUNT_LARGER_THAN_TYPE_SIZE;
     }
 
-    int error = EXI_ERROR__NO_ERROR;
-
-    for (size_t n = 0; n < bit_count; n++)
+    const size_t remaining_bits = 8 - stream->bit_count;
+    if (remaining_bits >= bit_count)
     {
-        uint8_t bit;
-        error = exi_bitstream_read_bit(stream, &bit);
-        if (error != EXI_ERROR__NO_ERROR)
-        {
-            break;
-        }
-
-        *value = (*value << 1u) | bit;
+        *value = (uint32_t)((stream->data[stream->byte_pos] >> (remaining_bits - bit_count)) & ((1 << bit_count) - 1));
+        stream->bit_count += bit_count;
+        return EXI_ERROR__NO_ERROR;
     }
+    *value = (uint32_t)(stream->data[stream->byte_pos] & ((1 << remaining_bits) - 1));
+    bit_count = (bit_count - remaining_bits);
+    stream->bit_count = 8;
+    if (stream->byte_pos == stream->data_size)
+    {
+        return EXI_ERROR__BITSTREAM_OVERFLOW;
+    }
+    stream->byte_pos++;
+    stream->bit_count = 0;
+
+    while (bit_count >= 8)
+    {
+        *value = (*value << 8) | stream->data[stream->byte_pos];
+        bit_count -= 8;
+        if (stream->byte_pos >= stream->data_size)
+        {
+            return EXI_ERROR__BITSTREAM_OVERFLOW;
+        }
+        stream->byte_pos++;
+    }
+
+    *value = (*value << bit_count) | (stream->data[stream->byte_pos] >> (8 - bit_count));
+    stream->bit_count = bit_count;
 {%- if add_debug_code == 1 %}
 
     if (stream->status_callback)
@@ -216,7 +250,8 @@ int exi_bitstream_read_bits(exi_bitstream_t* stream, size_t bit_count, uint32_t*
         stream->status_callback(EXI_DEBUG__BITSTREAM_READ_BITS, 0, bit_count, *value);
     }
 {% endif %}
-    return error;
+
+    return EXI_ERROR__NO_ERROR;
 }
 
 int exi_bitstream_read_octet(exi_bitstream_t* stream, uint8_t* value)
