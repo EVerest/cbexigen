@@ -60,7 +60,8 @@ class ExiDecoderHeader(ExiBaseCoderHeader):
         try:
             temp = self.generator.get_template('DatatypesDecoder.h.jinja')
             code = temp.render(filename=self.h_params["filename"], filekey=self.h_params['identifier'],
-                               include_content=self.__include_content, code_content=self.__code_content)
+                               description=self.h_params.get('description'), include_content=self.__include_content,
+                               code_content=self.__code_content)
             tools.save_code_to_file(self.h_params['filename'], code, self.parameters['folder'])
         except KeyError as err:
             log_write_error(f'Exception in {self.__class__.__name__}.{self.__render_file.__name__} '
@@ -932,7 +933,8 @@ class ExiDecoderCode(ExiBaseCoderCode):
         try:
             temp = self.generator.get_template("DatatypesDecoder.c.jinja")
             code = temp.render(filename=self.c_params["filename"], filekey=self.c_params["identifier"],
-                               includes_code=self.__include_content, code=self.__code_content)
+                               description=self.c_params.get('description'), includes_code=self.__include_content,
+                               code=self.__code_content)
             tools.save_code_to_file(self.c_params["filename"], code, self.parameters['folder'])
         except KeyError as err:
             log_write_error(f'Exception in {self.__class__.__name__}.{self.__render_file.__name__} '
