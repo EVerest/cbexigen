@@ -1143,6 +1143,10 @@ class SchemaAnalyzer(object):
 
             for gen_elem in self.__generate_elements:
                 if gen_elem.type == '{' + imp.default_namespace + '}' + name:
+                    # Only replace particles for empty/abstract container types.
+                    # Concrete types (with their own fields) must keep their particles.
+                    if gen_elem.content_type != 'empty' and len(gen_elem.particles) > 0:
+                        continue
                     gen_elem.particles = items
                     gen_elem.is_in_namespace_elements = True
                     self.__namespace_elements[name] = items
@@ -1465,8 +1469,8 @@ class SchemaAnalyzer(object):
         log_write('')
         log_write('Scan for derived and extended elements')
 
-        def find_base_type(base_type_name):
-            result = None
+        def find_base_types(base_type_name):
+            results = []
             for item in self.__current_schema.maps.elements.values():
                 if item.prefixed_name.startswith('xs:'):
                     continue
@@ -1474,10 +1478,9 @@ class SchemaAnalyzer(object):
                     continue
 
                 if item.type.base_type.local_name == base_type_name:
-                    result = item
-                    break
+                    results.append(item)
 
-            return result
+            return results
 
         element: ElementData
         particle: Particle
@@ -1491,20 +1494,20 @@ class SchemaAnalyzer(object):
                         list_with_missing.append(particle)
                         log_write(f'    Adding abstract particle {particle.name} to missing list.')
 
-                    # get the base type, add it as particle
-                    missing_element = find_base_type(particle.type_short)
-                    if missing_element is not None:
-                        part = self.__get_particle(missing_element)
-
+                    # get all elements derived from this type, add them as particles
+                    missing_elements = find_base_types(particle.type_short)
+                    if len(missing_elements) > 0:
                         particle.min_occurs_old = particle.min_occurs
                         particle.min_occurs = 0
                         list_with_missing.append(particle)
                         log_write(f'    Adding particle {particle.name} to missing list.')
 
-                        part.min_occurs_old = part.min_occurs
-                        part.min_occurs = 0
-                        list_with_missing.append(part)
-                        log_write(f'    Adding missing particle {part.name} to missing list.')
+                        for missing_element in missing_elements:
+                            part = self.__get_particle(missing_element)
+                            part.min_occurs_old = part.min_occurs
+                            part.min_occurs = 0
+                            list_with_missing.append(part)
+                            log_write(f'    Adding missing particle {part.name} to missing list.')
 
             if len(list_with_missing) > 0:
                 first = -1
