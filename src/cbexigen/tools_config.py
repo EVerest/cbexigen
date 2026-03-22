@@ -4,11 +4,12 @@
 
 """ Tools for the Exi Codegenerator config """
 import importlib
+import io
+import urllib.request
+import zipfile
 
 from typing import Union, Dict
 from pathlib import Path
-
-import urllib.request
 
 CONFIG_ARGS: Dict[str, Union[str, Path]] = {
     'program_dir': '',
@@ -189,6 +190,8 @@ def process_config_parameters():
 
 ISO2_SCHEMAS_URL = "https://standards.iso.org/iso/15118/-2/ed-2/en/"
 ISO20_SCHEMAS_URL = "https://standards.iso.org/iso/15118/-20/ed-1/en/"
+ISO20_AMD1_SCHEMAS_URL = "https://standards.iso.org/iso/15118/-20/ed-1/en/Amd/1/"
+ISO20_AMD1_SCHEMAS_ZIP = "AMD1_xsdSchema.zip"
 
 
 def download_schemas():
@@ -237,3 +240,45 @@ def download_schemas():
                 print(f"Error during downloading: {err=}, {type(err)=}")
         else:
             print(f"ISO15118-20 schema {schema} is already there. Skipping it.")
+
+    iso20_amd1_schema_files_names = ['V2G_CI_AC_DER_IEC.xsd', 'V2G_CI_AC_DER_SAE.xsd']
+    amd1_needs_zip_fallback = False
+
+    for schema in iso20_amd1_schema_files_names:
+        schema_file_path = iso20_schema_path / schema
+        if not schema_file_path.exists():
+            print(f"ISO15118-20 Amd1 schema {schema} not found! Downloading it...")
+            try:
+                urllib.request.urlretrieve(
+                    ISO20_AMD1_SCHEMAS_URL + schema, schema_file_path.absolute().as_posix())
+            except Exception as err:
+                print(f"Direct download failed for {schema}: {err=}, {type(err)=}")
+                if schema_file_path.exists():
+                    schema_file_path.unlink()
+                amd1_needs_zip_fallback = True
+                break
+        else:
+            print(f"ISO15118-20 Amd1 schema {schema} is already there. Skipping it.")
+
+    if amd1_needs_zip_fallback:
+        print(f"Trying zip fallback: downloading {ISO20_AMD1_SCHEMAS_ZIP}...")
+        try:
+            zip_url = ISO20_AMD1_SCHEMAS_URL + ISO20_AMD1_SCHEMAS_ZIP
+            with urllib.request.urlopen(zip_url) as response:
+                zip_data = io.BytesIO(response.read())
+            with zipfile.ZipFile(zip_data) as zf:
+                for schema in iso20_amd1_schema_files_names:
+                    schema_file_path = iso20_schema_path / schema
+                    if schema_file_path.exists():
+                        print(f"ISO15118-20 Amd1 schema {schema} is already there. Skipping it.")
+                        continue
+                    # find the file in the zip (may be in a subdirectory)
+                    matching = [n for n in zf.namelist() if n.endswith(schema)]
+                    if matching:
+                        with zf.open(matching[0]) as src, open(schema_file_path, 'wb') as dst:
+                            dst.write(src.read())
+                        print(f"Extracted {schema} from {ISO20_AMD1_SCHEMAS_ZIP}.")
+                    else:
+                        print(f"Error: {schema} not found in {ISO20_AMD1_SCHEMAS_ZIP}.")
+        except Exception as err:
+            print(f"Error during zip download: {err=}, {type(err)=}")

@@ -120,6 +120,10 @@ iso20_dc_fragments = [
     'SignedInfo',
     'DC_ChargeParameterDiscoveryRes',
 ]
+iso20_ac_der_iec_fragments = [
+    'SignedInfo',
+    "AC_ChargeParameterDiscoveryRes",
+]
 
 # general C code style
 c_code_indent_chars = 4
@@ -724,6 +728,63 @@ c_files_to_generate = {
             'include_std_lib': ['stdint.h'],
             'include_other': ['exi_basetypes.h', 'exi_basetypes_encoder.h', 'exi_error_codes.h', 'exi_header.h',
                               'iso20_ACDP_Datatypes.h', 'iso20_ACDP_Encoder.h']
+        }
+    },
+    'iso20_AC_DER_IEC_Datatypes': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_AC_DER_IEC.xsd',
+        'prefix': 'iso20_ac_der_iec_',
+        'type': 'converter',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_AC_DER_IEC_Datatypes.h',
+            'identifier': 'ISO20_AC_DER_IEC_DATATYPES_H',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h']
+        },
+        'c': {
+            'filename': 'iso20_AC_DER_IEC_Datatypes.c',
+            'identifier': 'ISO20_AC_DER_IEC_DATATYPES_C',
+            'include_std_lib': [],
+            'include_other': ['iso20_AC_DER_IEC_Datatypes.h']
+        }
+    },
+    'iso20_AC_DER_IEC_Decoder': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_AC_DER_IEC.xsd',
+        'prefix': 'iso20_ac_der_iec_',
+        'type': 'decoder',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_AC_DER_IEC_Decoder.h',
+            'identifier': 'ISO20_AC_DER_IEC_DECODER_H',
+            'include_std_lib': [],
+            'include_other': ['exi_bitstream.h', 'iso20_AC_DER_IEC_Datatypes.h']
+        },
+        'c': {
+            'filename': 'iso20_AC_DER_IEC_Decoder.c',
+            'identifier': 'ISO20_AC_DER_IEC_DECODER_C',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h', 'exi_types_decoder.h', 'exi_basetypes_decoder.h',
+                              'exi_error_codes.h', 'exi_header.h', 'iso20_AC_DER_IEC_Datatypes.h',
+                              'iso20_AC_DER_IEC_Decoder.h']
+        }
+    },
+    'iso20_AC_DER_IEC_Encoder': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_AC_DER_IEC.xsd',
+        'prefix': 'iso20_ac_der_iec_',
+        'type': 'encoder',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_AC_DER_IEC_Encoder.h',
+            'identifier': 'ISO20_AC_DER_IEC_ENCODER_H',
+            'include_std_lib': [],
+            'include_other': ['exi_bitstream.h', 'iso20_AC_DER_IEC_Datatypes.h']
+        },
+        'c': {
+            'filename': 'iso20_AC_DER_IEC_Encoder.c',
+            'identifier': 'ISO20_AC_DER_IEC_ENCODER_C',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h', 'exi_basetypes_encoder.h', 'exi_error_codes.h', 'exi_header.h',
+                              'iso20_AC_DER_IEC_Datatypes.h', 'iso20_AC_DER_IEC_Encoder.h']
         }
     },
 }
