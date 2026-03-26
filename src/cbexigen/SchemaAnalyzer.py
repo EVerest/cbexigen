@@ -572,7 +572,7 @@ class SchemaAnalyzer(object):
             if self.__is_abstract(child):
                 # get substituted particles for child
                 qname = self.__get_name(child)
-                subst_group = self.__current_schema.substitution_groups._target_dict.get(qname)
+                subst_group = self.__current_schema.maps.substitution_groups.get(qname)
                 if subst_group:
                     for elem in subst_group:
                         particle = self.__get_abstract_particle(child, elem)
@@ -590,7 +590,7 @@ class SchemaAnalyzer(object):
         if self.__is_abstract_type(element):
             # get substituted particles for element
             qname = self.__get_name(element)
-            subst_group = self.__current_schema.substitution_groups._target_dict.get(qname)
+            subst_group = self.__current_schema.maps.substitution_groups.get(qname)
             if subst_group:
                 for elem in subst_group:
                     particle = self.__get_abstract_particle(element, elem)
@@ -850,7 +850,7 @@ class SchemaAnalyzer(object):
                     msg_write((level + 1) * "    " + "ABSTRACT TYPE is extension")
 
                 qname = self.__get_name(child)
-                sg = self.__current_schema.substitution_groups._target_dict.get(qname)
+                sg = self.__current_schema.maps.substitution_groups.get(qname)
                 if sg:
                     for substitute in sg:
                         substitute_type_name = self.__get_type_name(substitute)
@@ -925,7 +925,7 @@ class SchemaAnalyzer(object):
         self.__build_schema_builtin_types_list()
 
         if self.__is_iso20:
-            for element in self.__current_schema.elements._target_dict.values():
+            for element in self.__current_schema.maps.elements.values():
                 if element.prefixed_name.startswith('xs:'):
                     continue
 
@@ -1010,7 +1010,7 @@ class SchemaAnalyzer(object):
 
     def __build_schema_builtin_types_list(self):
         xs_namespace = self.__current_schema.namespaces['xs']
-        for value in self.__current_schema.types._target_dict.values():
+        for value in self.__current_schema.maps.types.values():
             if value.target_namespace == xs_namespace:
                 if value.__class__.__name__ == 'XsdAtomicBuiltin':
                     if value.simple_type.base_type is not None:
@@ -1063,7 +1063,7 @@ class SchemaAnalyzer(object):
         self.__known_fragments.clear()
         fragments = {}
 
-        for element in self.__current_schema.elements._target_dict.values():
+        for element in self.__current_schema.maps.elements.values():
             if element.default_namespace:
                 if element.name not in fragments.keys():
                     fragments[element.name] = __get_fragment(element)
@@ -1109,7 +1109,7 @@ class SchemaAnalyzer(object):
         current_namespace = self.__current_schema.get_schema('')
         for ele in current_namespace.elements.values():
             items = []
-            for value in current_namespace.elements._target_dict.values():
+            for value in current_namespace.maps.elements.values():
                 if value.default_namespace:
                     name = self.__get_type_name_short(value)
                     if name == '' or name in ['AnonType', 'string']:
@@ -1151,7 +1151,7 @@ class SchemaAnalyzer(object):
     def __build_generate_elements_types_list(self):
         xs_namespace = self.__current_schema.namespaces['xs']
         type_list = []
-        for value in self.__current_schema.types._target_dict.values():
+        for value in self.__current_schema.maps.types.values():
             if value.target_namespace != xs_namespace and value.content_type_label == 'element-only':
                 type_list.append(value.local_name)
 
@@ -1259,8 +1259,10 @@ class SchemaAnalyzer(object):
         # drop all the particles listed in particle_list
         p_index: int
         for p_index, p in reversed(particle_list):
-            if parent_element.particles[p_index] != p:
-                log_write(f"particle '{p.name}' not found in '{parent_element.name_short}'")
+            if p_index >= len(parent_element.particles) or parent_element.particles[p_index] is not p:
+                raise RuntimeError(
+                    f"particle '{p.name}' at index {p_index} does not match in "
+                    f"'{parent_element.name_short}' -- particle list is stale")
             del parent_element.particles[p_index]
 
         # insert the replacements at the original position, assuming the lowest original particle
@@ -1301,11 +1303,17 @@ class SchemaAnalyzer(object):
                 else:
                     log_write(f'    Add to list and remove particle {particle.name}.')
                     replacement_list.append(particle)
-                    if particle in parent.particles:
-                        particles_to_remove.append((parent.particles.index(particle), particle))
+                    # Use name-based lookup (not object identity) to find the
+                    # matching particle in parent for removal.
+                    for idx, pp in enumerate(parent.particles):
+                        if pp.name == particle.name and (idx, pp) not in particles_to_remove:
+                            particles_to_remove.append((idx, pp))
+                            break
 
-            for particle in parent.particles:
+            for idx, particle in enumerate(parent.particles):
                 if particle.name != element.name_short:
+                    continue
+                if (idx, particle) in particles_to_remove:
                     continue
 
                 log_write(f'    Add to list and remove particle {particle.name}.')
@@ -1313,7 +1321,7 @@ class SchemaAnalyzer(object):
                 p_max_occurs = particle.max_occurs
                 particle.min_occurs = 0
                 replacement_list.append(particle)
-                particles_to_remove.append((parent.particles.index(particle), particle))
+                particles_to_remove.append((idx, particle))
 
             if len(replacement_list) > 0:
                 self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list,
@@ -1459,7 +1467,7 @@ class SchemaAnalyzer(object):
 
         def find_base_type(base_type_name):
             result = None
-            for item in self.__current_schema.elements._target_dict.values():
+            for item in self.__current_schema.maps.elements.values():
                 if item.prefixed_name.startswith('xs:'):
                     continue
                 if item.type.base_type is None:
