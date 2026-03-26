@@ -1147,6 +1147,10 @@ class SchemaAnalyzer(object):
                     # Concrete types (with their own fields) must keep their particles.
                     if gen_elem.content_type != 'empty' and len(gen_elem.particles) > 0:
                         continue
+                    # Skip substitution group heads – their particles come from
+                    # the substitution group expansion, not from namespace imports.
+                    if self.__current_schema.maps.substitution_groups.get(gen_elem.name):
+                        continue
                     gen_elem.particles = items
                     gen_elem.is_in_namespace_elements = True
                     self.__namespace_elements[name] = items
