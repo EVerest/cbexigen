@@ -329,6 +329,12 @@ class SchemaAnalyzer(object):
 
         particle.name = attribute.local_name
 
+        ns = tools.extract_namespace_uri(getattr(attribute, 'name', ''))
+        if ns:
+            particle.namespace = ns
+        elif hasattr(attribute, 'default_namespace') and attribute.default_namespace:
+            particle.namespace = attribute.default_namespace
+
         particle.type = self.__get_type_name(attribute)
         particle.type_short = self.__get_type_name_short(attribute)
         particle.base_type = self.__get_base_type_name(attribute)
@@ -393,6 +399,12 @@ class SchemaAnalyzer(object):
 
         particle.name = element.local_name
 
+        ns = tools.extract_namespace_uri(element.name)
+        if ns:
+            particle.namespace = ns
+        elif hasattr(element, 'default_namespace') and element.default_namespace:
+            particle.namespace = element.default_namespace
+
         particle.type = self.__get_type_name(element)
         particle.type_short = self.__get_type_name_short(element)
         particle.base_type = self.__get_base_type_name(element)
@@ -455,6 +467,12 @@ class SchemaAnalyzer(object):
             particle.abstract = True
 
         particle.name = substitute.local_name
+
+        ns = tools.extract_namespace_uri(substitute.name)
+        if ns:
+            particle.namespace = ns
+        elif hasattr(substitute, 'default_namespace') and substitute.default_namespace:
+            particle.namespace = substitute.default_namespace
 
         particle.type = self.__get_type_name(substitute)
         particle.type_short = self.__get_type_name_short(substitute)
@@ -1252,7 +1270,7 @@ class SchemaAnalyzer(object):
         with the sorted particles from replacement_list.
         """
         # the replacements need to be sorted alphabetically
-        replacement_list.sort(key=lambda particle_key: particle_key.name)
+        replacement_list.sort(key=lambda p: (p.name or '', p.namespace or ''))
 
         # the particles need to be sorted by index, for proper removal
         particle_list.sort(key=lambda x: x[0])
@@ -1371,6 +1389,9 @@ class SchemaAnalyzer(object):
                                 abstract=True,
                                 min_occurs=0,
                                 max_occurs=1)
+            ns = tools.extract_namespace_uri(element.name)
+            if ns:
+                part_new.namespace = ns
             replacement_list.append(part_new)
 
             self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list,
@@ -1456,10 +1477,13 @@ class SchemaAnalyzer(object):
                                         type_short=element.type_short,
                                         min_occurs=0,
                                         max_occurs=1)
+                        ns = tools.extract_namespace_uri(element.name)
+                        if ns:
+                            part.namespace = ns
                         re_list.append(part)
 
                         if len(re_list) > 0:
-                            re_list.sort(key=lambda particle_key: particle_key.name)
+                            re_list.sort(key=lambda p: (p.name or '', p.namespace or ''))
                             abstract_seq = []
                             for part in re_list:
                                 log_write(f'    Add particle from list {part.name}.')
