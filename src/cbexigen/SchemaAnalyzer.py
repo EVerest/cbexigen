@@ -1497,18 +1497,15 @@ class SchemaAnalyzer(object):
         log_write('')
         log_write('Scan for derived and extended elements')
 
-        def find_base_types(base_type_name):
-            results = []
-            for item in self.__current_schema.maps.elements.values():
-                if item.prefixed_name.startswith('xs:'):
-                    continue
-                if item.type.base_type is None:
-                    continue
-
-                if item.type.base_type.local_name == base_type_name:
-                    results.append(item)
-
-            return results
+        # Pre-build lookup: base_type_name -> [elements derived from it]
+        base_type_map = {}
+        for item in self.__current_schema.maps.elements.values():
+            if item.prefixed_name.startswith('xs:'):
+                continue
+            if item.type.base_type is None:
+                continue
+            key = item.type.base_type.local_name
+            base_type_map.setdefault(key, []).append(item)
 
         element: ElementData
         particle: Particle
@@ -1523,7 +1520,7 @@ class SchemaAnalyzer(object):
                         log_write(f'    Adding abstract particle {particle.name} to missing list.')
 
                     # get all elements derived from this type, add them as particles
-                    missing_elements = find_base_types(particle.type_short)
+                    missing_elements = base_type_map.get(particle.type_short, [])
                     if len(missing_elements) > 0:
                         particle.min_occurs_old = particle.min_occurs
                         particle.min_occurs = 0
