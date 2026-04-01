@@ -48,12 +48,8 @@ int exi_basetypes_encoder_bool(exi_bitstream_t* stream, int value)
         stream->status_callback(EXI_DEBUG__BASETYPES_ENCODE_BOOL, 0, (int)value, 0);
     }
 {% endif %}
-    int error;
     uint32_t bit = (value) ? 1 : 0;
-
-    error = exi_bitstream_write_bits(stream, 1, bit);
-
-    return error;
+    return exi_bitstream_write_bits(stream, 1, bit);
 }
 
 /*****************************************************************************

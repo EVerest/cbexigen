@@ -425,6 +425,10 @@ class ExiBaseCoderCode:
 
     def generate_element_grammars(self, element: ElementData):
         self.reset_element_grammars()
+        # NOTE: Attribute particles are pre-sorted by SchemaAnalyzer.
+        # When canonical_exi_enabled=1, attributes are sorted by (local_name, namespace_uri)
+        # with xsi:type first and xsi:nil second, per W3C Canonical EXI spec.
+        # Child element particles remain in schema-defined order.
         particle_is_part_of_sequence = False
 
         # if the current element type is in the namespace elements dict,

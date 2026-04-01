@@ -20,6 +20,13 @@ log_file_name = 'logfile.txt'
 # and create separate code for the debugging functions
 add_debug_code = 0
 
+# enable canonical EXI code generation
+# this will add a canonical_mode field to exi_bitstream_t
+# and enable Canonical EXI for Plug & Charge code paths in generated output
+# mode=0 (EXI_MODE_STANDARD): schema-informed standard EXI (0x80 header, bit-packed)
+# mode=1 (EXI_MODE_CANONICAL): Canonical EXI for Plug & Charge (0x80 header, bit-packed, type-aware)
+canonical_exi_enabled = 0
+
 # generate analysis tree while generating code
 # this will generate an analysis tree file starting from the root element
 # for the 15118-20 every message has its separate tree file

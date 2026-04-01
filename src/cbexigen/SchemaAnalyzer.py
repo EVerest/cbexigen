@@ -15,6 +15,24 @@ from cbexigen.tools_logging import log_write, log_write_dict, log_write_element,
 from cbexigen.tools_config import CONFIG_PARAMS, get_config_module
 
 
+_XSI_NAMESPACE = 'http://www.w3.org/2001/XMLSchema-instance'
+
+
+def _canonical_attribute_sort_key(particle):
+    """Sort key for canonical EXI attribute ordering per W3C Canonical EXI spec.
+
+    Order: xsi:type first, xsi:nil second, then lexicographic by (local_name, namespace_uri).
+    Uses Unicode code point comparison (Python's default string comparison).
+    """
+    ns = getattr(particle, 'namespace_uri', '')
+    if ns == _XSI_NAMESPACE and particle.name == 'type':
+        return (0, '', '')  # sort first
+    elif ns == _XSI_NAMESPACE and particle.name == 'nil':
+        return (1, '', '')  # sort second
+    else:
+        return (2, particle.name, ns)  # lexicographic by (local_name, ns_uri)
+
+
 class SchemaAnalyzer(object):
 
     def __init__(self, schema, schema_base, analyzer_data: AnalyzerData, schema_prefix):
@@ -335,6 +353,10 @@ class SchemaAnalyzer(object):
         particle.top_level_type = self.__get_primitive_type_name(attribute)
 
         particle.is_attribute = True
+
+        # Store namespace URI for canonical EXI attribute ordering.
+        # XsdAttribute inherits target_namespace from XsdComponent.
+        particle.namespace_uri = attribute.target_namespace or ''
 
         if attribute.use.casefold() == 'required':
             particle.min_occurs = 1
@@ -788,7 +810,10 @@ class SchemaAnalyzer(object):
                     temp_list.append(self.__get_particle_from_attribute(attribute))
 
                 if len(temp_list) > 1:
-                    temp_list.sort(key=lambda item: item.name, reverse=False)
+                    if CONFIG_PARAMS.get('canonical_exi_enabled', 0) == 1:
+                        temp_list.sort(key=_canonical_attribute_sort_key, reverse=False)
+                    else:
+                        temp_list.sort(key=lambda item: item.name, reverse=False)
                 element_data.particles.extend(temp_list)
 
                 if element.type.content_type_label == 'simple':
@@ -1080,20 +1105,38 @@ class SchemaAnalyzer(object):
 
         # There are unused elements in the ISO-20 schema that are not yet included in the list of all elements
         # for the fragment decoder and encoder. These elements can be determined via the components.
-        # Therefore, we iterate through the components of the schema and the 1st level of imports and complete the list.
-        # TODO: As only ISO-20 is currently affected and the only import of the individual schemas is the
-        #       CommonTypes schema, recursive processing is not used here. This should be changed if necessary.
         for component in self.__current_schema.iter_components():
             if isinstance(component, Xsd11Element):
                 if component.name not in fragments.keys():
                     fragments[component.name] = __get_fragment(component)
 
-        for import_item in self.__current_schema.imports.values():
-            imported_schema = XMLSchema11(import_item.name, base_url=self.__schema_base, build=True)
-            for component in imported_schema.iter_components():
-                if isinstance(component, Xsd11Element):
-                    if component.name not in fragments.keys():
-                        fragments[component.name] = __get_fragment(component)
+        # Process schema imports to discover fragment elements.
+        # Canonical EXI requires recursive traversal of all transitive imports
+        # to match EXIficient's fragment grammar construction.
+        # Standard mode only processes direct (1st level) imports.
+        recursive = CONFIG_PARAMS.get('canonical_exi_enabled', 0) == 1
+
+        def process_imports(schema, processed_schemas=None):
+            if processed_schemas is None:
+                processed_schemas = set()
+
+            for import_item in schema.imports.values():
+                import_path = import_item.name
+                if import_path in processed_schemas:
+                    continue
+                processed_schemas.add(import_path)
+
+                imported_schema = XMLSchema11(import_path, base_url=self.__schema_base, build=True)
+
+                for component in imported_schema.iter_components():
+                    if isinstance(component, Xsd11Element):
+                        if component.name not in fragments.keys():
+                            fragments[component.name] = __get_fragment(component)
+
+                if recursive:
+                    process_imports(imported_schema, processed_schemas)
+
+        process_imports(self.__current_schema)
 
         # Sort the list of elements and types by 1. name and 2. namespace
         sorted_by_name = dict(sorted(fragments.items(), key=lambda item: (item[1].name, item[1].namespace)))

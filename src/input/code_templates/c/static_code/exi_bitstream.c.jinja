@@ -106,6 +106,9 @@ void exi_bitstream_init(exi_bitstream_t* stream, uint8_t* data, size_t data_size
     stream->_flag_byte_pos = data_offset;
 
     stream->status_callback = status_callback;
+{%- if canonical_exi_enabled == 1 %}
+    stream->canonical_mode = 0;
+{%- endif %}
 {%- if add_debug_code == 1 %}
 
     if (stream->status_callback)

@@ -67,6 +67,15 @@ typedef struct exi_bitstream {
 
     /* Pointer to callback for reporting errors or logging if assigned */
     exi_status_callback status_callback;
+{%- if canonical_exi_enabled == 1 %}
+/* EXI encoding mode constants for canonical_mode field */
+#define EXI_MODE_STANDARD  0u   /* Schema-informed standard EXI (0x80 header, bit-packed) */
+#define EXI_MODE_CANONICAL 1u   /* Canonical EXI for Plug & Charge (0x80 header, bit-packed, type-aware) */
+
+    /* EXI encoding mode: EXI_MODE_STANDARD (0) or EXI_MODE_CANONICAL (1).
+     * Set by application code before calling encoder functions. */
+    uint8_t canonical_mode;
+{%- endif %}
 } exi_bitstream_t;
 
 

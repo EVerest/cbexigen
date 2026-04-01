@@ -18,6 +18,18 @@
  */
 int decode_exi_type_hex_binary(exi_bitstream_t* stream, uint16_t* value_len, uint8_t* value_buffer, size_t value_buffer_size);
 
+/**
+ * \brief       Decode base64Binary
+ *
+ * \param       stream              EXI bitstream
+ * \param       value_len           uint16_t (out) used length of decoded value
+ * \param       value_buffer        byte buffer (out) decoded value
+ * \param       value_buffer_size   size of the buffer
+ * \return                          Error-Code <> 0, if no error 0
+ *
+ */
+int decode_exi_type_base64_binary(exi_bitstream_t* stream, uint16_t* value_len, uint8_t* value_buffer, size_t value_buffer_size);
+
 {% for size in [8, 16, 32, 64] -%}
 /**
  * \brief       Decode {{ size }}-bit integer

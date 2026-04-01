@@ -22,6 +22,8 @@ CONFIG_ARGS: Dict[str, Union[str, Path]] = {
 CONFIG_PARAMS: Dict[str, Union[str, int]] = {
     # add debug code while generating code
     'add_debug_code': 0,
+    # enable canonical EXI code generation
+    'canonical_exi_enabled': 0,
     # generate analysis tree while generating code
     'generate_analysis_tree': 0,
     'generate_analysis_tree_20': 0,
@@ -112,6 +114,45 @@ def process_config_parameters():
     # add_debug_code
     if hasattr(config_module, 'add_debug_code'):
         CONFIG_PARAMS['add_debug_code'] = config_module.add_debug_code
+
+    # canonical EXI definitions
+    # canonical_exi_enabled
+    if hasattr(config_module, 'canonical_exi_enabled'):
+        CONFIG_PARAMS['canonical_exi_enabled'] = config_module.canonical_exi_enabled
+
+    # When canonical EXI is enabled, register the exi_types_encoder templates
+    # and add exi_types_encoder.h to all encoder include lists.
+    if CONFIG_PARAMS.get('canonical_exi_enabled', 0) == 1:
+        config_module.c_files_to_generate['exi_types_encoder'] = {
+            'prefix': '',
+            'type': 'static',
+            'folder': 'common',
+            'h': {
+                'template': 'static_code/exi_types_encoder.h.jinja',
+                'filename': 'exi_types_encoder.h',
+                'identifier': 'EXI_TYPES_ENCODER_H',
+                'include_std_lib': [],
+                'include_other': []
+            },
+            'c': {
+                'template': 'static_code/exi_types_encoder.c.jinja',
+                'filename': 'exi_types_encoder.c',
+                'identifier': 'EXI_TYPES_ENCODER_C',
+                'include_std_lib': [],
+                'include_other': []
+            }
+        }
+        # Add exi_types_encoder.h to all encoder include lists
+        for _, entry in config_module.c_files_to_generate.items():
+            if entry.get('type') == 'encoder':
+                c_config = entry.get('c', {})
+                includes = c_config.get('include_other', [])
+                if 'exi_types_encoder.h' not in includes:
+                    if 'exi_basetypes_encoder.h' in includes:
+                        idx = includes.index('exi_basetypes_encoder.h') + 1
+                    else:
+                        idx = 0
+                    includes.insert(idx, 'exi_types_encoder.h')
 
     ''' analysis tree definitions '''
     # generate_analysis_tree

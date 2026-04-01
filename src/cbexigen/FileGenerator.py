@@ -113,7 +113,8 @@ class FileGenerator(object):
             generator = tools_generator.get_generator()
             temp = generator.get_template(config['template'])
             code = temp.render(filename=config['filename'], filekey=config['identifier'],
-                               add_debug_code=self.__analyzer_data.add_debug_code_enabled)
+                               add_debug_code=self.__analyzer_data.add_debug_code_enabled,
+                               canonical_exi_enabled=tools_conf.CONFIG_PARAMS['canonical_exi_enabled'])
 
             tools.save_code_to_file(config['filename'], code, parameters['folder'])
         except KeyError as err:
@@ -131,7 +132,8 @@ class FileGenerator(object):
             generator = tools_generator.get_generator()
             temp = generator.get_template(config['template'])
             code = temp.render(filename=config['filename'], filekey=config['identifier'],
-                               add_debug_code=self.__analyzer_data.add_debug_code_enabled)
+                               add_debug_code=self.__analyzer_data.add_debug_code_enabled,
+                               canonical_exi_enabled=tools_conf.CONFIG_PARAMS['canonical_exi_enabled'])
 
             tools.save_code_to_file(config['filename'], code, parameters['folder'])
         except KeyError as err:

@@ -1,0 +1,72 @@
+{% extends "BaseCode.jinja" %}
+{% block includes %}
+
+#include "exi_basetypes.h"
+#include "exi_basetypes_encoder.h"
+#include "exi_bitstream.h"
+#include "exi_error_codes.h"
+#include "exi_types_encoder.h"
+
+#include <stdint.h>
+#include <string.h>
+{% endblock %}
+
+{% block content %}
+// *********
+// HexBinary
+// *********
+int encode_exi_type_hex_binary(exi_bitstream_t* stream, uint16_t bytes_len, const uint8_t* bytes, size_t bytes_size)
+{
+    int error;
+
+    if ((size_t)bytes_len > bytes_size)
+    {
+        return EXI_ERROR__BYTE_BUFFER_TOO_SMALL;
+    }
+
+    for (uint16_t i = 0; i < bytes_len; i++)
+    {
+        error = exi_bitstream_write_octet(stream, bytes[i]);
+        if (error != EXI_ERROR__NO_ERROR)
+        {
+            return error;
+        }
+    }
+
+    return EXI_ERROR__NO_ERROR;
+}
+
+// ***********
+// Base64Binary
+// ***********
+int encode_exi_type_base64_binary(exi_bitstream_t* stream, uint16_t bytes_len, const uint8_t* bytes, size_t bytes_size)
+{
+    int error;
+
+    if ((size_t)bytes_len > bytes_size)
+    {
+        return EXI_ERROR__BYTE_BUFFER_TOO_SMALL;
+    }
+
+    /* Schema-informed typed binary encoding per W3C EXI Spec Section 7.1.9:
+     * CH event code (1 bit = 0) + length as unsigned integer + raw bytes.
+     * EE (End Element) event is written by the calling grammar function. */
+
+    /* Write CH event code (1-bit = 0) */
+    error = exi_basetypes_encoder_nbit_uint(stream, 1, 0);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    /* Write byte count as unsigned integer (uint_16) */
+    error = exi_basetypes_encoder_uint_16(stream, bytes_len);
+    if (error != EXI_ERROR__NO_ERROR)
+    {
+        return error;
+    }
+
+    /* Write raw bytes */
+    return exi_basetypes_encoder_bytes(stream, bytes_len, bytes, bytes_size);
+}
+{% endblock %}
