@@ -216,6 +216,31 @@ class SchemaAnalyzer(object):
         return comment
 
     @staticmethod
+    def __xsd_element_sort_key(element: XsdElement):
+        type_name = ''
+        if hasattr(element, 'type') and element.type is not None:
+            type_name = element.type.qualified_name or element.type.local_name or ''
+
+        return element.name or '', type_name
+
+    @classmethod
+    def __sorted_xsd_elements(cls, elements):
+        return sorted(elements, key=cls.__xsd_element_sort_key)
+
+    @classmethod
+    def __iter_substitutes(cls, element: XsdElement):
+        substitutes = element.maps.substitution_groups.get(element.name)
+        if not substitutes:
+            return
+
+        for substitute in cls.__sorted_xsd_elements(substitutes):
+            if not substitute.abstract:
+                yield substitute
+            for recursive_substitute in cls.__iter_substitutes(substitute):
+                if not recursive_substitute.abstract:
+                    yield recursive_substitute
+
+    @staticmethod
     def __get_child_count(element: [XsdElement, XMLSchema11]):
         count = 0
         for _ in element.iterchildren():
@@ -223,19 +248,19 @@ class SchemaAnalyzer(object):
 
         return count
 
-    @staticmethod
-    def __get_substitute_count(element: [XsdElement, XMLSchema11]):
+    @classmethod
+    def __get_substitute_count(cls, element: [XsdElement, XMLSchema11]):
         count = 0
-        for _ in element.iter_substitutes():
+        for _ in cls.__iter_substitutes(element):
             count += 1
 
         return count
 
-    @staticmethod
-    def __get_substitute_list(element: [XsdElement]):
+    @classmethod
+    def __get_substitute_list(cls, element: [XsdElement]):
         substitute_list = ""
 
-        for substitute in element.iter_substitutes():
+        for substitute in cls.__iter_substitutes(element):
             if substitute.name is None:
                 continue
 
@@ -574,7 +599,7 @@ class SchemaAnalyzer(object):
                 qname = self.__get_name(child)
                 subst_group = self.__current_schema.substitution_groups._target_dict.get(qname)
                 if subst_group:
-                    for elem in subst_group:
+                    for elem in self.__sorted_xsd_elements(subst_group):
                         particle = self.__get_abstract_particle(child, elem)
                         particles.append(particle)
                         subst_list.append(elem)
@@ -592,7 +617,7 @@ class SchemaAnalyzer(object):
             qname = self.__get_name(element)
             subst_group = self.__current_schema.substitution_groups._target_dict.get(qname)
             if subst_group:
-                for elem in subst_group:
+                for elem in self.__sorted_xsd_elements(subst_group):
                     particle = self.__get_abstract_particle(element, elem)
                     particles.append(particle)
                     subst_list.append(elem)
@@ -852,7 +877,7 @@ class SchemaAnalyzer(object):
                 qname = self.__get_name(child)
                 sg = self.__current_schema.substitution_groups._target_dict.get(qname)
                 if sg:
-                    for substitute in sg:
+                    for substitute in self.__sorted_xsd_elements(sg):
                         substitute_type_name = self.__get_type_name(substitute)
                         msg_write(level * "    " + str(level) + "." + str(count) + " " +
                                   substitute.name + " -> " + substitute_type_name)
@@ -1049,7 +1074,7 @@ class SchemaAnalyzer(object):
                 if child_element.name not in element_list.keys():
                     element_list[child_element.name] = __get_fragment(child_element)
 
-            for subst_child in child_element.iter_substitutes():
+            for subst_child in self.__iter_substitutes(child_element):
                 __print_child_recursive(element_list, subst_child)
 
             for sub_child in child_element.iterchildren():
