@@ -354,6 +354,12 @@ class SchemaAnalyzer(object):
 
         particle.name = attribute.local_name
 
+        ns = tools.extract_namespace_uri(getattr(attribute, 'name', ''))
+        if ns:
+            particle.namespace = ns
+        elif hasattr(attribute, 'default_namespace') and attribute.default_namespace:
+            particle.namespace = attribute.default_namespace
+
         particle.type = self.__get_type_name(attribute)
         particle.type_short = self.__get_type_name_short(attribute)
         particle.base_type = self.__get_base_type_name(attribute)
@@ -418,6 +424,12 @@ class SchemaAnalyzer(object):
 
         particle.name = element.local_name
 
+        ns = tools.extract_namespace_uri(element.name)
+        if ns:
+            particle.namespace = ns
+        elif hasattr(element, 'default_namespace') and element.default_namespace:
+            particle.namespace = element.default_namespace
+
         particle.type = self.__get_type_name(element)
         particle.type_short = self.__get_type_name_short(element)
         particle.base_type = self.__get_base_type_name(element)
@@ -480,6 +492,12 @@ class SchemaAnalyzer(object):
             particle.abstract = True
 
         particle.name = substitute.local_name
+
+        ns = tools.extract_namespace_uri(substitute.name)
+        if ns:
+            particle.namespace = ns
+        elif hasattr(substitute, 'default_namespace') and substitute.default_namespace:
+            particle.namespace = substitute.default_namespace
 
         particle.type = self.__get_type_name(substitute)
         particle.type_short = self.__get_type_name_short(substitute)
@@ -597,7 +615,7 @@ class SchemaAnalyzer(object):
             if self.__is_abstract(child):
                 # get substituted particles for child
                 qname = self.__get_name(child)
-                subst_group = self.__current_schema.substitution_groups._target_dict.get(qname)
+                subst_group = self.__current_schema.maps.substitution_groups.get(qname)
                 if subst_group:
                     for elem in self.__sorted_xsd_elements(subst_group):
                         particle = self.__get_abstract_particle(child, elem)
@@ -615,7 +633,7 @@ class SchemaAnalyzer(object):
         if self.__is_abstract_type(element):
             # get substituted particles for element
             qname = self.__get_name(element)
-            subst_group = self.__current_schema.substitution_groups._target_dict.get(qname)
+            subst_group = self.__current_schema.maps.substitution_groups.get(qname)
             if subst_group:
                 for elem in self.__sorted_xsd_elements(subst_group):
                     particle = self.__get_abstract_particle(element, elem)
@@ -875,7 +893,7 @@ class SchemaAnalyzer(object):
                     msg_write((level + 1) * "    " + "ABSTRACT TYPE is extension")
 
                 qname = self.__get_name(child)
-                sg = self.__current_schema.substitution_groups._target_dict.get(qname)
+                sg = self.__current_schema.maps.substitution_groups.get(qname)
                 if sg:
                     for substitute in self.__sorted_xsd_elements(sg):
                         substitute_type_name = self.__get_type_name(substitute)
@@ -950,7 +968,7 @@ class SchemaAnalyzer(object):
         self.__build_schema_builtin_types_list()
 
         if self.__is_iso20:
-            for element in self.__current_schema.elements._target_dict.values():
+            for element in self.__current_schema.maps.elements.values():
                 if element.prefixed_name.startswith('xs:'):
                     continue
 
@@ -1035,7 +1053,7 @@ class SchemaAnalyzer(object):
 
     def __build_schema_builtin_types_list(self):
         xs_namespace = self.__current_schema.namespaces['xs']
-        for value in self.__current_schema.types._target_dict.values():
+        for value in self.__current_schema.maps.types.values():
             if value.target_namespace == xs_namespace:
                 if value.__class__.__name__ == 'XsdAtomicBuiltin':
                     if value.simple_type.base_type is not None:
@@ -1088,7 +1106,7 @@ class SchemaAnalyzer(object):
         self.__known_fragments.clear()
         fragments = {}
 
-        for element in self.__current_schema.elements._target_dict.values():
+        for element in self.__current_schema.maps.elements.values():
             if element.default_namespace:
                 if element.name not in fragments.keys():
                     fragments[element.name] = __get_fragment(element)
@@ -1134,7 +1152,7 @@ class SchemaAnalyzer(object):
         current_namespace = self.__current_schema.get_schema('')
         for ele in current_namespace.elements.values():
             items = []
-            for value in current_namespace.elements._target_dict.values():
+            for value in current_namespace.maps.elements.values():
                 if value.default_namespace:
                     name = self.__get_type_name_short(value)
                     if name == '' or name in ['AnonType', 'string']:
@@ -1168,6 +1186,14 @@ class SchemaAnalyzer(object):
 
             for gen_elem in self.__generate_elements:
                 if gen_elem.type == '{' + imp.default_namespace + '}' + name:
+                    # Only replace particles for empty/abstract container types.
+                    # Concrete types (with their own fields) must keep their particles.
+                    if gen_elem.content_type != 'empty' and len(gen_elem.particles) > 0:
+                        continue
+                    # Skip substitution group heads – their particles come from
+                    # the substitution group expansion, not from namespace imports.
+                    if self.__current_schema.maps.substitution_groups.get(gen_elem.name):
+                        continue
                     gen_elem.particles = items
                     gen_elem.is_in_namespace_elements = True
                     self.__namespace_elements[name] = items
@@ -1176,7 +1202,7 @@ class SchemaAnalyzer(object):
     def __build_generate_elements_types_list(self):
         xs_namespace = self.__current_schema.namespaces['xs']
         type_list = []
-        for value in self.__current_schema.types._target_dict.values():
+        for value in self.__current_schema.maps.types.values():
             if value.target_namespace != xs_namespace and value.content_type_label == 'element-only':
                 type_list.append(value.local_name)
 
@@ -1269,7 +1295,7 @@ class SchemaAnalyzer(object):
         with the sorted particles from replacement_list.
         """
         # the replacements need to be sorted alphabetically
-        replacement_list.sort(key=lambda particle_key: particle_key.name)
+        replacement_list.sort(key=lambda p: (p.name or '', p.namespace or ''))
 
         # the particles need to be sorted by index, for proper removal
         particle_list.sort(key=lambda x: x[0])
@@ -1284,8 +1310,10 @@ class SchemaAnalyzer(object):
         # drop all the particles listed in particle_list
         p_index: int
         for p_index, p in reversed(particle_list):
-            if parent_element.particles[p_index] != p:
-                log_write(f"particle '{p.name}' not found in '{parent_element.name_short}'")
+            if p_index >= len(parent_element.particles) or parent_element.particles[p_index] is not p:
+                raise RuntimeError(
+                    f"particle '{p.name}' at index {p_index} does not match in "
+                    f"'{parent_element.name_short}' -- particle list is stale")
             del parent_element.particles[p_index]
 
         # insert the replacements at the original position, assuming the lowest original particle
@@ -1326,11 +1354,17 @@ class SchemaAnalyzer(object):
                 else:
                     log_write(f'    Add to list and remove particle {particle.name}.')
                     replacement_list.append(particle)
-                    if particle in parent.particles:
-                        particles_to_remove.append((parent.particles.index(particle), particle))
+                    # Use name-based lookup (not object identity) to find the
+                    # matching particle in parent for removal.
+                    for idx, pp in enumerate(parent.particles):
+                        if pp.name == particle.name and (idx, pp) not in particles_to_remove:
+                            particles_to_remove.append((idx, pp))
+                            break
 
-            for particle in parent.particles:
+            for idx, particle in enumerate(parent.particles):
                 if particle.name != element.name_short:
+                    continue
+                if (idx, particle) in particles_to_remove:
                     continue
 
                 log_write(f'    Add to list and remove particle {particle.name}.')
@@ -1338,7 +1372,7 @@ class SchemaAnalyzer(object):
                 p_max_occurs = particle.max_occurs
                 particle.min_occurs = 0
                 replacement_list.append(particle)
-                particles_to_remove.append((parent.particles.index(particle), particle))
+                particles_to_remove.append((idx, particle))
 
             if len(replacement_list) > 0:
                 self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list,
@@ -1380,6 +1414,9 @@ class SchemaAnalyzer(object):
                                 abstract=True,
                                 min_occurs=0,
                                 max_occurs=1)
+            ns = tools.extract_namespace_uri(element.name)
+            if ns:
+                part_new.namespace = ns
             replacement_list.append(part_new)
 
             self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list,
@@ -1465,10 +1502,13 @@ class SchemaAnalyzer(object):
                                         type_short=element.type_short,
                                         min_occurs=0,
                                         max_occurs=1)
+                        ns = tools.extract_namespace_uri(element.name)
+                        if ns:
+                            part.namespace = ns
                         re_list.append(part)
 
                         if len(re_list) > 0:
-                            re_list.sort(key=lambda particle_key: particle_key.name)
+                            re_list.sort(key=lambda p: (p.name or '', p.namespace or ''))
                             abstract_seq = []
                             for part in re_list:
                                 log_write(f'    Add particle from list {part.name}.')
@@ -1482,19 +1522,15 @@ class SchemaAnalyzer(object):
         log_write('')
         log_write('Scan for derived and extended elements')
 
-        def find_base_type(base_type_name):
-            result = None
-            for item in self.__current_schema.elements._target_dict.values():
-                if item.prefixed_name.startswith('xs:'):
-                    continue
-                if item.type.base_type is None:
-                    continue
-
-                if item.type.base_type.local_name == base_type_name:
-                    result = item
-                    break
-
-            return result
+        # Pre-build lookup: base_type_name -> [elements derived from it]
+        base_type_map = {}
+        for item in self.__current_schema.maps.elements.values():
+            if item.prefixed_name.startswith('xs:'):
+                continue
+            if item.type.base_type is None:
+                continue
+            key = item.type.base_type.local_name
+            base_type_map.setdefault(key, []).append(item)
 
         element: ElementData
         particle: Particle
@@ -1508,20 +1544,20 @@ class SchemaAnalyzer(object):
                         list_with_missing.append(particle)
                         log_write(f'    Adding abstract particle {particle.name} to missing list.')
 
-                    # get the base type, add it as particle
-                    missing_element = find_base_type(particle.type_short)
-                    if missing_element is not None:
-                        part = self.__get_particle(missing_element)
-
+                    # get all elements derived from this type, add them as particles
+                    missing_elements = base_type_map.get(particle.type_short, [])
+                    if len(missing_elements) > 0:
                         particle.min_occurs_old = particle.min_occurs
                         particle.min_occurs = 0
                         list_with_missing.append(particle)
                         log_write(f'    Adding particle {particle.name} to missing list.')
 
-                        part.min_occurs_old = part.min_occurs
-                        part.min_occurs = 0
-                        list_with_missing.append(part)
-                        log_write(f'    Adding missing particle {part.name} to missing list.')
+                        for missing_element in missing_elements:
+                            part = self.__get_particle(missing_element)
+                            part.min_occurs_old = part.min_occurs
+                            part.min_occurs = 0
+                            list_with_missing.append(part)
+                            log_write(f'    Adding missing particle {part.name} to missing list.')
 
             if len(list_with_missing) > 0:
                 first = -1
