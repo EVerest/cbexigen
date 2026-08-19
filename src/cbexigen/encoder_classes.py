@@ -28,6 +28,12 @@ class ExiEncoderHeader(ExiBaseCoderHeader):
             self.__fragments = get_fragment_parameter_for_schema(self.__schema_prefix)
             self.__generate_fragment = len(self.__fragments) > 0
 
+        self.__xmldsigfragments = []
+        self.__generate_all_xmldsig_fragment = True
+        if self.config['generate_fragments'] == 1:
+            self.__xmldsigfragments = get_fragment_parameter_for_schema('xmldsig_')
+            self.__generate_all_xmldsig_fragment = len(self.__xmldsigfragments) == 0
+
         self.__include_content = ''
         self.__code_content = ''
 
@@ -102,6 +108,12 @@ class ExiEncoderCode(ExiBaseCoderCode):
         if self.config['generate_fragments'] == 1:
             self.__fragments = get_fragment_parameter_for_schema(self.__schema_prefix)
             self.__generate_fragment = len(self.__fragments) > 0
+
+        self.__xmldsigfragments = []
+        self.__generate_all_xmldsig_fragment = True
+        if self.config['generate_fragments'] == 1:
+            self.__xmldsigfragments = get_fragment_parameter_for_schema('xmldsig_')
+            self.__generate_all_xmldsig_fragment = len(self.__xmldsigfragments) == 0
 
         self.__include_content = ''
         self.__code_content = ''
@@ -542,7 +554,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         if detail.flag == GrammarFlag.END:
             content += self.__get_event_content_for_end_element(detail, grammar.bits_to_write, False, level)
         else:
-            if detail.particle is not None and not (detail.is_any and detail.any_is_dummy):
+            if detail.particle is not None and not (detail.is_any and detail.any_is_dummy) and detail.particle.is_optimized is False:
                 if detail.is_extra_grammar:
                     option = -2
 
@@ -568,6 +580,15 @@ class ExiEncoderCode(ExiBaseCoderCode):
                                        add_debug_code=self.get_status_for_add_debug_code(detail.particle.prefixed_name),
                                        type_parameter=type_parameter,
                                        indent=self.indent, level=level)
+            elif detail.particle.is_optimized is True:
+                parameter = grammar.element_typename + '->' + detail.particle.name
+                event_comment = f'// Event optimized out: {detail.particle_name} (index={detail.event_index}); next={detail.next_grammar}'
+                temp = self.generator.get_template('EncodeEventOptionalElementOptimized.jinja')
+                content += temp.render(option=option,
+                                       parameter=parameter,
+                                       event_comment=event_comment,
+                                       indent=self.indent, level=level)
+
             else:
                 # unsupported particle which appears in the event list
                 if detail.is_any and detail.any_is_dummy:
@@ -898,19 +919,28 @@ class ExiEncoderCode(ExiBaseCoderCode):
         struct_type = f'{self.__schema_prefix}{CONFIG_PARAMS["xmldsig_fragment_struct_name"]}'
         parameter_name = CONFIG_PARAMS['xmldsig_fragment_parameter_name']
 
-        encode_fn = []
+        all_fragments = []
         for fragment in self.analyzer_data.known_fragments.values():
             if 'xmldsig' in fragment.namespace.casefold():
                 if fragment.type in self.analyzer_data.known_elements.values():
                     function = f'{CONFIG_PARAMS["encode_function_prefix"]}{self.__schema_prefix}{fragment.type}'
                     parameter = f'{parameter_name}->{fragment.name}'
-                    encode_fn.append([fragment.name, fragment.namespace, function, parameter])
+                    all_fragments.append([fragment.name, fragment.namespace, function, parameter])
                 else:
-                    encode_fn.append([fragment.name, fragment.namespace, '', ''])
+                    all_fragments.append([fragment.name, fragment.namespace, '', ''])
 
-        encode_fn.sort()
-        end_fragment = len(encode_fn) + 1
-        bits = tools.get_bits_to_decode(len(encode_fn))
+        all_fragments.sort()
+
+        encode_fn = []
+        for name, namespace, function, parameter in all_fragments:
+            if 'xmldsig' in namespace.casefold() and (name in self.__xmldsigfragments
+                                                      or self.__generate_all_xmldsig_fragment is True):
+                encode_fn.append([name, namespace, function, parameter])
+            else:
+                encode_fn.append([name, namespace, '', ''])
+
+        end_fragment = len(all_fragments) + 1
+        bits = tools.get_bits_to_decode(len(all_fragments))
 
         temp = self.generator.get_template('EncodeFragmentFunction.jinja')
         content += temp.render(function_comment=comment,
