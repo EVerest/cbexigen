@@ -720,6 +720,7 @@ class DatatypeCode:
             self.config['root_struct_name']
         struct_type = self.parameters['prefix'] + self.config['root_struct_name']
         parameter_name = self.config['root_parameter_name']
+        use_memset = self.config['use_memset_root_content']
 
         if len(self.analyzer_data.root_elements) > 1:
             for element in self.analyzer_data.root_elements:
@@ -738,6 +739,7 @@ class DatatypeCode:
         temp = self.generator.get_template("BaseInitWithUsed.jinja")
 
         return temp.render(function_name=function_name,
+                           use_memset=use_memset,
                            struct_type=struct_type,
                            parameter_name=parameter_name,
                            element_comment=comment,
@@ -748,6 +750,7 @@ class DatatypeCode:
         struct_type = f'{self.__schema_prefix}{self.config["fragment_struct_name"]}'
         parameter_name = self.config['fragment_parameter_name']
         function_name = f'{self.config["init_function_prefix"]}{struct_type}'
+        use_memset = self.config['use_memset_child_elements']
 
         ele = []
         arr = []
@@ -768,6 +771,7 @@ class DatatypeCode:
         # generate init function with arrayLen = 0u and isUsed = 0u
         temp = self.generator.get_template("BaseInitWithArrayLenAndUsed.jinja")
         result = temp.render(function_name=function_name,
+                             use_memset=use_memset,
                              struct_type=struct_type,
                              parameter_name=parameter_name,
                              element_comment=comment,
@@ -785,6 +789,7 @@ class DatatypeCode:
         struct_type = f'{self.__schema_prefix}{self.config["xmldsig_fragment_struct_name"]}'
         parameter_name = self.config['xmldsig_fragment_parameter_name']
         function_name = f'{self.config["init_function_prefix"]}{struct_type}'
+        use_memset = self.config['use_memset_child_elements']
 
         ele = []
         arr = []
@@ -805,6 +810,7 @@ class DatatypeCode:
         # generate init function with arrayLen = 0u and isUsed = 0u
         temp = self.generator.get_template("BaseInitWithArrayLenAndUsed.jinja")
         result = temp.render(function_name=function_name,
+                             use_memset=use_memset,
                              struct_type=struct_type,
                              parameter_name=parameter_name,
                              element_comment=comment,
@@ -828,6 +834,7 @@ class DatatypeCode:
                 function_name = self.config['init_function_prefix'] + element.prefixed_type
                 struct_type = element.prefixed_type
                 parameter_name = element.type_short
+                use_memset = self.config['use_memset_child_elements']
 
                 if element.type_short == 'AnonType':
                     function_name = self.config['init_function_prefix'] + element.prefixed_name
@@ -856,6 +863,7 @@ class DatatypeCode:
                 # generate init function with arrayLen = 0u and isUsed = 0u
                 temp = self.generator.get_template("BaseInitWithArrayLenAndUsed.jinja")
                 result += temp.render(function_name=function_name,
+                                      use_memset=use_memset,
                                       struct_type=struct_type,
                                       parameter_name=parameter_name,
                                       element_comment=comment,

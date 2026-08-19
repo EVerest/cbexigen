@@ -1,9 +1,13 @@
 {{ element_comment }}
 void {{ function_name }}(struct {{ struct_type }}* {{ parameter_name }}) {
+{%- if use_memset %}
+    memset({{ parameter_name }}, 0, sizeof(struct {{ struct_type }}));
+{%- else %}
     {%- if not elements %}
     (void) {{ parameter_name }};
     {%- endif %}
     {%- for name in elements %}
     {{ parameter_name }}->{{ name }}_isUsed = 0u;
     {%- endfor %}
+{%- endif %}
 }

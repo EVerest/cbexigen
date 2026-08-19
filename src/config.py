@@ -126,6 +126,12 @@ c_code_indent_chars = 4
 # these characters will be replaced by an underscore in generated code
 c_replace_chars = [' ', '-', '/']
 
+# Usage of memset for initialization of EXI Documents and Fragments
+use_memset_root_content = True
+
+# Usage of memset for initialization of EXI child elements
+use_memset_child_elements = True
+
 # files to be generated
 c_files_to_generate = {
     'exi_error_codes': {
@@ -287,7 +293,7 @@ c_files_to_generate = {
         'c': {
             'filename': 'appHand_Datatypes.c',
             'identifier': 'APP_HANDSHAKE_DATATYPES_C',
-            'include_std_lib': [],
+            'include_std_lib': ['string.h'],
             'include_other': ['appHand_Datatypes.h']
         }
     },
@@ -344,7 +350,7 @@ c_files_to_generate = {
         'c': {
             'filename': 'din_msgDefDatatypes.c',
             'identifier': 'DIN_MSG_DEF_DATATYPES_C',
-            'include_std_lib': [],
+            'include_std_lib': ['string.h'],
             'include_other': ['din_msgDefDatatypes.h']
         }
     },
@@ -400,7 +406,7 @@ c_files_to_generate = {
         'c': {
             'filename': 'iso2_msgDefDatatypes.c',
             'identifier': 'ISO2_MSG_DEF_DATATYPES_C',
-            'include_std_lib': [],
+            'include_std_lib': ['string.h'],
             'include_other': ['iso2_msgDefDatatypes.h']
         }
     },
@@ -456,7 +462,7 @@ c_files_to_generate = {
         'c': {
             'filename': 'iso20_CommonMessages_Datatypes.c',
             'identifier': 'ISO20_COMMON_MESSAGES_DATATYPES_C',
-            'include_std_lib': [],
+            'include_std_lib': ['string.h'],
             'include_other': ['iso20_CommonMessages_Datatypes.h']
         }
     },
@@ -513,7 +519,7 @@ c_files_to_generate = {
         'c': {
             'filename': 'iso20_AC_Datatypes.c',
             'identifier': 'ISO20_AC_DATATYPES_C',
-            'include_std_lib': [],
+            'include_std_lib': ['string.h'],
             'include_other': ['iso20_AC_Datatypes.h']
         }
     },
@@ -569,7 +575,7 @@ c_files_to_generate = {
         'c': {
             'filename': 'iso20_DC_Datatypes.c',
             'identifier': 'ISO20_DC_DATATYPES_C',
-            'include_std_lib': [],
+            'include_std_lib': ['string.h'],
             'include_other': ['iso20_DC_Datatypes.h']
         }
     },
@@ -626,7 +632,7 @@ c_files_to_generate = {
         'c': {
             'filename': 'iso20_WPT_Datatypes.c',
             'identifier': 'ISO20_WPT_DATATYPES_C',
-            'include_std_lib': [],
+            'include_std_lib': ['string.h'],
             'include_other': ['iso20_WPT_Datatypes.h']
         }
     },
@@ -683,7 +689,7 @@ c_files_to_generate = {
         'c': {
             'filename': 'iso20_ACDP_Datatypes.c',
             'identifier': 'ISO20_ACDP_DATATYPES_C',
-            'include_std_lib': [],
+            'include_std_lib': ['string.h'],
             'include_other': ['iso20_ACDP_Datatypes.h']
         }
     },
