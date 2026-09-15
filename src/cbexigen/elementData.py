@@ -54,6 +54,7 @@ class Particle:
     integer_bit_size: int = -1
     integer_base_type: str = None
     integer_is_unsigned: bool = False
+    namespace: str = ''
     # additional info for the anyType particle
     process_content: str = None
 

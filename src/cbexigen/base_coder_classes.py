@@ -58,6 +58,19 @@ class ExiBaseCoderHeader:
 
 
 class ExiBaseCoderCode:
+    @staticmethod
+    def get_array_loop_breakout(detail: ElementGrammarDetail):
+        """
+        Occurrence count at which a LOOP grammar is left, or None if it never breaks out.
+        Encoder and decoder must agree on this to the bit, so both take it from here.
+        """
+        if detail.flag != GrammarFlag.LOOP or detail.particle.max_occurs_old is None:
+            # unbounded (max None) arrays don't need to break out of loop
+            return None
+        if detail.particle.max_occurs_old == -1:
+            return detail.particle.max_occurs
+        return detail.particle.max_occurs_old
+
     def __init__(self, parameters, analyzer_data, enable_logging=True):
         self.generator = tools_generator.get_generator()
         self.config = CONFIG_PARAMS
@@ -444,7 +457,7 @@ class ExiBaseCoderCode:
             choice_options = self.ChoiceOptions(element, particle)
             combined_min_occurs_from_choice = \
                 choice_options.min_occurs if choice_options.particles else particle.min_occurs
-            if combined_min_occurs_from_choice == 1:
+            if combined_min_occurs_from_choice >= 1:
                 index_last_nonoptional_particle = particle_index
 
         def _particle_is_in_choice(element: ElementData, particle: Particle):
@@ -631,11 +644,10 @@ class ExiBaseCoderCode:
                         if m < _max:
                             # flag=Grammar.LOOP indicates that the _next_ grammar will be the same as this one
                             #
-                            # Note: We do not loop on the mandatory elements of an array, it would require extra
-                            # logic, and we have no min_occurs larger than 2 (i.e. no large repetition of mandatory
-                            # elements) anyway in our existing standards.
-
-                            if m > 1 and m > part.min_occurs - 1 and (part.max_occurs_old is None or m < part.max_occurs_old):
+                            # Do not enter the self-loop until all mandatory occurrences have been consumed.
+                            # Before minOccurs is reached, the grammar must only accept another START event;
+                            # allowing END or LOOP too early changes the event-code width and misaligns EXI.
+                            if m > 1 and m > part.min_occurs and (part.max_occurs_old is None or m < part.max_occurs_old):
                                 flag = GrammarFlag.LOOP
                                 skip_to_end = True
                             else:
@@ -801,32 +813,33 @@ class ExiBaseCoderCode:
                                     return True
                             return False
 
-                        if end_elem_detail_index >= 0 and len_details == 2:
+                        if grammar_detail.flag == GrammarFlag.LOOP:
+                            # A LOOP detail re-enters its own grammar for as long as the array may
+                            # grow. This holds whether or not further particles follow the repeated
+                            # one: targeting the successor grammar instead would cap the array at
+                            # min_occurs + 1. next_grammar_out is where it leaves to once the
+                            # schema maximum is reached.
+                            grammar_detail.next_grammar = grammar.grammar_id
+                            grammar_detail.next_grammar_out = grammars[idx_grammar + 1].grammar_id
+
+                        elif end_elem_detail_index >= 0 and len_details == 2:
                             if grammar_detail.is_in_array_last:
                                 if _is_final_particle(element, part_index):
                                     grammar_detail.next_grammar = self.grammar_end_element
                                 else:
                                     grammar_detail.next_grammar = element.particles_next_grammar_ids[part_index]
                             else:
-                                if grammar_detail.flag == GrammarFlag.START:
-                                    grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
-                                else:
-                                    # LOOP
-                                    grammar_detail.next_grammar = grammar.grammar_id
-                                    grammar_detail.next_grammar_out = grammars[idx_grammar + 1].grammar_id
+                                grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
 
                         else:
                             if part_index is not None:
                                 if _is_final_particle(element, part_index):
                                     # next grammar is always END for the final particle
                                     grammar_detail.next_grammar = self.grammar_end_element
+                                elif grammar_detail.is_in_array_not_last or grammar_detail.is_in_array_last:
+                                    grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
                                 else:
-                                    if grammar_detail.is_in_array_not_last:
-                                        grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
-                                    elif grammar_detail.is_in_array_last:
-                                        grammar_detail.next_grammar = grammars[idx_grammar + 1].grammar_id
-                                    else:
-                                        grammar_detail.next_grammar = element.particles_next_grammar_ids[part_index]
+                                    grammar_detail.next_grammar = element.particles_next_grammar_ids[part_index]
                             else:
                                 log_write_error("Failed to find element particle for " +
                                                 f"{grammar_detail.particle.name}")
