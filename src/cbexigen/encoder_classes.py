@@ -321,11 +321,18 @@ class ExiEncoderCode(ExiBaseCoderCode):
         value_parameter = f'{element_typename}->{detail.particle.name}.{detail.particle.value_parameter_name}'
         index_parameter = detail.particle.name + '_currentIndex'
 
+        # At the schema maximum the loop grammar is left, which narrows the event code by one bit.
+        # Without the breakout the encoder writes a wider END event than the decoder reads.
+        breakout_at = self.get_array_loop_breakout(detail)
+
         temp = self.generator.get_template('EncodeTypeElementArray.jinja')
         content = temp.render(type_parameter=type_parameter,
                               value_parameter=value_parameter,
                               index_parameter=index_parameter,
+                              type_loop_breakout=breakout_at is not None,
+                              type_array_len_schema=breakout_at,
                               next_grammar=detail.next_grammar,
+                              next_grammar_breakout=detail.next_grammar_out,
                               indent=self.indent, level=level)
 
         return content
@@ -969,7 +976,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
             if skip_element:
                 curr_idx += 1
-                if curr_idx > len(self.elements_to_generate):
+                if curr_idx >= len(self.elements_to_generate):
                     log_write_error('Module encoder: Generator loop aborted! Index larger than existing elements.')
                     break
             else:
