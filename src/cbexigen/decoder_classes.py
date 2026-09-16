@@ -421,13 +421,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
             decode_comment += ' (Attribute)'
         type_array = f'{element_typename}->{detail.particle.name}.{detail.particle.value_parameter_name}'
         type_array_len = f'{element_typename}->{detail.particle.name}.{detail.particle.length_parameter_name}'
-        type_loop_breakout = (
-            detail.flag == GrammarFlag.LOOP and
-            detail.particle.max_occurs_old is not None  # unbounded (max None) arrays don't need to break out of loop
-        )
-        array_length_from_schema = detail.particle.max_occurs
-        if detail.particle.max_occurs_old != -1:
-            array_length_from_schema = detail.particle.max_occurs_old
+        breakout_at = self.get_array_loop_breakout(detail)
         decode_fn = f'{CONFIG_PARAMS["decode_function_prefix"]}{detail.particle.prefixed_type}'
         next_grammar_id = detail.next_grammar
         next_grammar_id_breakout = detail.next_grammar_out
@@ -438,8 +432,8 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                      type_define=detail.particle.prefixed_define_for_array,
                                      type_array=type_array,
                                      type_array_len=type_array_len,
-                                     type_array_len_schema=array_length_from_schema,
-                                     type_loop_breakout=type_loop_breakout,
+                                     type_array_len_schema=breakout_at,
+                                     type_loop_breakout=breakout_at is not None,
                                      decode_fn=decode_fn,
                                      next_grammar_id=next_grammar_id,
                                      next_grammar_id_breakout=next_grammar_id_breakout,
@@ -973,7 +967,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
             if skip_element:
                 curr_idx += 1
-                if curr_idx > len(self.elements_to_generate):
+                if curr_idx >= len(self.elements_to_generate):
                     log_write_error('Module decoder: Generator loop aborted! Index larger than existing elements.')
                     break
             else:
