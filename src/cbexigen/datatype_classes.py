@@ -4,6 +4,7 @@
 
 from xmlschema import XMLSchema11
 from cbexigen import tools, tools_generator, tools_logging
+from cbexigen import elementFragmentCoder
 from cbexigen.elementData import Particle, ElementData
 from cbexigen.tools_config import CONFIG_PARAMS, get_fragment_parameter_for_schema
 from cbexigen.tools_logging import log_write_error, log_init_logger, log_write_logger, \
@@ -407,6 +408,24 @@ class DatatypeHeader:
                            element_comment=comment,
                            elements=elements)
 
+    def __get_element_fragment_content(self):
+        """Structs for the elements that need the element fragment grammar."""
+        grammar = self.analyzer_data.element_fragment_grammar
+        if not self.__generate_fragment or grammar is None or not grammar.types:
+            return ''
+
+        prefix = self.parameters['prefix']
+        self.__global_define_list.update(elementFragmentCoder.get_defines(prefix, grammar))
+
+        content = f'#define {elementFragmentCoder.get_feature_define(prefix)} 1\n\n'
+        for fragment_type in grammar.types.values():
+            content += elementFragmentCoder.get_struct(prefix, fragment_type)
+            content += '\n'
+            struct_name = elementFragmentCoder.get_type_name(prefix, fragment_type)
+            self.analyzer_data.known_prototypes[struct_name] = fragment_type.type
+
+        return content + '\n'
+
     def __get_fragment_content(self):
         if not self.__generate_fragment:
             return ''
@@ -423,7 +442,9 @@ class DatatypeHeader:
                     fragment_type = fragment.name
 
                 prefixed_type = f'{self.parameters["prefix"]}{fragment_type}'
-                if fragment_type in self.analyzer_data.known_elements.values():
+                if (fragment_type in self.analyzer_data.known_elements.values() or
+                        elementFragmentCoder.is_element_fragment_type(
+                            self.analyzer_data.element_fragment_grammar, fragment_type)):
                     elements.append((prefixed_type, fragment.name))
                 else:
                     log_write_error(f'Fragment {fragment.name} ({fragment.type}) '
@@ -603,6 +624,7 @@ class DatatypeHeader:
                 curr_idx = 0
 
         content += '\n\n'
+        content += self.__get_element_fragment_content()
         content += self.__get_root_content()
 
         include = tools_generator.get_includes_content(self.h_params)
@@ -743,6 +765,27 @@ class DatatypeCode:
                            element_comment=comment,
                            elements=elements)
 
+    def __get_element_fragment_content(self):
+        """init functions for the element fragment structs."""
+        grammar = self.analyzer_data.element_fragment_grammar
+        if grammar is None or not grammar.types:
+            return ''
+
+        prefix = self.parameters['prefix']
+        content = ''
+        temp = self.generator.get_template('BaseInitWithUsed.jinja')
+        for fragment_type in grammar.types.values():
+            struct_type = elementFragmentCoder.get_type_name(prefix, fragment_type)
+            content += temp.render(
+                element_comment=f'// init for element fragment {fragment_type.name}',
+                function_name=f'{self.config["init_function_prefix"]}{struct_type}',
+                struct_type=struct_type,
+                parameter_name=fragment_type.type,
+                elements=elementFragmentCoder.get_init_elements(fragment_type))
+            content += '\n'
+
+        return content
+
     def __get_fragment_content(self):
         comment = '// init for fragment'
         struct_type = f'{self.__schema_prefix}{self.config["fragment_struct_name"]}'
@@ -759,7 +802,9 @@ class DatatypeCode:
                 if fragment.type == 'AnonType':
                     fragment_type = fragment.name
 
-                if fragment_type in self.analyzer_data.known_elements.values():
+                if (fragment_type in self.analyzer_data.known_elements.values() or
+                        elementFragmentCoder.is_element_fragment_type(
+                            self.analyzer_data.element_fragment_grammar, fragment_type)):
                     ele.append(fragment.name)
                 else:
                     log_write_error(f'Fragment {fragment.name} ({fragment.type}) '
@@ -881,6 +926,7 @@ class DatatypeCode:
         content += self.__get_function_content()
 
         if self.__generate_fragment:
+            content += self.__get_element_fragment_content()
             content += '\n'
             content += self.__get_fragment_content()
             content += '\n'
