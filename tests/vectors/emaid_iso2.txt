@@ -1,0 +1,26 @@
+# ISO 15118-2 eMAID element-fragment EXI vectors.
+#
+# Reference bytes produced by Exificient (the EXI codec Josev uses), via
+# iso15118.shared.exi_codec.EXI().to_exi(EMAID(id=..., value=...),
+# Namespace.ISO_V2_MSG_DEF).  Exificient implements the EXI 1.0
+# schema-informed element fragment grammar (section 8.5.3), which the eMAID
+# element requires because its qname is bound to two distinct types
+# (EMAIDType and eMAIDType) in the ISO 15118-2 schema set.
+#
+# Id lengths 1..6 are covered deliberately: each one shifts the character
+# payload to a different bit offset, so a grammar that is right only at one
+# alignment cannot pass the whole set.
+#
+# Format: <Id> <TAB> <eMAID value> <TAB> <expected EXI hex>
+i	UKSWI123456789A	80ec0201b4c0045552d4d5d24c4c8ccd0d4d8dce0e507d3d00
+id	UKSWI123456789A	80ec020234b240045552d4d5d24c4c8ccd0d4d8dce0e507d3d00
+id4	UKSWI123456789A	80ec0202b4b21a40045552d4d5d24c4c8ccd0d4d8dce0e507d3d00
+id44	UKSWI123456789A	80ec020334b21a1a40045552d4d5d24c4c8ccd0d4d8dce0e507d3d00
+id445	UKSWI123456789A	80ec0203b4b21a1a1ac0045552d4d5d24c4c8ccd0d4d8dce0e507d3d00
+id4456	UKSWI123456789A	80ec020434b21a1a1a9b40045552d4d5d24c4c8ccd0d4d8dce0e507d3d00
+id4	DE12345678901A	80ec0202b4b21a400411114c4c8ccd0d4d8dce0e4c0c507d3d00
+id4	UKSWI123456789B	80ec0202b4b21a40045552d4d5d24c4c8ccd0d4d8dce0e50bd3d00
+id1	AB123456789012Z	80ec0202b4b218c00450508c4c8ccd0d4d8dce0e4c0c4c96bd3d00
+id4	FRA12345678901	80ec0202b4b21a40041194904c4c8ccd0d4d8dce0e4c0c7d3d00
+id2	UK012345678901	80ec0202b4b21940041552cc0c4c8ccd0d4d8dce0e4c0c7d3d00
+id3	DEPNXCONTRACT1	80ec0202b4b219c004111154139610d3d395149050d50c7d3d00
