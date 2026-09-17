@@ -8,10 +8,11 @@ from xmlschema.validators import (XsdSimpleType, XsdComplexType, XsdGroup, XsdAn
                                   Xsd11AtomicRestriction, Xsd11Element)
 
 from cbexigen import tools
-from cbexigen.typeDefinitions import AnalyzerData, OCCURRENCE_LIMITS_CORRECTED, FragmentData
+from cbexigen.typeDefinitions import (AnalyzerData, OCCURRENCE_LIMITS_CORRECTED, FragmentData,
+                                      ElementFragmentAttribute, ElementFragmentGrammar, ElementFragmentType)
 from cbexigen.elementData import Particle, Choice, ElementData
 from cbexigen.tools_logging import log_write, log_write_dict, log_write_element, msg_write, \
-    log_write_element_pos_data
+    log_write_element_pos_data, log_write_error
 from cbexigen.tools_config import CONFIG_PARAMS, get_config_module
 
 
@@ -32,6 +33,7 @@ class SchemaAnalyzer(object):
         self.__known_enums = analyzer_data.known_enums
         self.__known_prototypes = analyzer_data.known_prototypes
         self.__known_fragments = analyzer_data.known_fragments
+        self.__analyzer_data = analyzer_data
 
         self.__max_occurs_changed = analyzer_data.max_occurs_changed
         self.__namespace_elements = analyzer_data.namespace_elements
@@ -1001,6 +1003,7 @@ class SchemaAnalyzer(object):
         # Build list of all elements and types if enabled in config
         if self.config['generate_fragments'] == 1:
             self.__build_schema_fragment_list()
+            self.__build_element_fragment_grammar()
 
         # Build list of generate elements types
         self.__build_generate_elements_types_list()
@@ -1123,6 +1126,209 @@ class SchemaAnalyzer(object):
         # Sort the list of elements and types by 1. name and 2. namespace
         sorted_by_name = dict(sorted(fragments.items(), key=lambda item: (item[1].name, item[1].namespace)))
         self.__known_fragments.update(sorted_by_name)
+
+    # ------------------------------------------------------------------
+    # EXI 1.0, 8.5.3 Schema-informed Element Fragment Grammar
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def __split_qname(qname):
+        if qname is not None and qname.startswith('{') and qname.find('}') > 0:
+            return qname[1:qname.index('}')], qname[qname.index('}') + 1:]
+        return '', qname if qname is not None else ''
+
+    @classmethod
+    def __qname_sort_key(cls, qname):
+        # 8.5.3: sorted lexicographically, first by local-name, then by uri.
+        uri, local_name = cls.__split_qname(qname)
+        return local_name, uri
+
+    @classmethod
+    def __component_qname(cls, component):
+        if component.target_namespace:
+            return '{' + component.target_namespace + '}' + component.local_name
+        return component.local_name
+
+    def __iter_schema_closure(self):
+        """Yields every schema reachable through import or include.
+
+        Deliberately not schema.maps: that also carries the meta-schemas
+        xmlschema builds in, the XML namespace in particular. The ISO schemas
+        never import those, and counting their four attributes would shift the
+        EE and CH event codes of ElementFragment_0 by four.
+        """
+        pending = [self.__current_schema]
+        visited = set()
+
+        while pending:
+            schema = pending.pop()
+            if id(schema) in visited:
+                continue
+
+            visited.add(id(schema))
+            yield schema
+
+            for group in (getattr(schema, 'imports', {}), getattr(schema, 'includes', {})):
+                for child in group.values():
+                    if child is not None:
+                        pending.append(child)
+
+    def __collect_element_fragment_declarations(self):
+        """Groups every element declaration by qname, and collects attributes."""
+        declarations = {}
+        attributes = set()
+
+        for schema in self.__iter_schema_closure():
+            for component in schema.iter_components(xsd_classes=Xsd11Element):
+                qname = self.__component_qname(component)
+                declarations.setdefault(qname, []).append(component)
+
+            for component in schema.iter_components(xsd_classes=XsdAttribute):
+                attributes.add(self.__component_qname(component))
+
+        return declarations, attributes
+
+    @staticmethod
+    def __element_type_identity(element: XsdElement):
+        """The pair 8.5.3 compares declarations on: type name and {nillable}."""
+        type_name = element.type.name if element.type is not None else None
+        return type_name, bool(element.nillable)
+
+    def __get_element_fragment_type(self, qname, elements, grammar: ElementFragmentGrammar):
+        """Builds the union content model of one ambiguous element."""
+        namespace, name = self.__split_qname(qname)
+
+        fragment_type = ElementFragmentType()
+        fragment_type.name = name
+        fragment_type.namespace = namespace
+        fragment_type.type = f'{name}ElementFragment'
+        fragment_type.declared_types = sorted(
+            {identity[0] for identity in map(self.__element_type_identity, elements) if identity[0]})
+        fragment_type.attributes = []
+        fragment_type.has_characters = False
+        fragment_type.content_define = ''
+
+        attribute_qnames = set()
+        child_elements = set()
+
+        for element in elements:
+            element_type = element.type
+            if element_type is None:
+                continue
+
+            for attribute in getattr(element_type, 'attributes', {}).values():
+                if attribute is None or attribute.local_name is None:
+                    continue
+                attribute_qnames.add(self.__component_qname(attribute))
+
+            # A simple type has neither mixed content nor child elements.
+            is_simple = element_type.is_simple()
+            is_mixed = bool(getattr(element_type, 'mixed', False))
+
+            if is_simple or element_type.has_simple_content() or is_mixed:
+                fragment_type.has_characters = True
+
+            if not is_simple and (element_type.is_element_only() or is_mixed):
+                for child in element_type.iter_components(xsd_classes=Xsd11Element):
+                    if child is not element and child.local_name is not None:
+                        child_elements.add(self.__component_qname(child))
+
+        if child_elements:
+            # The relaxed grammar allows SE productions here. No schema in
+            # scope needs them, and generating them would mean generating a
+            # coder for every element in the schema, so refuse loudly rather
+            # than emit a coder that silently drops child elements.
+            log_write_error(
+                f'Element fragment grammar for {qname} would need START_ELEMENT productions '
+                f'({len(child_elements)} child elements). This is not implemented; '
+                f'the element will keep using its type grammar and its fragment bytes will be wrong.')
+            return None
+
+        used_names = {}
+        for attribute_qname in sorted(attribute_qnames, key=self.__qname_sort_key):
+            if attribute_qname not in grammar.attribute_qnames:
+                log_write_error(f'Attribute {attribute_qname} of element fragment {qname} '
+                                f'is not in the schema attribute list.')
+                return None
+
+            attribute = ElementFragmentAttribute()
+            _, attribute.name = self.__split_qname(attribute_qname)
+            attribute.qname = attribute_qname
+            attribute.event_code = grammar.attribute_qnames.index(attribute_qname)
+            attribute.define = f'{fragment_type.type}_{attribute.name}{self.config["char_define_addendum"]}'
+
+            if attribute.name in used_names:
+                log_write_error(f'Element fragment {qname} has two attributes named {attribute.name} '
+                                f'({used_names[attribute.name]} and {attribute_qname}).')
+                return None
+
+            used_names[attribute.name] = attribute_qname
+            fragment_type.attributes.append(attribute)
+
+        if fragment_type.has_characters:
+            fragment_type.content_define = f'{fragment_type.type}_CONTENT{self.config["char_define_addendum"]}'
+
+        return fragment_type
+
+    def __build_element_fragment_grammar(self):
+        """Derives the element fragment grammar described in EXI 1.0, 8.5.3.
+
+        An element whose qname is declared more than once, and whose
+        declarations do not all agree on type name and {nillable}, cannot be
+        resolved to one type grammar when it appears inside a fragment,
+        because a fragment carries no parent context to disambiguate it. Such
+        an element is coded with the relaxed element fragment grammar, whose
+        event codes are numbered over the attribute and element declarations
+        of the whole schema rather than over one type's content model.
+        """
+        grammar = ElementFragmentGrammar()
+        grammar.types = {}
+
+        declarations, attributes = self.__collect_element_fragment_declarations()
+
+        grammar.attribute_qnames = sorted(attributes, key=self.__qname_sort_key)
+        grammar.element_count = len(self.__known_fragments)
+
+        # The SE(F_j) codes are emitted by the fragment coder, which numbers
+        # them over known_fragments. If that list and the schema disagree the
+        # event codes would be off and every fragment would be misencoded.
+        if grammar.element_count != len(declarations):
+            log_write_error(f'Element fragment grammar: the fragment list holds {grammar.element_count} '
+                            f'elements but the schema declares {len(declarations)} unique element qnames.')
+
+        for qname in sorted(declarations, key=self.__qname_sort_key):
+            elements = declarations[qname]
+            identities = {self.__element_type_identity(element) for element in elements}
+            if len(identities) < 2:
+                continue
+
+            fragment_type = self.__get_element_fragment_type(qname, elements, grammar)
+            if fragment_type is None:
+                continue
+
+            grammar.types[fragment_type.name] = fragment_type
+
+            # Point the fragment coder at the element fragment grammar instead
+            # of at one of the conflicting types.
+            for fragment in self.__known_fragments.values():
+                if fragment.name == fragment_type.name and fragment.namespace == fragment_type.namespace:
+                    fragment.type = fragment_type.type
+
+        self.__analyzer_data.element_fragment_grammar = grammar
+
+        log_write('')
+        log_write('ELEMENT FRAGMENT GRAMMAR (EXI 1.0, 8.5.3)')
+        log_write(f'n (unique attribute qnames) = {grammar.attribute_count}')
+        log_write(f'm (unique element qnames)   = {grammar.element_count}')
+        log_write(f'ElementFragment_0: AT(*)={grammar.attribute_count}, '
+                  f'EE={grammar.first_end_element_code}, CH={grammar.first_characters_code}')
+        log_write(f'ElementFragment_1: SE(*)={grammar.element_count}, '
+                  f'EE={grammar.content_end_element_code}, CH={grammar.content_characters_code}')
+        for index, attribute_qname in enumerate(grammar.attribute_qnames):
+            log_write(f'    AT({attribute_qname}) = {index}')
+        for fragment_type in grammar.types.values():
+            log_write(f'  element {fragment_type.name} needs the element fragment grammar, declared as '
+                      f'{", ".join(fragment_type.declared_types)}')
 
     def __build_namespace_element_lists(self):
         """
