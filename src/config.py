@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2022 - 2023 chargebyte GmbH
-# Copyright (c) 2022 - 2023 Contributors to EVerest
+# Copyright (c) 2022 - 2026 Contributors to EVerest
 
 """
     config file for cbexigen
@@ -108,6 +108,7 @@ iso20_fragments = [
     'SignedInfo',
     'PnC_AReqAuthorizationMode',
     'CertificateInstallationReq',
+    'OEMProvisioningCertificateChain',
     'SignedInstallationData',
     'MeteringConfirmationReq',
     'AbsolutePriceSchedule',
