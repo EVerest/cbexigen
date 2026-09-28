@@ -107,10 +107,12 @@ iso2_fragments = [
 iso20_fragments = [
     'SignedInfo',
     'PnC_AReqAuthorizationMode',
-    'CertificateInstallationReq',
     'SignedInstallationData',
-    'MeteringConfirmationReq',
     'AbsolutePriceSchedule',
+    # ammendment 1
+    'OEMProvisioningCertificateChain',
+    'SignedMeteringData',
+    'PriceLevelSchedule',
 ]
 iso20_ac_fragments = [
     'SignedInfo',
