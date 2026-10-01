@@ -10,6 +10,7 @@ import zipfile
 
 from typing import Union, Dict
 from pathlib import Path
+from xmlschema import XMLResource, XMLResourceError
 
 CONFIG_ARGS: Dict[str, Union[str, Path]] = {
     'program_dir': '',
@@ -21,6 +22,9 @@ CONFIG_ARGS: Dict[str, Union[str, Path]] = {
 }
 
 CONFIG_PARAMS: Dict[str, Union[str, int]] = {
+    # Qualified schema types emitted by a shared schema prefix.
+    'shared_type_prefixes': {},
+    'shared_namespace_prefixes': {},
     # add debug code while generating code
     'add_debug_code': 0,
     # generate analysis tree while generating code
@@ -109,6 +113,8 @@ def process_config_parameters():
     """
     config_module = get_config_module()
 
+    CONFIG_PARAMS['shared_type_prefixes'] = {}
+
     ''' debug code definitions '''
     # add_debug_code
     if hasattr(config_module, 'add_debug_code'):
@@ -186,6 +192,52 @@ def process_config_parameters():
     # c_replace_chars (replace with underscore)
     if hasattr(config_module, 'c_replace_chars'):
         CONFIG_PARAMS['c_replace_chars'] = config_module.c_replace_chars
+
+    CONFIG_PARAMS['shared_namespace_prefixes'] = _get_shared_namespace_prefixes(config_module)
+
+
+def _get_shared_namespace_prefixes(config_module):
+    """Infer ISO-20 shared type ownership from XSD namespaces and imports."""
+    target_prefixes = {}
+    imported_prefixes = {}
+    schema_root = Path(CONFIG_ARGS['schema_base_dir'])
+    pending_schemas = []
+    visited_schemas = set()
+
+    for file_config in config_module.c_files_to_generate.values():
+        schema_name = file_config.get('schema')
+        prefix = file_config.get('prefix', '')
+        if schema_name is not None and prefix.startswith('iso20_'):
+            pending_schemas.append((schema_root / schema_name, prefix))
+
+    while pending_schemas:
+        schema_path, prefix = pending_schemas.pop(0)
+        schema_key = str(schema_path.resolve())
+        if schema_key in visited_schemas:
+            continue
+        visited_schemas.add(schema_key)
+
+        try:
+            root = XMLResource(schema_path).root
+        except (OSError, XMLResourceError):
+            continue
+
+        target_namespace = root.attrib.get('targetNamespace')
+        if target_namespace and target_namespace not in target_prefixes:
+            target_prefixes[target_namespace] = prefix
+
+        for imported_schema in root.findall('{http://www.w3.org/2001/XMLSchema}import'):
+            namespace = imported_schema.attrib.get('namespace')
+            if namespace and namespace not in imported_prefixes:
+                imported_prefixes[namespace] = prefix
+
+            schema_location = imported_schema.attrib.get('schemaLocation')
+            if schema_location:
+                pending_schemas.append((schema_path.parent / schema_location, prefix))
+
+    result = dict(imported_prefixes)
+    result.update(target_prefixes)
+    return result
 
 
 ISO2_SCHEMAS_URL = "https://standards.iso.org/iso/15118/-2/ed-2/en/"

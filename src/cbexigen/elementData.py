@@ -121,7 +121,50 @@ class Particle:
 
     @property
     def prefixed_type(self):
-        return self.prefix + self.typename_simple
+        prefix = CONFIG_PARAMS['shared_type_prefixes'].get(self.type)
+        if (prefix is None and self.prefix.startswith('iso20_') and self.type
+                and self.type.startswith('{') and '}' in self.type):
+            namespace = self.type[1:self.type.index('}')]
+            prefix = CONFIG_PARAMS['shared_namespace_prefixes'].get(namespace)
+        if prefix is None:
+            prefix = self.prefix
+        return prefix + self.typename_simple
+
+    @property
+    def codec_type(self):
+        return self.prefixed_type
+
+    @property
+    def is_shared_type_non_owner(self):
+        if (self.prefix.startswith('iso20_') and self.type
+                and self.type.startswith('{') and '}' in self.type):
+            active_namespace = CONFIG_PARAMS.get('active_schema_namespace')
+            if active_namespace:
+                return self.type[1:self.type.index('}')] != active_namespace
+
+        shared_prefix = CONFIG_PARAMS['shared_type_prefixes'].get(self.type)
+        if (shared_prefix is None and self.prefix.startswith('iso20_') and self.type
+                and self.type.startswith('{') and '}' in self.type):
+            namespace = self.type[1:self.type.index('}')]
+            shared_prefix = CONFIG_PARAMS['shared_namespace_prefixes'].get(namespace)
+        if shared_prefix is not None:
+            return shared_prefix != self.prefix
+
+        return (self.prefix.startswith('iso20_')
+            and self.prefixed_type != self.prefix + self.typename
+            and self.prefixed_type.startswith('iso20_'))
+
+    @property
+    def is_shared_type_owner(self):
+        if self.prefix == 'iso20_':
+            return True
+
+        shared_prefix = CONFIG_PARAMS['shared_type_prefixes'].get(self.type)
+        if (shared_prefix is None and self.prefix.startswith('iso20_') and self.type
+                and self.type.startswith('{') and '}' in self.type):
+            namespace = self.type[1:self.type.index('}')]
+            shared_prefix = CONFIG_PARAMS['shared_namespace_prefixes'].get(namespace)
+        return shared_prefix is not None and shared_prefix == self.prefix
 
     @property
     def is_array(self) -> bool:
@@ -324,6 +367,42 @@ class ElementData:
     type: str = None
     type_short: str = None
     base_type: str = None
+    contextual_type_name: str = None
+
+    @property
+    def is_shared_type_non_owner(self):
+        if self.contextual_type_name is not None:
+            return False
+
+        if (self.prefix.startswith('iso20_') and self.type
+                and self.type.startswith('{') and '}' in self.type):
+            active_namespace = CONFIG_PARAMS.get('active_schema_namespace')
+            if active_namespace:
+                return self.type[1:self.type.index('}')] != active_namespace
+
+        shared_prefix = CONFIG_PARAMS['shared_type_prefixes'].get(self.type)
+        if (shared_prefix is None and self.prefix.startswith('iso20_') and self.type
+                and self.type.startswith('{') and '}' in self.type):
+            namespace = self.type[1:self.type.index('}')]
+            shared_prefix = CONFIG_PARAMS['shared_namespace_prefixes'].get(namespace)
+        if shared_prefix is not None:
+            return shared_prefix != self.prefix
+
+        return (self.prefix.startswith('iso20_')
+            and self.prefixed_type != self.prefix + self.typename
+            and self.prefixed_type.startswith('iso20_'))
+
+    @property
+    def is_shared_type_owner(self):
+        if self.contextual_type_name is not None:
+            return True
+
+        shared_prefix = CONFIG_PARAMS['shared_type_prefixes'].get(self.type)
+        if (shared_prefix is None and self.prefix.startswith('iso20_') and self.type
+                and self.type.startswith('{') and '}' in self.type):
+            namespace = self.type[1:self.type.index('}')]
+            shared_prefix = CONFIG_PARAMS['shared_namespace_prefixes'].get(namespace)
+        return shared_prefix is not None and shared_prefix == self.prefix
     # element only
     content_type: str = None
     # restriction
@@ -375,7 +454,21 @@ class ElementData:
 
     @property
     def prefixed_type(self):
-        return self.prefix + self.typename
+        if self.contextual_type_name is not None:
+            return self.contextual_type_name
+
+        prefix = CONFIG_PARAMS['shared_type_prefixes'].get(self.type)
+        if (prefix is None and self.prefix.startswith('iso20_') and self.type
+                and self.type.startswith('{') and '}' in self.type):
+            namespace = self.type[1:self.type.index('}')]
+            prefix = CONFIG_PARAMS['shared_namespace_prefixes'].get(namespace)
+        if prefix is None:
+            prefix = self.prefix
+        return prefix + self.typename
+
+    @property
+    def codec_type(self):
+        return self.prefixed_type
 
     @property
     def prefixed_init_name(self):

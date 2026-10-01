@@ -26,6 +26,12 @@ class DatatypeHeader:
         self.logging_enabled = enable_logging
         self.logger_name = ''
         self.scheme = current_scheme
+        self.config['active_schema_namespace'] = current_scheme.target_namespace
+        self.__is_shared_datatype_header = self.h_params['filename'] in {
+            'iso20_XMLDSIG_Datatypes.h',
+            'iso20_CommonTypes_Datatypes.h',
+        }
+        self.analyzer_data.known_prototypes.clear()
 
         self.__schema_prefix = self.parameters['prefix']
         self.__is_iso20 = self.__schema_prefix.startswith('iso20_')
@@ -132,16 +138,18 @@ class DatatypeHeader:
         return temp.render(defines=self.__global_define_list)
 
     def __generate_functions_enum(self):
+        if self.__is_shared_datatype_header:
+            return ''
+
         comment = '// enum for function numbers'
         enum_type = self.parameters['prefix'] + 'generatedFunctionNumbersType'
-        items = []
+        items = set()
         for value in self.scheme.maps.elements.values():
             if value.default_namespace:
-                items.append(self.parameters['prefix'] + value.local_name)
-        items.sort()
+                items.add(self.parameters['prefix'] + value.local_name)
 
         temp = self.generator.get_template('BaseEnum.jinja')
-        return temp.render(list=items, element_comment=comment, enum_type=enum_type)
+        return temp.render(list=sorted(items), element_comment=comment, enum_type=enum_type)  # nosemgrep: direct-use-of-jinja2
 
     def __generate_enum_array_struct(self, particle):
         # generate struct for array with length variable
@@ -225,7 +233,7 @@ class DatatypeHeader:
         comment = self.__get_particle_comment(particle)
         type_str = ''
 
-        if particle.integer_base_type is not None:
+        if particle.integer_base_type is not None and not is_in_types:
             if particle.integer_base_type in tools.TYPE_TRANSLATION_C:
                 type_str = tools.TYPE_TRANSLATION_C[particle.integer_base_type]
             else:
@@ -249,7 +257,7 @@ class DatatypeHeader:
         comment = self.__get_particle_comment(particle)
         type_str = ''
 
-        if particle.integer_base_type is not None:
+        if particle.integer_base_type is not None and not is_in_types:
             if particle.integer_base_type in tools.TYPE_TRANSLATION_C:
                 type_str = tools.TYPE_TRANSLATION_C[particle.integer_base_type]
             else:
@@ -276,12 +284,31 @@ class DatatypeHeader:
         return temp.render(indent=indent, level=indent_level,
                            sequence_comment=comment, sequence_name=name, sequence_content=content)
 
+    def __get_fragment_type_name(self, fragment_type, namespace):
+        prefix = self.parameters['prefix']
+        owner_prefix = self.config['shared_namespace_prefixes'].get(namespace)
+        if owner_prefix and prefix.startswith(owner_prefix):
+            prefix = owner_prefix
+        return prefix + fragment_type
+
+    def __is_generated_fragment_struct(self, fragment_type, namespace):
+        return any(
+            element.type_definition == 'complex'
+            and element.type_short == fragment_type
+            and tools.extract_namespace_uri(element.type) == namespace
+            and not element.is_shared_type_non_owner
+            for element in self.analyzer_data.generate_elements
+        )
+
     def __get_particle_content(self, particle: Particle, elements, indent_level=1):
         content = ''
         last = None
 
         # particle type is in list, so a separate type is generated
-        if particle.type in self.analyzer_data.known_elements:
+        is_xml_schema_builtin = particle.type and particle.type.startswith(
+            '{http://www.w3.org/2001/XMLSchema}')
+
+        if particle.type in self.analyzer_data.known_elements and not is_xml_schema_builtin:
             if particle.max_occurs > 1:
                 # generate struct for array with length variable
                 if particle.is_enum:
@@ -311,7 +338,7 @@ class DatatypeHeader:
         elif particle.min_occurs == 0:
             # generate variable with isUsed flag
             if particle.is_substitute:
-                elements[particle.type_short] = particle.name
+                elements[particle.prefixed_type] = particle.name
                 last = particle
             else:
                 particle_type = tools_generator.get_particle_type(particle)
@@ -377,6 +404,9 @@ class DatatypeHeader:
         return struct_content
 
     def __get_root_content(self):
+        if self.__is_shared_datatype_header:
+            return ''
+
         elements = []
         comment = '// root elements of EXI doc'
         name = self.parameters['prefix'] + self.config['root_struct_name']
@@ -389,7 +419,8 @@ class DatatypeHeader:
                 #       So it has to be checked if these types can be ignored here.
                 if element.type_definition == 'complex':
                     elements.append((element.prefixed_type, element.name_short))
-                    self.analyzer_data.known_prototypes[element.prefixed_type] = element.name_short
+                    if not element.is_shared_type_non_owner:
+                        self.analyzer_data.known_prototypes[element.prefixed_type] = element.name_short
             else:
                 if element.base_type == '':
                     elements.append((element.prefixed_type, element.name_short))
@@ -422,12 +453,11 @@ class DatatypeHeader:
                 if fragment.type == 'AnonType':
                     fragment_type = fragment.name
 
-                prefixed_type = f'{self.parameters["prefix"]}{fragment_type}'
-                if fragment_type in self.analyzer_data.known_elements.values():
+                if fragment.is_complex and fragment_type in self.analyzer_data.known_elements.values():
+                    prefixed_type = self.__get_fragment_type_name(fragment_type, fragment.namespace)
                     elements.append((prefixed_type, fragment.name))
                 else:
-                    log_write_error(f'Fragment {fragment.name} ({fragment.type}) '
-                                    f'is not in the list of known elements.')
+                    log_write_error(f'Fragment {fragment.name} ({fragment.type}) is not in the list of known elements.')
 
         temp = self.generator.get_template('BaseStructWithUnionAndUsed.jinja')
         content = temp.render(struct_name=name,
@@ -454,12 +484,11 @@ class DatatypeHeader:
                 if fragment.type == 'AnonType':
                     fragment_type = fragment.name
 
-                prefixed_type = f'{self.parameters["prefix"]}{fragment_type}'
-                if fragment_type in self.analyzer_data.known_elements.values():
+                if fragment.is_complex and fragment_type in self.analyzer_data.known_elements.values():
+                    prefixed_type = self.__get_fragment_type_name(fragment_type, fragment.namespace)
                     elements.append((prefixed_type, fragment.name))
                 else:
-                    self.log(f'xmldsig Fragment {fragment.name} ({fragment.type}) '
-                             f'is not in the list of known elements.')
+                    self.log(f'xmldsig Fragment {fragment.name} ({fragment.type}) is not in the list of known elements.')
 
         temp = self.generator.get_template('BaseStructWithUnionAndUsed.jinja')
         content = temp.render(struct_name=name,
@@ -474,11 +503,14 @@ class DatatypeHeader:
         # this works here because the first prototypes are added in get_root_content()
         for element in self.analyzer_data.generate_elements:
             if element.type_definition != 'enum':
+                if element.is_shared_type_non_owner:
+                    continue
+
                 if element.prefixed_name not in self.analyzer_data.known_prototypes:
                     if element.prefixed_type not in self.analyzer_data.known_prototypes:
                         self.analyzer_data.known_prototypes[element.prefixed_type] = element.type_short
 
-        if self.__generate_fragment:
+        if self.__generate_fragment and not self.__is_shared_datatype_header:
             fragment_type = self.__schema_prefix + self.config['fragment_struct_name']
             self.analyzer_data.known_prototypes[fragment_type] = self.config['fragment_parameter_name']
             xmldsig_type = self.__schema_prefix + self.config['xmldsig_fragment_struct_name']
@@ -526,6 +558,10 @@ class DatatypeHeader:
         # the enums are generated first
         for element in self.analyzer_data.generate_elements:
             if element.type_definition == 'enum':
+                if element.is_shared_type_non_owner:
+                    self.__generate.remove(element)
+                    continue
+
                 element_list.clear()
                 if element.has_enum_list:
                     comment = element.element_comment
@@ -567,12 +603,18 @@ class DatatypeHeader:
                 break
 
             element = self.__generate[curr_idx]
+            if element.is_shared_type_non_owner:
+                self.__generate.remove(element)
+                curr_idx = 0
+                continue
+
             # building struct/element name
             elem_name = element.typename
 
             skip_element = False
             for particle in element.particles:
-                if particle.is_complex:
+                if (particle.type in self.analyzer_data.known_elements
+                        and not particle.is_shared_type_non_owner):
                     if particle.typename_simple not in self.__generated_t:
                         # skip here! generate type first before we can use it
                         skip_element = True
@@ -610,7 +652,7 @@ class DatatypeHeader:
         prototype = self.__get_prototype_content()
         enum_code = self.__generate_functions_enum()
 
-        if self.__generate_fragment:
+        if self.__generate_fragment and not self.__is_shared_datatype_header:
             fragment_content = self.__get_fragment_content()
             if fragment_content != '':
                 content += fragment_content
@@ -649,6 +691,10 @@ class DatatypeCode:
         self.analyzer_data = analyzer_data
         self.logging_enabled = enable_logging
         self.logger_name = ''
+        self.__is_shared_datatype_code = self.c_params['filename'] in {
+            'iso20_XMLDSIG_Datatypes.c',
+            'iso20_CommonTypes_Datatypes.c',
+        }
 
         self.__schema_prefix = self.parameters['prefix']
         self.__is_iso20 = self.__schema_prefix.startswith('iso20_')
@@ -682,6 +728,15 @@ class DatatypeCode:
     # ---------------------------------------------------------------------------
     # generator helper functions
     # ---------------------------------------------------------------------------
+    def __is_generated_fragment_struct(self, fragment_type, namespace):
+        return any(
+            element.type_definition == 'complex'
+            and element.type_short == fragment_type
+            and tools.extract_namespace_uri(element.type) == namespace
+            and not element.is_shared_type_non_owner
+            for element in self.analyzer_data.generate_elements
+        )
+
     @staticmethod
     def __get_type_member_array(particle: Particle):
         result = particle.name + '.arrayLen'
@@ -714,6 +769,9 @@ class DatatypeCode:
     # content delivery functions
     # ---------------------------------------------------------------------------
     def __get_root_content(self):
+        if self.__is_shared_datatype_code:
+            return ''
+
         elements = {}
         comment = '// root elements of EXI doc'
         function_name = self.config['init_function_prefix'] + self.parameters['prefix'] + \
@@ -759,7 +817,7 @@ class DatatypeCode:
                 if fragment.type == 'AnonType':
                     fragment_type = fragment.name
 
-                if fragment_type in self.analyzer_data.known_elements.values():
+                if fragment.is_complex and fragment_type in self.analyzer_data.known_elements.values():
                     ele.append(fragment.name)
                 else:
                     log_write_error(f'Fragment {fragment.name} ({fragment.type}) '
@@ -796,7 +854,7 @@ class DatatypeCode:
                 if fragment.type == 'AnonType':
                     fragment_type = fragment.name
 
-                if fragment_type in self.analyzer_data.known_elements.values():
+                if fragment.is_complex and fragment_type in self.analyzer_data.known_elements.values():
                     ele.append(fragment.name)
                 else:
                     self.log(f'xmldsig Fragment {fragment.name} ({fragment.type}) '
@@ -822,6 +880,9 @@ class DatatypeCode:
 
         for element in self.analyzer_data.generate_elements:
             if not element.type_definition == 'enum':
+                if element.is_shared_type_non_owner:
+                    continue
+
                 ele.clear()
                 arr.clear()
 
@@ -880,7 +941,7 @@ class DatatypeCode:
         content += self.__get_root_content()
         content += self.__get_function_content()
 
-        if self.__generate_fragment:
+        if self.__generate_fragment and not self.__is_shared_datatype_code:
             content += '\n'
             content += self.__get_fragment_content()
             content += '\n'

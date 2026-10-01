@@ -16,11 +16,16 @@ from cbexigen.tools_logging import log_write_error
 
 
 class ExiDecoderHeader(ExiBaseCoderHeader):
-    def __init__(self, parameters, enable_logging=True):
+    def __init__(self, parameters, analyzer_data=None, enable_logging=True):
         super(ExiDecoderHeader, self).__init__(parameters=parameters, enable_logging=enable_logging)
+        self.analyzer_data = analyzer_data
 
         self.__schema_prefix = self.parameters['prefix']
         self.__is_iso20 = self.__schema_prefix.startswith('iso20_')
+        self.__is_shared_codec_header = self.h_params['filename'] in {
+            'iso20_CommonTypes_Decoder.h',
+            'iso20_XMLDSIG_Decoder.h',
+        }
 
         self.__fragments = []
         self.__generate_fragment = False
@@ -75,9 +80,16 @@ class ExiDecoderHeader(ExiBaseCoderHeader):
         self.__include_content = tools_generator.get_includes_content(self.h_params)
 
         self.__code_content = '\n'
-        self.__code_content += self.__get_main_function_content(content_type=ContentType.root)
+        if not self.__is_shared_codec_header:
+            self.__code_content += self.__get_main_function_content(content_type=ContentType.root)
 
-        if self.__generate_fragment:
+        if self.analyzer_data is not None and self.__schema_prefix.startswith('iso20_'):
+            for element in self.analyzer_data.generate_elements:
+                if element.type_definition == 'complex':
+                    self.__code_content += f'\nint decode_{element.codec_type}(exi_bitstream_t* stream, '
+                    self.__code_content += f'struct {element.prefixed_type}* {element.type_short});'
+
+        if self.__generate_fragment and not self.__is_shared_codec_header:
             self.__code_content += '\n'
             self.__code_content += self.__get_main_function_content(content_type=ContentType.fragment)
             self.__code_content += '\n'
@@ -96,6 +108,9 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
         self.__schema_prefix = self.parameters['prefix']
         self.__is_iso20 = self.__schema_prefix.startswith('iso20_')
+        self.__is_shared_codec_code = self.parameters['schema'].endswith('xmldsig-core-schema.xsd') or self.c_params['filename'] in {
+            'iso20_CommonTypes_Decoder.c',
+        }
 
         self.__fragments = []
         self.__generate_fragment = False
@@ -110,11 +125,12 @@ class ExiDecoderCode(ExiBaseCoderCode):
     # ---------------------------------------------------------------------------
     # generator helper functions
     # ---------------------------------------------------------------------------
-    def get_function_declaration(self, element_name, is_forward_declaration):
-        content = 'static '
-        content += 'int ' + self.config['decode_function_prefix'] + self.parameters['prefix'] + element_name + '('
+    def get_function_declaration(self, element: ElementData, is_forward_declaration):
+        function_storage = '' if self.parameters['prefix'].startswith('iso20_') else 'static '
+        content = function_storage
+        content += 'int ' + self.config['decode_function_prefix'] + element.codec_type + '('
         content += 'exi_bitstream_t* stream, '
-        content += 'struct ' + self.parameters['prefix'] + element_name + '* ' + element_name + ')'
+        content += 'struct ' + element.prefixed_type + '* ' + element.type_short + ')'
 
         if is_forward_declaration:
             content += ';'
@@ -422,7 +438,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         type_array = f'{element_typename}->{detail.particle.name}.{detail.particle.value_parameter_name}'
         type_array_len = f'{element_typename}->{detail.particle.name}.{detail.particle.length_parameter_name}'
         breakout_at = self.get_array_loop_breakout(detail)
-        decode_fn = f'{CONFIG_PARAMS["decode_function_prefix"]}{detail.particle.prefixed_type}'
+        decode_fn = f'{CONFIG_PARAMS["decode_function_prefix"]}{detail.particle.codec_type}'
         next_grammar_id = detail.next_grammar
         next_grammar_id_breakout = detail.next_grammar_out
 
@@ -443,7 +459,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
     def __get_content_decode_namespace_element(self, element_typename, particle: Particle, next_grammar, level):
         decode_comment = '// decode: namespace element'
-        decode_fn = f'{CONFIG_PARAMS["decode_function_prefix"]}{particle.prefixed_type}'
+        decode_fn = f'{CONFIG_PARAMS["decode_function_prefix"]}{particle.codec_type}'
         type_value = f'{element_typename}->{particle.name}'
         next_grammar_id = next_grammar
 
@@ -461,7 +477,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
         decode_comment = '// decode: element'
         if detail.particle.is_attribute:
             decode_comment += ' (Attribute)'
-        decode_fn = f'{CONFIG_PARAMS["decode_function_prefix"]}{detail.particle.prefixed_type}'
+        decode_fn = f'{CONFIG_PARAMS["decode_function_prefix"]}{detail.particle.codec_type}'
         type_value = f'{element_typename}->{detail.particle.name}'
         next_grammar_id = detail.next_grammar
 
@@ -739,20 +755,23 @@ class ExiDecoderCode(ExiBaseCoderCode):
                 grammar_content = self.__get_grammar_content(grammars, 2)
 
             temp = self.generator.get_template('BaseDecodeFunction.jinja')
+            function_storage = '' if self.__schema_prefix.startswith('iso20_') else 'static '
             content += temp.render(element_comment=element.element_comment,
                                    particle_comment=element.particle_comment,
-                                   function_name=CONFIG_PARAMS['decode_function_prefix'] + element.prefixed_type,
+                                   function_name=CONFIG_PARAMS['decode_function_prefix'] + element.codec_type,
                                    struct_type=element.prefixed_type, parameter_name=typename,
                                    start_grammar_id=start_grammar_id,
                                    init_function=CONFIG_PARAMS['init_function_prefix'] + element.prefixed_type,
                                    grammar_content=grammar_content,
                                    add_debug_code=self.get_status_for_add_debug_code(element.prefixed_type),
+                                   function_storage=function_storage,
                                    indent=self.indent, level=1)
             content += '\n\n'
         else:
             temp = self.generator.get_template('DecodeEmptyFunction.jinja')
+            function_storage = '' if self.__schema_prefix.startswith('iso20_') else 'static '
             content += temp.render(element_comment=element.element_comment,
-                                   function_name=CONFIG_PARAMS['decode_function_prefix'] + element.prefixed_type,
+                                   function_name=CONFIG_PARAMS['decode_function_prefix'] + element.codec_type,
                                    struct_type=element.prefixed_type, parameter_name=typename,
                                    add_debug_code=self.get_status_for_add_debug_code(element.prefixed_type),
                                    indent=self.indent, level=1)
@@ -761,6 +780,9 @@ class ExiDecoderCode(ExiBaseCoderCode):
         return content
 
     def __get_root_content(self):
+        if self.__is_shared_codec_code:
+            return ''
+
         root_content = ''
         root_comment = '// main function for decoding'
         fn_name = CONFIG_PARAMS['decode_function_prefix'] + self.parameters['prefix'] + \
@@ -773,7 +795,13 @@ class ExiDecoderCode(ExiBaseCoderCode):
             log_write_error(f'No root elements in analyzer data. Main function {fn_name} is not generated.')
         elif len(self.analyzer_data.root_elements) > 1:
             decode_fn = []
-            for elem in self.analyzer_data.root_elements:
+            root_elements = (sorted(self.analyzer_data.root_elements,
+                             key=lambda elem: (elem.type_short if elem.type_definition == 'complex'
+                                               and elem.type_short == elem.name_short + 'Type'
+                                               else elem.name_short + 'Type' if elem.type_definition == 'complex'
+                                               else elem.name_short, elem.name_short))
+                             if self.__is_iso20 else self.analyzer_data.root_elements)
+            for elem in root_elements:
                 if self.__is_iso20:
                     # TODO: The following if filters the simple types DigestValue, MgmtData and KeyName.
                     #       Simple types has to be decoded directly and not with an decoding function.
@@ -794,7 +822,8 @@ class ExiDecoderCode(ExiBaseCoderCode):
                         decode_fn.append([CONFIG_PARAMS['decode_function_prefix'] + elem.prefixed_type,
                                           parameter_name + '->' + elem.typename])
 
-            decode_fn.sort()
+            if not self.__is_iso20:
+                decode_fn.sort()
 
             bits = tools.get_bits_to_decode(len(self.analyzer_data.root_elements))
 
@@ -861,8 +890,12 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
         decode_fn = []
         for fragment in self.analyzer_data.known_fragments.values():
-            if fragment.name in self.__fragments:
-                function = f'{CONFIG_PARAMS["decode_function_prefix"]}{self.__schema_prefix}{fragment.type}'
+            fragment_type = fragment.name if fragment.type == 'AnonType' else fragment.type
+            if (fragment.name in self.__fragments and fragment.is_complex
+                    and fragment_type in self.analyzer_data.known_elements.values()):
+                owner_prefix = (CONFIG_PARAMS['shared_namespace_prefixes'].get(
+                    fragment.namespace, self.__schema_prefix) if self.__is_iso20 else self.__schema_prefix)
+                function = f'{CONFIG_PARAMS["decode_function_prefix"]}{owner_prefix}{fragment_type}'
                 parameter = f'{parameter_name}->{fragment.name}'
                 decode_fn.append([fragment.name, fragment.namespace, function, parameter])
             else:
@@ -898,8 +931,11 @@ class ExiDecoderCode(ExiBaseCoderCode):
         decode_fn = []
         for fragment in self.analyzer_data.known_fragments.values():
             if 'xmldsig' in fragment.namespace.casefold():
-                if fragment.type in self.analyzer_data.known_elements.values():
-                    function = f'{CONFIG_PARAMS["decode_function_prefix"]}{self.__schema_prefix}{fragment.type}'
+                fragment_type = fragment.name if fragment.type == 'AnonType' else fragment.type
+                if fragment.is_complex and fragment_type in self.analyzer_data.known_elements.values():
+                    owner_prefix = (CONFIG_PARAMS['shared_namespace_prefixes'].get(
+                        fragment.namespace, self.__schema_prefix) if self.__is_iso20 else self.__schema_prefix)
+                    function = f'{CONFIG_PARAMS["decode_function_prefix"]}{owner_prefix}{fragment_type}'
                     parameter = f'{parameter_name}->{fragment.name}'
                     decode_fn.append([fragment.name, fragment.namespace, function, parameter])
                 else:
@@ -976,7 +1012,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                 self.log(element.particle_comment)
 
                 # get forward declarations
-                static_declarations.append(self.get_function_declaration(elem_typename, True))
+                static_declarations.append(self.get_function_declaration(element, True))
 
                 # determine grammar ids for calculating bits to read from stream
                 self.generate_element_grammars(element)
@@ -1007,10 +1043,11 @@ class ExiDecoderCode(ExiBaseCoderCode):
         self.__code_content += '\n'
         self.__code_content += self.__function_content
 
-        self.__code_content += '\n'
-        self.__code_content += self.__get_root_content()
+        if not self.__is_shared_codec_code:
+            self.__code_content += '\n'
+            self.__code_content += self.__get_root_content()
 
-        if self.__generate_fragment:
+        if self.__generate_fragment and not self.__is_shared_codec_code:
             fragment_content = self.__get_fragment_content()
             if fragment_content != '':
                 self.__code_content += '\n'

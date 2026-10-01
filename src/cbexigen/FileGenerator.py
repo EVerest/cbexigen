@@ -66,6 +66,9 @@ class FileGenerator(object):
             tools_logging.msg_write('*** Elements: ' + parameters['schema'] + ' ***', True)
             self.__schema.analyze_schema_elements()
 
+        tools_conf.CONFIG_PARAMS['active_schema_namespace'] = \
+            self.__schema.get_current_schema().target_namespace
+
     def __generate_debug_files(self, parameters):
         if not self.__analyzer_data.add_debug_code_enabled or parameters['type'] == 'converter':
             return
@@ -151,7 +154,7 @@ class FileGenerator(object):
 
     @staticmethod
     def __generate_decoder_h(parameters, info_data: AnalyzerData):
-        header = ExiDecoderHeader(parameters, True)
+        header = ExiDecoderHeader(parameters, info_data, True)
         header.generate_file()
 
     @staticmethod
@@ -162,7 +165,7 @@ class FileGenerator(object):
 
     @staticmethod
     def __generate_encoder_h(parameters, info_data: AnalyzerData):
-        header = ExiEncoderHeader(parameters, True)
+        header = ExiEncoderHeader(parameters, info_data, True)
         header.generate_file()
 
     @staticmethod
