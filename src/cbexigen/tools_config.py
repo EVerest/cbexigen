@@ -4,11 +4,13 @@
 
 """ Tools for the Exi Codegenerator config """
 import importlib
+import io
+import urllib.request
+import zipfile
 
 from typing import Union, Dict
 from pathlib import Path
-
-import urllib.request
+from xmlschema import XMLResource, XMLResourceError
 
 CONFIG_ARGS: Dict[str, Union[str, Path]] = {
     'program_dir': '',
@@ -20,6 +22,9 @@ CONFIG_ARGS: Dict[str, Union[str, Path]] = {
 }
 
 CONFIG_PARAMS: Dict[str, Union[str, int]] = {
+    # Qualified schema types emitted by a shared schema prefix.
+    'shared_type_prefixes': {},
+    'shared_namespace_prefixes': {},
     # add debug code while generating code
     'add_debug_code': 0,
     # generate analysis tree while generating code
@@ -108,6 +113,8 @@ def process_config_parameters():
     """
     config_module = get_config_module()
 
+    CONFIG_PARAMS['shared_type_prefixes'] = {}
+
     ''' debug code definitions '''
     # add_debug_code
     if hasattr(config_module, 'add_debug_code'):
@@ -186,9 +193,83 @@ def process_config_parameters():
     if hasattr(config_module, 'c_replace_chars'):
         CONFIG_PARAMS['c_replace_chars'] = config_module.c_replace_chars
 
+    CONFIG_PARAMS['shared_namespace_prefixes'] = _get_shared_namespace_prefixes(config_module)
+
+
+def _get_shared_namespace_prefixes(config_module):
+    """Infer ISO-20 shared type ownership from XSD namespaces and imports."""
+    target_prefixes = {}
+    imported_prefixes = {}
+    schema_root = Path(CONFIG_ARGS['schema_base_dir'])
+    pending_schemas = []
+    visited_schemas = set()
+
+    for file_config in config_module.c_files_to_generate.values():
+        schema_name = file_config.get('schema')
+        prefix = file_config.get('prefix', '')
+        if schema_name is not None and prefix.startswith('iso20_'):
+            pending_schemas.append((schema_root / schema_name, prefix))
+
+    while pending_schemas:
+        schema_path, prefix = pending_schemas.pop(0)
+        schema_key = str(schema_path.resolve())
+        if schema_key in visited_schemas:
+            continue
+        visited_schemas.add(schema_key)
+
+        try:
+            root = XMLResource(schema_path).root
+        except (OSError, XMLResourceError):
+            continue
+
+        target_namespace = root.attrib.get('targetNamespace')
+        if target_namespace and target_namespace not in target_prefixes:
+            target_prefixes[target_namespace] = prefix
+
+        for imported_schema in root.findall('{http://www.w3.org/2001/XMLSchema}import'):
+            namespace = imported_schema.attrib.get('namespace')
+            if namespace and namespace not in imported_prefixes:
+                imported_prefixes[namespace] = prefix
+
+            schema_location = imported_schema.attrib.get('schemaLocation')
+            if schema_location:
+                pending_schemas.append((schema_path.parent / schema_location, prefix))
+
+    result = dict(imported_prefixes)
+    result.update(target_prefixes)
+    return result
+
 
 ISO2_SCHEMAS_URL = "https://standards.iso.org/iso/15118/-2/ed-2/en/"
 ISO20_SCHEMAS_URL = "https://standards.iso.org/iso/15118/-20/ed-1/en/"
+ISO20_AMD1_SCHEMAS_URL = "https://standards.iso.org/iso/15118/-20/ed-1/en/Amd/1/"
+ISO20_AMD1_SCHEMAS_ZIP = "AMD1_xsdSchema.zip"
+
+
+def _validate_https_url(url: str) -> str:
+    if not url.startswith("https://"):
+        raise ValueError(f"Only https URLs are allowed, got: {url}")
+    return url
+
+
+def _download_schema_files(base_url: str, schema_names: list, target_path: Path,
+                           label: str) -> bool:
+    """Download schema files. Returns False if any download failed."""
+    for schema in schema_names:
+        schema_file_path = target_path / schema
+        if schema_file_path.exists():
+            print(f"{label} schema {schema} is already there. Skipping it.")
+            continue
+        print(f"{label} schema {schema} not found! Downloading it...")
+        try:
+            urllib.request.urlretrieve(
+                _validate_https_url(base_url + schema), schema_file_path.absolute().as_posix())
+        except Exception as err:
+            print(f"Download failed for {schema}: {err=}, {type(err)=}")
+            if schema_file_path.exists():
+                schema_file_path.unlink()
+            return False
+    return True
 
 
 def download_schemas():
@@ -202,11 +283,8 @@ def download_schemas():
         CONFIG_ARGS['schema_base_dir'], config_module.c_files_to_generate['iso20_CommonMessages_Datatypes']['schema'])
     iso20_schema_path = iso20_schema_full_name.parent.resolve()
 
-    if not iso2_schema_path.exists():
-        iso2_schema_path.mkdir(parents=True, exist_ok=True)
-
-    if not iso20_schema_path.exists():
-        iso20_schema_path.mkdir(parents=True, exist_ok=True)
+    iso2_schema_path.mkdir(parents=True, exist_ok=True)
+    iso20_schema_path.mkdir(parents=True, exist_ok=True)
 
     iso2_schema_files_names = ['V2G_CI_AppProtocol.xsd', 'V2G_CI_MsgDef.xsd', 'V2G_CI_MsgBody.xsd',
                                'V2G_CI_MsgDataTypes.xsd', 'V2G_CI_MsgHeader.xsd', 'xmldsig-core-schema.xsd']
@@ -214,26 +292,29 @@ def download_schemas():
     iso20_schema_files_names = ['V2G_CI_AC.xsd', 'V2G_CI_ACDP.xsd', 'V2G_CI_AppProtocol.xsd', 'V2G_CI_CommonMessages.xsd',
                                 'V2G_CI_CommonTypes.xsd', 'V2G_CI_DC.xsd', 'V2G_CI_WPT.xsd', 'xmldsig-core-schema.xsd']
 
-    for schema in iso2_schema_files_names:
-        schema_file_path = iso2_schema_path / schema
-        if not schema_file_path.exists():
-            print(f"ISO15118-2 schema {schema} not found! Downloading it...")
-            try:
-                urllib.request.urlretrieve(
-                    ISO2_SCHEMAS_URL + schema, schema_file_path.absolute().as_posix())
-            except Exception as err:
-                print(f"Error during downloading: {err=}, {type(err)=}")
-        else:
-            print(f"ISO15118-2 schema {schema} is already there. Skipping it.")
+    _download_schema_files(ISO2_SCHEMAS_URL, iso2_schema_files_names, iso2_schema_path, "ISO15118-2")
+    _download_schema_files(ISO20_SCHEMAS_URL, iso20_schema_files_names, iso20_schema_path, "ISO15118-20")
 
-    for schema in iso20_schema_files_names:
-        schema_file_path = iso20_schema_path / schema
-        if not schema_file_path.exists():
-            print(f"ISO15118-20 schema {schema} not found! Downloading it...")
-            try:
-                urllib.request.urlretrieve(
-                    ISO20_SCHEMAS_URL + schema, schema_file_path.absolute().as_posix())
-            except Exception as err:
-                print(f"Error during downloading: {err=}, {type(err)=}")
-        else:
-            print(f"ISO15118-20 schema {schema} is already there. Skipping it.")
+    iso20_amd1_schema_files_names = ['V2G_CI_AC_DER_IEC.xsd', 'V2G_CI_AC_DER_SAE.xsd']
+    if not _download_schema_files(ISO20_AMD1_SCHEMAS_URL, iso20_amd1_schema_files_names,
+                                  iso20_schema_path, "ISO15118-20 Amd1"):
+        print(f"Trying zip fallback: downloading {ISO20_AMD1_SCHEMAS_ZIP}...")
+        try:
+            with urllib.request.urlopen(  # nosec B310  # nosemgrep
+                    _validate_https_url(ISO20_AMD1_SCHEMAS_URL + ISO20_AMD1_SCHEMAS_ZIP)) as response:
+                zip_data = io.BytesIO(response.read())
+            with zipfile.ZipFile(zip_data) as zf:
+                for schema in iso20_amd1_schema_files_names:
+                    schema_file_path = iso20_schema_path / schema
+                    if schema_file_path.exists():
+                        print(f"ISO15118-20 Amd1 schema {schema} is already there. Skipping it.")
+                        continue
+                    matching = [n for n in zf.namelist() if n.endswith(schema)]
+                    if matching:
+                        with zf.open(matching[0]) as src, open(schema_file_path, 'wb') as dst:
+                            dst.write(src.read())
+                        print(f"Extracted {schema} from {ISO20_AMD1_SCHEMAS_ZIP}.")
+                    else:
+                        print(f"Error: {schema} not found in {ISO20_AMD1_SCHEMAS_ZIP}.")
+        except Exception as err:
+            print(f"Error during zip download: {err=}, {type(err)=}")

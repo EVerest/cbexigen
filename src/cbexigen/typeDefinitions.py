@@ -2,37 +2,38 @@
 # Copyright (c) 2022 - 2023 chargebyte GmbH
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict
 
 
 @dataclass
 class AnalyzerData:
-    schema_identifier = ''
-    root_elements = []
-    generate_elements = []
-    generate_elements_types = {}
+    schema_identifier: str = ''
+    root_elements: list = field(default_factory=list)
+    generate_elements: list = field(default_factory=list)
+    generate_elements_types: dict = field(default_factory=dict)
 
-    known_elements = {}
-    known_particles = {}
-    known_enums = {}
-    known_prototypes = {}
-    known_fragments = {}
+    known_elements: dict = field(default_factory=dict)
+    known_particles: dict = field(default_factory=dict)
+    known_enums: dict = field(default_factory=dict)
+    known_prototypes: dict = field(default_factory=dict)
+    known_fragments: dict = field(default_factory=dict)
 
-    max_occurs_changed = {}
-    namespace_elements = {}
-    schema_builtin_types = {}
+    max_occurs_changed: dict = field(default_factory=dict)
+    namespace_elements: dict = field(default_factory=dict)
+    schema_builtin_types: dict = field(default_factory=dict)
 
-    add_debug_code_enabled = 0
-    debug_code_current_message_id = 1
-    debug_code_messages = {}
+    add_debug_code_enabled: int = 0
+    debug_code_current_message_id: int = 1
+    debug_code_messages: dict = field(default_factory=dict)
 
 
 @dataclass
 class FragmentData:
-    name = ''
-    namespace = ''
-    type = ''
+    name: str = ''
+    namespace: str = ''
+    type: str = ''
+    is_complex: bool = False
 
 
 # Note: a corrected limit of 1 is default for all unbounded types, unless
