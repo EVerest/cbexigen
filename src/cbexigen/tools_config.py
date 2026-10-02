@@ -48,6 +48,9 @@ CONFIG_PARAMS: Dict[str, Union[str, int]] = {
     # general c-code style
     'c_code_indent_chars': 4,
     'c_replace_chars': [' ', '-'],
+    # usage of memset
+    'use_memset_root_content': False,
+    'use_memset_child_elements': False,
 }
 
 __CONFIG_MODULE = None
@@ -185,6 +188,14 @@ def process_config_parameters():
     # c_replace_chars (replace with underscore)
     if hasattr(config_module, 'c_replace_chars'):
         CONFIG_PARAMS['c_replace_chars'] = config_module.c_replace_chars
+
+    ''' usage of memset '''
+    # initialization of EXI child elements
+    if hasattr(config_module, 'use_memset_root_content'):
+        CONFIG_PARAMS['use_memset_root_content'] = config_module.use_memset_root_content
+    # initialization of EXI child elements
+    if hasattr(config_module, 'use_memset_child_elements'):
+        CONFIG_PARAMS['use_memset_child_elements'] = config_module.use_memset_child_elements
 
 
 ISO2_SCHEMAS_URL = "https://standards.iso.org/iso/15118/-2/ed-2/en/"
