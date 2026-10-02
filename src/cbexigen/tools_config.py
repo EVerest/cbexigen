@@ -3,7 +3,7 @@
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 
 """ Tools for the Exi Codegenerator config """
-import importlib
+from importlib.util import module_from_spec, spec_from_file_location
 
 from typing import Union, Dict
 from pathlib import Path
@@ -70,10 +70,13 @@ def get_config_module():
     global __CONFIG_MODULE
 
     if __CONFIG_MODULE is None:
-        config_module_name = Path(CONFIG_ARGS['config_file']).name
-        if config_module_name.endswith('.py'):
-            config_module_name = config_module_name[:-3]
-        __CONFIG_MODULE = importlib.import_module(config_module_name)
+
+        config_module = Path(CONFIG_ARGS['program_dir'], CONFIG_ARGS['config_file']).resolve()
+        config_module_name = config_module.stem
+
+        spec = spec_from_file_location(config_module_name, config_module)
+        __CONFIG_MODULE = module_from_spec(spec)
+        spec.loader.exec_module(__CONFIG_MODULE)
 
     return __CONFIG_MODULE
 
