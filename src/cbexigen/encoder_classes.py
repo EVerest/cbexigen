@@ -5,6 +5,7 @@
 from typing import List
 from cbexigen.base_coder_classes import ExiBaseCoderHeader, ExiBaseCoderCode
 from cbexigen import tools_generator, tools
+from cbexigen import elementFragmentCoder
 from cbexigen.elementData import ElementData, Particle, ContentType
 from cbexigen.elementGrammar import GrammarFlag, ElementGrammar, ElementGrammarDetail
 from cbexigen.tools_config import CONFIG_PARAMS, get_fragment_parameter_for_schema
@@ -846,19 +847,28 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
         return root_content
 
+    def __get_element_fragment_content(self):
+        """Coders for the elements that need the element fragment grammar."""
+        grammar = self.analyzer_data.element_fragment_grammar
+        if grammar is None or not grammar.types:
+            return ''
+
+        prefix = self.__schema_prefix
+        content = ''
+        for fragment_type in grammar.types.values():
+            self.log(f'Element fragment grammar for {fragment_type.name}')
+            content += elementFragmentCoder.get_encoder(prefix, fragment_type, grammar)
+            content += '\n'
+
+        return content
+
     def __get_fragment_content(self):
         content = ''
         comment = '// main function for encoding fragment'
         if not self.__is_iso20:
-            comment += ('\n/* NOTE! There may be problems when comparing the signature of the eMAID.\n'
-                        '   In the ISO 15118-2 schema there are two different types with problematic names,\n'
-                        '   EMAIDType and eMAIDType. The fragment de- and encoder of e.g. openV2G considers\n'
-                        '   this type as generic type EXISchemaInformedElementFragmentGrammar. '
-                        'We treat it as a complex type.\n'
-                        '   We have not yet been able to determine why this particular type has to be coded as '
-                        'a generic type,\n   and only for the fragment decoder and encoder.\n'
-                        '   This is why we have not yet adapted our fragment coders, '
-                        'and it can lead to the problem mentioned. */')
+            comment += ('\n/* Elements declared with more than one type are coded here with the EXI\n'
+                        '   element fragment grammar (EXI 1.0, 8.5.3) rather than with a type grammar,\n'
+                        '   because a fragment carries no parent context to pick a declaration by. */')
 
         fn_name = (f'{CONFIG_PARAMS["encode_function_prefix"]}{self.__schema_prefix}'
                    f'{CONFIG_PARAMS["fragment_struct_name"]}')
@@ -1013,6 +1023,11 @@ class ExiEncoderCode(ExiBaseCoderCode):
         self.__code_content += self.__get_root_content()
 
         if self.__generate_fragment:
+            element_fragment_content = self.__get_element_fragment_content()
+            if element_fragment_content != '':
+                self.__code_content += '\n'
+                self.__code_content += element_fragment_content
+
             fragment_content = self.__get_fragment_content()
             if fragment_content != '':
                 self.__code_content += '\n'
