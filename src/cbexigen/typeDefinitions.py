@@ -39,6 +39,7 @@ class FragmentData:
 @dataclass
 class ElementFragmentAttribute:
     """One AT production of an element fragment grammar."""
+
     name = ''
     qname = ''
     event_code = 0
@@ -54,6 +55,7 @@ class ElementFragmentType:
     cannot be resolved to a single type grammar inside a fragment. Its content
     is coded with the relaxed element fragment grammar instead.
     """
+
     name = ''
     namespace = ''
     type = ''
@@ -75,6 +77,7 @@ class ElementFragmentGrammar:
                         EE n+m+2, CH n+m+3
     ElementFragment_1:  SE(F_0..F_m-1) 0..m-1, SE(*) m, EE m+1, CH m+2
     """
+
     attribute_qnames = []
     element_count = 0
     types = {}

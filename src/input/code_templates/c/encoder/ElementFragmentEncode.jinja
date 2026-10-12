@@ -1,0 +1,74 @@
+{% macro encode_string(name, define, level) -%}
+{{ indent * level }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * level }}{
+{{ indent * (level + 1) }}// string should not be found in table, so add 2
+{{ indent * (level + 1) }}error = exi_basetypes_encoder_uint_16(stream, (uint16_t)({{ fragment.type }}->{{ name }}.charactersLen + 2));
+{{ indent * (level + 1) }}if (error == EXI_ERROR__NO_ERROR)
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}error = exi_basetypes_encoder_characters(stream, {{ fragment.type }}->{{ name }}.charactersLen, {{ fragment.type }}->{{ name }}.characters, {{ define }});
+{{ indent * (level + 1) }}}
+{{ indent * level }}}
+{%- endmacro -%}
+{% include 'ElementFragmentComment.jinja' %}
+static int encode_{{ struct_name }}(exi_bitstream_t* stream, const struct {{ struct_name }}* {{ fragment.type }}) {
+{{ indent }}int grammar_id = 0;
+{{ indent }}int done = 0;
+{{ indent }}int error = 0;
+{{ indent }}// ElementFragment_0 returns to itself after every attribute, so the
+{{ indent }}// remaining events are tracked here instead of in the caller's struct.
+{% for name in members -%}
+{{ indent }}int {{ name }}_pending = {{ fragment.type }}->{{ name }}_isUsed;
+{% endfor %}
+{{ indent }}while (!done)
+{{ indent }}{
+{{ indent * 2 }}switch (grammar_id)
+{{ indent * 2 }}{
+{{ indent * 2 }}case 0:
+{{ indent * 3 }}// Grammar: ElementFragment_0; read/write bits={{ first_bits }}
+{% for attribute in fragment.attributes -%}
+{{ indent * 3 }}{% if loop.first %}if{% else %}else if{% endif %} ({{ attribute.name }}_pending)
+{{ indent * 3 }}{
+{{ indent * 4 }}// Event: AT({{ attribute.qname }}); event code {{ attribute.event_code }}; next=ElementFragment_0
+{{ indent * 4 }}{{ attribute.name }}_pending = 0;
+{{ indent * 4 }}error = exi_basetypes_encoder_nbit_uint(stream, {{ first_bits }}, {{ attribute.event_code }});
+{{ encode_string(attribute.name, prefix ~ attribute.define, 4) }}
+{{ indent * 3 }}}
+{% endfor -%}
+{% if fragment.has_characters -%}
+{{ indent * 3 }}{% if fragment.attributes %}else if{% else %}if{% endif %} (CONTENT_pending)
+{{ indent * 3 }}{
+{{ indent * 4 }}// Event: CH [untyped value]; event code {{ grammar.first_characters_code }}; next=ElementFragment_1
+{{ indent * 4 }}CONTENT_pending = 0;
+{{ indent * 4 }}error = exi_basetypes_encoder_nbit_uint(stream, {{ first_bits }}, {{ grammar.first_characters_code }});
+{{ encode_string('CONTENT', prefix ~ fragment.content_define, 4) }}
+{{ indent * 4 }}grammar_id = 1;
+{{ indent * 3 }}}
+{% endif -%}
+{{ indent * 3 }}else
+{{ indent * 3 }}{
+{{ indent * 4 }}// Event: END Element; event code {{ grammar.first_end_element_code }}
+{{ indent * 4 }}error = exi_basetypes_encoder_nbit_uint(stream, {{ first_bits }}, {{ grammar.first_end_element_code }});
+{{ indent * 4 }}done = 1;
+{{ indent * 3 }}}
+{{ indent * 3 }}break;
+{{ indent * 2 }}case 1:
+{{ indent * 3 }}// Grammar: ElementFragment_1; read/write bits={{ content_bits }}
+{{ indent * 3 }}// A second CH would need a second character member, so only the
+{{ indent * 3 }}// end of the element is reachable here.
+{{ indent * 3 }}// Event: END Element; event code {{ grammar.content_end_element_code }}
+{{ indent * 3 }}error = exi_basetypes_encoder_nbit_uint(stream, {{ content_bits }}, {{ grammar.content_end_element_code }});
+{{ indent * 3 }}done = 1;
+{{ indent * 3 }}break;
+{{ indent * 2 }}default:
+{{ indent * 3 }}error = EXI_ERROR__UNKNOWN_GRAMMAR_ID;
+{{ indent * 3 }}break;
+{{ indent * 2 }}}
+
+{{ indent * 2 }}if (error)
+{{ indent * 2 }}{
+{{ indent * 3 }}done = 1;
+{{ indent * 2 }}}
+{{ indent }}}
+
+{{ indent }}return error;
+}

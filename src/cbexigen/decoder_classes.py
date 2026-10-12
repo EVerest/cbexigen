@@ -855,7 +855,9 @@ class ExiDecoderCode(ExiBaseCoderCode):
         content = ''
         for fragment_type in grammar.types.values():
             self.log(f'Element fragment grammar for {fragment_type.name}')
-            content += elementFragmentCoder.get_decoder(prefix, fragment_type, grammar)
+            content += self.generator.get_template('ElementFragmentDecode.jinja').render(
+                indent=self.indent,
+                **elementFragmentCoder.get_render_context(prefix, fragment_type, grammar)) + '\n'
             content += '\n'
 
         return content
