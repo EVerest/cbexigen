@@ -419,9 +419,11 @@ class DatatypeHeader:
 
         content = f'#define {elementFragmentCoder.get_feature_define(prefix)} 1\n\n'
         for fragment_type in grammar.types.values():
-            content += elementFragmentCoder.get_struct(prefix, fragment_type)
+            context = elementFragmentCoder.get_render_context(prefix, fragment_type, grammar)
+            content += self.generator.get_template('ElementFragmentStruct.jinja').render(
+                indent=' ' * self.config['c_code_indent_chars'], **context) + '\n'
             content += '\n'
-            struct_name = elementFragmentCoder.get_type_name(prefix, fragment_type)
+            struct_name = context['struct_name']
             self.analyzer_data.known_prototypes[struct_name] = fragment_type.type
 
         return content + '\n'
@@ -766,7 +768,7 @@ class DatatypeCode:
                            elements=elements)
 
     def __get_element_fragment_content(self):
-        """init functions for the element fragment structs."""
+        """Init functions for the element fragment structs."""
         grammar = self.analyzer_data.element_fragment_grammar
         if grammar is None or not grammar.types:
             return ''
