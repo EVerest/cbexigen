@@ -969,7 +969,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
 
             if skip_element:
                 curr_idx += 1
-                if curr_idx > len(self.elements_to_generate):
+                if curr_idx >= len(self.elements_to_generate):
                     log_write_error('Module encoder: Generator loop aborted! Index larger than existing elements.')
                     break
             else:

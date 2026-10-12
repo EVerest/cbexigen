@@ -973,7 +973,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
 
             if skip_element:
                 curr_idx += 1
-                if curr_idx > len(self.elements_to_generate):
+                if curr_idx >= len(self.elements_to_generate):
                     log_write_error('Module decoder: Generator loop aborted! Index larger than existing elements.')
                     break
             else:

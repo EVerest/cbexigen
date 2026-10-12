@@ -444,7 +444,7 @@ class ExiBaseCoderCode:
             choice_options = self.ChoiceOptions(element, particle)
             combined_min_occurs_from_choice = \
                 choice_options.min_occurs if choice_options.particles else particle.min_occurs
-            if combined_min_occurs_from_choice == 1:
+            if combined_min_occurs_from_choice >= 1:
                 index_last_nonoptional_particle = particle_index
 
         def _particle_is_in_choice(element: ElementData, particle: Particle):
@@ -631,11 +631,10 @@ class ExiBaseCoderCode:
                         if m < _max:
                             # flag=Grammar.LOOP indicates that the _next_ grammar will be the same as this one
                             #
-                            # Note: We do not loop on the mandatory elements of an array, it would require extra
-                            # logic, and we have no min_occurs larger than 2 (i.e. no large repetition of mandatory
-                            # elements) anyway in our existing standards.
-
-                            if m > 1 and m > part.min_occurs - 1 and (part.max_occurs_old is None or m < part.max_occurs_old):
+                            # Do not enter the self-loop until all mandatory occurrences have been consumed.
+                            # Before minOccurs is reached, the grammar must only accept another START event;
+                            # allowing END or LOOP too early changes the event-code width and misaligns EXI.
+                            if m > 1 and m > part.min_occurs and (part.max_occurs_old is None or m < part.max_occurs_old):
                                 flag = GrammarFlag.LOOP
                                 skip_to_end = True
                             else:
