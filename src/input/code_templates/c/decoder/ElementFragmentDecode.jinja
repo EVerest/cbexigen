@@ -1,0 +1,102 @@
+{% macro decode_string(name, define, level) -%}
+{{ indent * level }}error = exi_basetypes_decoder_uint_16(stream, &{{ fragment.type }}->{{ name }}.charactersLen);
+{{ indent * level }}if (error == 0)
+{{ indent * level }}{
+{{ indent * (level + 1) }}if ({{ fragment.type }}->{{ name }}.charactersLen >= 2)
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}// string tables and table partitions are not supported, so the length has to be decremented by 2
+{{ indent * (level + 2) }}{{ fragment.type }}->{{ name }}.charactersLen -= 2;
+{{ indent * (level + 2) }}error = exi_basetypes_decoder_characters(stream, {{ fragment.type }}->{{ name }}.charactersLen, {{ fragment.type }}->{{ name }}.characters, {{ define }});
+{{ indent * (level + 1) }}}
+{{ indent * (level + 1) }}else
+{{ indent * (level + 1) }}{
+{{ indent * (level + 2) }}// the string seems to be in the table, but this is not supported
+{{ indent * (level + 2) }}error = EXI_ERROR__STRINGVALUES_NOT_SUPPORTED;
+{{ indent * (level + 1) }}}
+{{ indent * level }}}
+{%- endmacro -%}
+{% include 'ElementFragmentComment.jinja' %}
+static int decode_{{ struct_name }}(exi_bitstream_t* stream, struct {{ struct_name }}* {{ fragment.type }}) {
+{{ indent }}int grammar_id = 0;
+{{ indent }}int done = 0;
+{{ indent }}uint32_t eventCode;
+{{ indent }}int error;
+
+{{ indent }}init_{{ struct_name }}({{ fragment.type }});
+
+{{ indent }}while (!done)
+{{ indent }}{
+{{ indent * 2 }}switch (grammar_id)
+{{ indent * 2 }}{
+{{ indent * 2 }}case 0:
+{{ indent * 3 }}// Grammar: ElementFragment_0; read/write bits={{ first_bits }}
+{{ indent * 3 }}error = exi_basetypes_decoder_nbit_uint(stream, {{ first_bits }}, &eventCode);
+{{ indent * 3 }}if (error == 0)
+{{ indent * 3 }}{
+{{ indent * 4 }}switch (eventCode)
+{{ indent * 4 }}{
+{% for attribute in fragment.attributes -%}
+{{ indent * 4 }}case {{ attribute.event_code }}:
+{{ indent * 5 }}// Event: AT({{ attribute.qname }}); next=ElementFragment_0
+{{ indent * 5 }}// decode: string (len, characters) (Attribute)
+{{ decode_string(attribute.name, prefix ~ attribute.define, 5) }}
+{{ indent * 5 }}{{ fragment.type }}->{{ attribute.name }}_isUsed = 1u;
+{{ indent * 5 }}grammar_id = 0;
+{{ indent * 5 }}break;
+{% endfor -%}
+{% if fragment.has_characters -%}
+{{ indent * 4 }}case {{ grammar.first_characters_code }}:
+{{ indent * 5 }}// Event: CH [untyped value]; next=ElementFragment_1
+{{ indent * 5 }}// decode: string (len, characters)
+{{ decode_string('CONTENT', prefix ~ fragment.content_define, 5) }}
+{{ indent * 5 }}{{ fragment.type }}->CONTENT_isUsed = 1u;
+{{ indent * 5 }}grammar_id = 1;
+{{ indent * 5 }}break;
+{% endif -%}
+{{ indent * 4 }}case {{ grammar.first_end_element_code }}:
+{{ indent * 5 }}// Event: END Element
+{{ indent * 5 }}done = 1;
+{{ indent * 5 }}break;
+{{ indent * 4 }}default:
+{{ indent * 5 }}error = EXI_ERROR__UNKNOWN_EVENT_CODE;
+{{ indent * 5 }}break;
+{{ indent * 4 }}}
+{{ indent * 3 }}}
+{{ indent * 3 }}break;
+{{ indent * 2 }}case 1:
+{{ indent * 3 }}// Grammar: ElementFragment_1; read/write bits={{ content_bits }}
+{{ indent * 3 }}error = exi_basetypes_decoder_nbit_uint(stream, {{ content_bits }}, &eventCode);
+{{ indent * 3 }}if (error == 0)
+{{ indent * 3 }}{
+{{ indent * 4 }}switch (eventCode)
+{{ indent * 4 }}{
+{{ indent * 4 }}case {{ grammar.content_end_element_code }}:
+{{ indent * 5 }}// Event: END Element
+{{ indent * 5 }}done = 1;
+{{ indent * 5 }}break;
+{% if fragment.has_characters -%}
+{{ indent * 4 }}case {{ grammar.content_characters_code }}:
+{{ indent * 5 }}// Event: CH [untyped value]; a second character event cannot be
+{{ indent * 5 }}// stored in the single CONTENT member
+{{ indent * 5 }}error = EXI_ERROR__UNSUPPORTED_SUB_EVENT;
+{{ indent * 5 }}break;
+{% endif -%}
+{{ indent * 4 }}default:
+{{ indent * 5 }}error = EXI_ERROR__UNKNOWN_EVENT_CODE;
+{{ indent * 5 }}break;
+{{ indent * 4 }}}
+{{ indent * 3 }}}
+{{ indent * 3 }}break;
+{{ indent * 2 }}default:
+{{ indent * 3 }}error = EXI_ERROR__UNKNOWN_GRAMMAR_ID;
+{{ indent * 3 }}break;
+{{ indent * 2 }}}
+
+{{ indent * 2 }}if (error)
+{{ indent * 2 }}{
+{{ indent * 3 }}done = 1;
+{{ indent * 2 }}}
+{{ indent }}}
+
+{{ indent }}return error;
+}

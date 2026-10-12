@@ -42,11 +42,11 @@ decode_function_prefix = 'decode_'
 choice_sequence_prefix = 'choice_'
 
 # Ambiguous element names are elements with the same name but different types.
-# Currently, this only seems to apply to the eMAID element from ISO 15118-2.
-# With the fragment coder, the type for the ambiguous element must be specified
-# here so that the correct decoder or encoder is called.
+# These are detected in the schema and coded with the EXI element fragment
+# grammar, so nothing has to be listed here. An entry still overrides the
+# detected type, which is only useful to pin a coder to one of the types on
+# purpose.
 iso2_ambiguous_element_names = {
-    'eMAID': 'EMAIDType',
 }
 
 # optimizations for arrays and structs
@@ -78,13 +78,13 @@ iso20_array_optimizations = {
 
 # if fragment de- and encoder should be generated, set this value to 1.
 # Currently only complex elements can be added to the fragment coders.
-# NOTE! There may be problems when comparing the signature of the eMAID.
-#       In the ISO 15118-2 schema there are two different types with problematic names, EMAIDType and eMAIDType.
-#       The fragment de- and encoder of e.g. openV2G considers this type as generic type
-#       EXISchemaInformedElementFragmentGrammar. We treat it as a complex type.
-#       We have not yet been able to determine why this particular type has to be coded as a generic type,
-#       and only for the fragment decoder and encoder.
-#       This is why we have not yet adapted our fragment coders, and it can lead to the problem mentioned.
+# An element whose qname is declared more than once, with declarations that do
+# not all agree on type name and {nillable}, is coded with the EXI element
+# fragment grammar instead of with a type grammar (EXI 1.0, 8.5.3). A fragment
+# carries no parent context, so there is nothing to pick one of the
+# declarations by. In ISO 15118-2 this is eMAID, declared as both EMAIDType and
+# eMAIDType, which is why its signed fragment used to disagree with other
+# implementations.
 generate_fragments = 1
 # fragment structure definitions
 fragment_struct_name = 'exiFragment'
