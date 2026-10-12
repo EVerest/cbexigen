@@ -626,7 +626,7 @@ class ExiBaseCoderCode:
                     add_extra = (part.max_occurs >= 1 and part.max_occurs_was_changed)
                     skip_to_end = False  # for LOOP, do not create grammar for subsequent repetitions
                     for m in range(1, _max + 1):
-                        if skip_to_end:
+                        if skip_to_end and m < _max:
                             continue
                         if m < _max:
                             # flag=Grammar.LOOP indicates that the _next_ grammar will be the same as this one
