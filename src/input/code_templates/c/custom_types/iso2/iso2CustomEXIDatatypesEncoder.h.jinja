@@ -1,0 +1,18 @@
+{% extends "BaseHeader.jinja" %}
+
+{% block description %}
+/**
+  * @file {{ filename }}
+  * @brief Encoding of custom data types for ISO 15118-2 EXI parser
+  *
+  **/
+{% endblock description %}
+
+{% block includes %}
+#include <iso2_CustomEXIDatatypes.h>
+#include <exi_bitstream.h>
+{% endblock %}
+
+{% block content %}
+int encode_iso2_EXISchemaInformedElementFragmentGrammar(exi_bitstream_t* stream, struct iso2_EXISchemaInformedElementFragmentGrammar* exiElementFrag);
+{% endblock %}

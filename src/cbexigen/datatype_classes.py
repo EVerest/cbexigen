@@ -423,9 +423,8 @@ class DatatypeHeader:
                     fragment_type = fragment.name
 
                 prefixed_type = f'{self.parameters["prefix"]}{fragment_type}'
-                if fragment_type in self.analyzer_data.known_elements.values():
-                    elements.append((prefixed_type, fragment.name))
-                else:
+                elements.append((prefixed_type, fragment.name))
+                if not fragment_type in self.analyzer_data.known_elements.values():
                     log_write_error(f'Fragment {fragment.name} ({fragment.type}) '
                                     f'is not in the list of known elements.')
 
