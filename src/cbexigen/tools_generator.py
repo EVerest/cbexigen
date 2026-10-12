@@ -30,7 +30,10 @@ def get_generator():
 
 def get_includes_content(config_dict):
     temp = get_generator().get_template('BaseInclude.jinja')
-    result = temp.render(std_lib_items=config_dict['include_std_lib'], elements=config_dict['include_other'])
+    elements = list(config_dict['include_other'])
+    elements.extend(config_dict.get('include_other_shared', []))
+
+    result = temp.render(std_lib_items=config_dict['include_std_lib'], elements=elements)  # nosemgrep: direct-use-of-jinja2
 
     return tools.adjust_string_start_end(result)
 

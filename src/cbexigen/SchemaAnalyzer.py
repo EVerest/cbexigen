@@ -2,8 +2,9 @@
 # Copyright (c) 2022 - 2023 chargebyte GmbH
 # Copyright (c) 2022 - 2023 Contributors to EVerest
 from typing import Union
+from pathlib import Path
 
-from xmlschema import XMLSchema11, XsdElement, XsdType, XsdAttribute
+from xmlschema import XMLResource, XMLSchema11, XsdElement, XsdType, XsdAttribute
 from xmlschema.validators import (XsdSimpleType, XsdComplexType, XsdGroup, XsdAnyElement, Xsd11AnyElement,
                                   Xsd11AtomicRestriction, Xsd11Element)
 
@@ -240,6 +241,19 @@ class SchemaAnalyzer(object):
                 if not recursive_substitute.abstract:
                     yield recursive_substitute
 
+    def __get_substitution_element_term_set(self, head: XsdElement):
+        declarations = {head.qualified_name: head}
+        pending = [head]
+        while pending:
+            current = pending.pop()
+            for member in self.__current_schema.maps.substitution_groups.get(current.qualified_name, []):
+                if member.qualified_name not in declarations:
+                    declarations[member.qualified_name] = member
+                    pending.append(member)
+
+        return sorted(declarations.values(), key=lambda item: (item.local_name or '',
+                                                                 item.target_namespace or ''))
+
     @staticmethod
     def __get_child_count(element: [XsdElement, XMLSchema11]):
         count = 0
@@ -313,6 +327,14 @@ class SchemaAnalyzer(object):
 
         return result
 
+    def __append_root_element(self, element_data, element):
+        for index, existing in enumerate(self.__root_elements):
+            if existing.name_short == element_data.name_short:
+                if element.schema.url == self.__current_schema.url:
+                    self.__root_elements[index] = element_data
+                return
+        self.__root_elements.append(element_data)
+
     def __add_to_max_occurs(self, name, occurrence):
         result = False
 
@@ -353,6 +375,12 @@ class SchemaAnalyzer(object):
         particle = Particle(prefix=self.__schema_prefix)
 
         particle.name = attribute.local_name
+
+        ns = tools.extract_namespace_uri(getattr(attribute, 'name', ''))
+        if ns:
+            particle.namespace = ns
+        elif hasattr(attribute, 'default_namespace') and attribute.default_namespace:
+            particle.namespace = attribute.default_namespace
 
         particle.type = self.__get_type_name(attribute)
         particle.type_short = self.__get_type_name_short(attribute)
@@ -418,6 +446,12 @@ class SchemaAnalyzer(object):
 
         particle.name = element.local_name
 
+        ns = tools.extract_namespace_uri(element.name)
+        if ns:
+            particle.namespace = ns
+        elif hasattr(element, 'default_namespace') and element.default_namespace:
+            particle.namespace = element.default_namespace
+
         particle.type = self.__get_type_name(element)
         particle.type_short = self.__get_type_name_short(element)
         particle.base_type = self.__get_base_type_name(element)
@@ -480,6 +514,12 @@ class SchemaAnalyzer(object):
             particle.abstract = True
 
         particle.name = substitute.local_name
+
+        ns = tools.extract_namespace_uri(substitute.name)
+        if ns:
+            particle.namespace = ns
+        elif hasattr(substitute, 'default_namespace') and substitute.default_namespace:
+            particle.namespace = substitute.default_namespace
 
         particle.type = self.__get_type_name(substitute)
         particle.type_short = self.__get_type_name_short(substitute)
@@ -571,6 +611,7 @@ class SchemaAnalyzer(object):
 
     def __get_particle_list(self, element: XsdElement, subst_list):
         particles = []
+        substitution_choices = []
         child_count = sum(1 for _ in element.iterchildren())
 
         for child in element.iterchildren():
@@ -594,18 +635,47 @@ class SchemaAnalyzer(object):
                 particles.append(particle)
                 continue
 
-            if self.__is_abstract(child):
-                # get substituted particles for child
+            head = self.__current_schema.maps.elements.get(child.qualified_name)
+            term_set = self.__get_substitution_element_term_set(head) if head is not None else []
+            has_local_members = any(declaration.qualified_name != head.qualified_name
+                                    and declaration.schema.url == self.__current_schema.url
+                                    for declaration in term_set) if head is not None else False
+            if head is not None and has_local_members:
+                alternatives = []
+                for declaration in term_set:
+                    particle = (self.__get_particle(child)
+                                if declaration.qualified_name == head.qualified_name
+                                else self.__get_abstract_particle(child, declaration))
+                    particle.is_substitute = True
+                    particle.min_occurs = 0
+                    particle.max_occurs = child.effective_max_occurs
+                    alternatives.append(particle)
+                    if declaration.qualified_name != head.qualified_name:
+                        subst_list.append(declaration)
+                    self.__known_particles[particle.name] = particle
+                particles.extend(alternatives)
+                substitution_choices.append(([part.name for part in alternatives],
+                                             child.effective_min_occurs,
+                                             child.effective_max_occurs))
+                continue
+
+            if self.__is_abstract(child) or self.__is_abstract_type(child):
                 qname = self.__get_name(child)
-                subst_group = self.__current_schema.substitution_groups._target_dict.get(qname)
-                if subst_group:
-                    for elem in self.__sorted_xsd_elements(subst_group):
-                        particle = self.__get_abstract_particle(child, elem)
-                        particles.append(particle)
-                        subst_list.append(elem)
-                        self.__known_particles[particle.name] = particle
+                if self.__is_abstract(child):
+                    subst_group = self.__current_schema.maps.substitution_groups.get(qname)
+                    if subst_group:
+                        for elem in self.__sorted_xsd_elements(subst_group):
+                            particle = self.__get_abstract_particle(child, elem)
+                            particles.append(particle)
+                            subst_list.append(elem)
+                            self.__known_particles[particle.name] = particle
+                    else:
+                        msg_write("No Substitute group (child) found for " + qname)
                 else:
-                    msg_write("No Substitute group (child) found for " + qname)
+                    particle = self.__get_particle(child)
+                    self.__test_for_parent_sequence(particle, child)
+                    self.__test_for_parent_simple_content(particle, child)
+                    particles.append(particle)
             else:
                 particle = self.__get_particle(child)
                 self.__test_for_parent_sequence(particle, child)
@@ -615,7 +685,7 @@ class SchemaAnalyzer(object):
         if self.__is_abstract_type(element):
             # get substituted particles for element
             qname = self.__get_name(element)
-            subst_group = self.__current_schema.substitution_groups._target_dict.get(qname)
+            subst_group = self.__current_schema.maps.substitution_groups.get(qname)
             if subst_group:
                 for elem in self.__sorted_xsd_elements(subst_group):
                     particle = self.__get_abstract_particle(element, elem)
@@ -625,7 +695,7 @@ class SchemaAnalyzer(object):
             else:
                 msg_write("No Substitute group (element) found for " + qname)
 
-        return particles
+        return particles, substitution_choices
 
     @staticmethod
     def __add_choice_info_if_exists(element: XsdElement, elem_data: ElementData):
@@ -836,9 +906,13 @@ class SchemaAnalyzer(object):
                                             max_occurs=1)
                             element_data.particles.append(part)
 
-            particles = self.__get_particle_list(element, subst_list)
+            particles, substitution_choices = self.__get_particle_list(element, subst_list)
             for particle in particles:
                 element_data.particles.append(particle)
+
+            if substitution_choices:
+                element_data.has_abstract_sequence = True
+                element_data.abstract_sequences.extend(substitution_choices)
 
             element_data.sequences = []
             self.__add_choice_info_if_exists(element, element_data)
@@ -875,7 +949,7 @@ class SchemaAnalyzer(object):
                     msg_write((level + 1) * "    " + "ABSTRACT TYPE is extension")
 
                 qname = self.__get_name(child)
-                sg = self.__current_schema.substitution_groups._target_dict.get(qname)
+                sg = self.__current_schema.maps.substitution_groups.get(qname)
                 if sg:
                     for substitute in self.__sorted_xsd_elements(sg):
                         substitute_type_name = self.__get_type_name(substitute)
@@ -950,28 +1024,80 @@ class SchemaAnalyzer(object):
         self.__build_schema_builtin_types_list()
 
         if self.__is_iso20:
-            for element in self.__current_schema.elements._target_dict.values():
+            # ISO-20 puts many reusable declarations in named complex/simple
+            # types without declaring a global element for each one.  Seed
+            # those local types as synthetic elements so their owning schema
+            # emits the shared C definition exactly once.
+            type_prefix = next((prefix for prefix, namespace in self.__current_schema.namespaces.items()
+                                if prefix and namespace == self.__current_schema.target_namespace), None)
+            global_element_types = {
+                element.type.qualified_name
+                for element in self.__current_schema.maps.elements.values()
+                if element.schema.url == self.__current_schema.url
+                and element.type is not None
+                and element.type.qualified_name
+            }
+            is_dedicated_owner = Path(self.__schema_file.name).name in {
+                'V2G_CI_CommonTypes.xsd',
+                'xmldsig-core-schema.xsd',
+            }
+            for schema_type in self.__current_schema.types.values():
+                if schema_type.target_namespace != self.__current_schema.target_namespace:
+                    continue
+                if schema_type.qualified_name in global_element_types:
+                    continue
+                if is_dedicated_owner:
+                    self.__generate_elements[:] = [
+                        item for item in self.__generate_elements
+                        if item.type != schema_type.qualified_name
+                    ]
+                if any(item.type == schema_type.qualified_name
+                       and item.prefix == self.__schema_prefix
+                       for item in self.__generate_elements):
+                    continue
+                type_name = f'{type_prefix}:{schema_type.local_name}' if type_prefix else schema_type.local_name
+                element_xml = (f'<xs:element xmlns:xs="http://www.w3.org/2001/XMLSchema" '
+                               f'name="{schema_type.local_name}" type="{type_name}" />')
+                synthetic = XsdElement(XMLResource(element_xml).root, self.__current_schema)
+                element_data = self.__get_element_data(synthetic, level, count, subst_list)
+                if element_data.type_definition not in ('complex', 'enum'):
+                    continue
+                self.__known_elements[schema_type.qualified_name] = schema_type.local_name
+                self.__generate_elements.append(element_data)
+
+            for element in self.__current_schema.maps.elements.values():
                 if element.prefixed_name.startswith('xs:'):
                     continue
 
-                element_data = self.__get_element_data(element, level, count, subst_list)
+                is_imported_element = element.schema.url != self.__current_schema.url
+                element_substitutes = []
+                element_data = self.__get_element_data(element, level, count, element_substitutes)
+                if is_imported_element:
+                    element_substitutes = [substitute for substitute in element_substitutes
+                                           if substitute.schema.url == self.__current_schema.url]
 
                 if self.config['generate_analysis_tree_20'] == 1:
                     tools.generate_analysis_tree(self.__current_schema, element_data.name_short, self.__schema_prefix)
 
                 if element_data.typename in self.__schema_builtin_types:
-                    self.__root_elements.append(element_data)
+                    self.__append_root_element(element_data, element)
                     continue
                 if element_data.content_type == 'simple' and len(element_data.particles) == 0:
-                    self.__root_elements.append(element_data)
+                    self.__append_root_element(element_data, element)
                     continue
 
-                if element.type.qualified_name:
+                if (element.schema.url == self.__current_schema.url
+                        and element.type.qualified_name):
                     if element.type.qualified_name not in self.__known_elements:
                         self.__known_elements[element.type.qualified_name] = element.type.local_name
                         self.__generate_elements.append(element_data)
+                elif (is_imported_element and element.type.is_complex()
+                      and element_substitutes):
+                    element_data.contextual_type_name = self.__schema_prefix + element_data.typename
+                    self.__known_elements[element_data.type] = element_data.type_short
+                    self.__generate_elements.append(element_data)
 
-                self.__root_elements.append(element_data)
+                self.__append_root_element(element_data, element)
 
                 self.__get_child_tree(element, level)
                 count += 1
@@ -1034,8 +1160,10 @@ class SchemaAnalyzer(object):
         self.__prepare_for_type_generation()
 
     def __build_schema_builtin_types_list(self):
-        xs_namespace = self.__current_schema.namespaces['xs']
-        for value in self.__current_schema.types._target_dict.values():
+        xs_namespace = self.__current_schema.namespaces.get('xs')
+        if xs_namespace is None:
+            xs_namespace = self.__current_schema.namespaces.get('')
+        for value in self.__current_schema.maps.types.values():
             if value.target_namespace == xs_namespace:
                 if value.__class__.__name__ == 'XsdAtomicBuiltin':
                     if value.simple_type.base_type is not None:
@@ -1055,6 +1183,8 @@ class SchemaAnalyzer(object):
                 fragment.namespace = fragment_element.name[1:fragment_element.name.index('}')]
             else:
                 fragment.namespace = fragment_element.default_namespace
+
+            fragment.is_complex = fragment_element.type.is_complex()
 
             if fragment.name in ambiguous_names_list.keys():
                 fragment.type = ambiguous_names_list[fragment.name]
@@ -1088,7 +1218,7 @@ class SchemaAnalyzer(object):
         self.__known_fragments.clear()
         fragments = {}
 
-        for element in self.__current_schema.elements._target_dict.values():
+        for element in self.__current_schema.maps.elements.values():
             if element.default_namespace:
                 if element.name not in fragments.keys():
                     fragments[element.name] = __get_fragment(element)
@@ -1134,7 +1264,7 @@ class SchemaAnalyzer(object):
         current_namespace = self.__current_schema.get_schema('')
         for ele in current_namespace.elements.values():
             items = []
-            for value in current_namespace.elements._target_dict.values():
+            for value in current_namespace.maps.elements.values():
                 if value.default_namespace:
                     name = self.__get_type_name_short(value)
                     if name == '' or name in ['AnonType', 'string']:
@@ -1168,15 +1298,21 @@ class SchemaAnalyzer(object):
 
             for gen_elem in self.__generate_elements:
                 if gen_elem.type == '{' + imp.default_namespace + '}' + name:
+                    # Skip substitution group heads – their particles come from
+                    # the substitution group expansion, not from namespace imports.
+                    if self.__current_schema.maps.substitution_groups.get(gen_elem.name):
+                        continue
                     gen_elem.particles = items
                     gen_elem.is_in_namespace_elements = True
                     self.__namespace_elements[name] = items
                     break
 
     def __build_generate_elements_types_list(self):
-        xs_namespace = self.__current_schema.namespaces['xs']
+        xs_namespace = self.__current_schema.namespaces.get('xs')
+        if xs_namespace is None:
+            xs_namespace = self.__current_schema.namespaces.get('')
         type_list = []
-        for value in self.__current_schema.types._target_dict.values():
+        for value in self.__current_schema.maps.types.values():
             if value.target_namespace != xs_namespace and value.content_type_label == 'element-only':
                 type_list.append(value.local_name)
 
@@ -1269,7 +1405,7 @@ class SchemaAnalyzer(object):
         with the sorted particles from replacement_list.
         """
         # the replacements need to be sorted alphabetically
-        replacement_list.sort(key=lambda particle_key: particle_key.name)
+        replacement_list.sort(key=lambda p: (p.name or '', p.namespace or ''))
 
         # the particles need to be sorted by index, for proper removal
         particle_list.sort(key=lambda x: x[0])
@@ -1284,8 +1420,10 @@ class SchemaAnalyzer(object):
         # drop all the particles listed in particle_list
         p_index: int
         for p_index, p in reversed(particle_list):
-            if parent_element.particles[p_index] != p:
-                log_write(f"particle '{p.name}' not found in '{parent_element.name_short}'")
+            if p_index >= len(parent_element.particles) or parent_element.particles[p_index] is not p:
+                raise RuntimeError(
+                    f"particle '{p.name}' at index {p_index} does not match in "
+                    f"'{parent_element.name_short}' -- particle list is stale")
             del parent_element.particles[p_index]
 
         # insert the replacements at the original position, assuming the lowest original particle
@@ -1307,6 +1445,9 @@ class SchemaAnalyzer(object):
     def __copy_particles_from_empty_content_elements(self, element: ElementData, parents):
         parent: ElementData
         for parent in parents:
+            if any(set(particle.name for particle in element.particles).issubset(set(choice_names))
+                   for choice_names, _min_occurs, _max_occurs in parent.abstract_sequences):
+                continue
             replacement_list = []
             log_write(f'  Copying particle(s) of {element.name_short} to {parent.name_short}.')
             particles_to_remove = []  # list of tuples (index within parent, particle)
@@ -1326,11 +1467,17 @@ class SchemaAnalyzer(object):
                 else:
                     log_write(f'    Add to list and remove particle {particle.name}.')
                     replacement_list.append(particle)
-                    if particle in parent.particles:
-                        particles_to_remove.append((parent.particles.index(particle), particle))
+                    # Use name-based lookup (not object identity) to find the
+                    # matching particle in parent for removal.
+                    for idx, pp in enumerate(parent.particles):
+                        if pp.name == particle.name and (idx, pp) not in particles_to_remove:
+                            particles_to_remove.append((idx, pp))
+                            break
 
-            for particle in parent.particles:
+            for idx, particle in enumerate(parent.particles):
                 if particle.name != element.name_short:
+                    continue
+                if (idx, particle) in particles_to_remove:
                     continue
 
                 log_write(f'    Add to list and remove particle {particle.name}.')
@@ -1338,7 +1485,7 @@ class SchemaAnalyzer(object):
                 p_max_occurs = particle.max_occurs
                 particle.min_occurs = 0
                 replacement_list.append(particle)
-                particles_to_remove.append((parent.particles.index(particle), particle))
+                particles_to_remove.append((idx, particle))
 
             if len(replacement_list) > 0:
                 self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list,
@@ -1380,6 +1527,9 @@ class SchemaAnalyzer(object):
                                 abstract=True,
                                 min_occurs=0,
                                 max_occurs=1)
+            ns = tools.extract_namespace_uri(element.name)
+            if ns:
+                part_new.namespace = ns
             replacement_list.append(part_new)
 
             self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list,
@@ -1465,10 +1615,13 @@ class SchemaAnalyzer(object):
                                         type_short=element.type_short,
                                         min_occurs=0,
                                         max_occurs=1)
+                        ns = tools.extract_namespace_uri(element.name)
+                        if ns:
+                            part.namespace = ns
                         re_list.append(part)
 
                         if len(re_list) > 0:
-                            re_list.sort(key=lambda particle_key: particle_key.name)
+                            re_list.sort(key=lambda p: (p.name or '', p.namespace or ''))
                             abstract_seq = []
                             for part in re_list:
                                 log_write(f'    Add particle from list {part.name}.')
@@ -1482,25 +1635,28 @@ class SchemaAnalyzer(object):
         log_write('')
         log_write('Scan for derived and extended elements')
 
-        def find_base_type(base_type_name):
-            result = None
-            for item in self.__current_schema.elements._target_dict.values():
-                if item.prefixed_name.startswith('xs:'):
-                    continue
-                if item.type.base_type is None:
-                    continue
-
-                if item.type.base_type.local_name == base_type_name:
-                    result = item
-                    break
-
-            return result
+        # Pre-build lookup: base_type_name -> [elements derived from it]
+        base_type_map = {}
+        for item in self.__current_schema.maps.elements.values():
+            if item.prefixed_name.startswith('xs:'):
+                continue
+            if item.type.base_type is None:
+                continue
+            key = item.type.base_type.local_name
+            base_type_map.setdefault(key, []).append(item)
 
         element: ElementData
         particle: Particle
         for element in self.__generate_elements:
             list_with_missing = []
+            substitution_choice_particles = {
+                name
+                for choice_names, _min_occurs, _max_occurs in element.abstract_sequences
+                for name in choice_names
+            }
             for particle in element.particles:
+                if particle.name in substitution_choice_particles:
+                    continue
                 if particle.type_short not in self.__schema_builtin_types:
                     if particle.abstract_type:
                         particle.min_occurs_old = particle.min_occurs
@@ -1508,20 +1664,20 @@ class SchemaAnalyzer(object):
                         list_with_missing.append(particle)
                         log_write(f'    Adding abstract particle {particle.name} to missing list.')
 
-                    # get the base type, add it as particle
-                    missing_element = find_base_type(particle.type_short)
-                    if missing_element is not None:
-                        part = self.__get_particle(missing_element)
-
+                    # get all elements derived from this type, add them as particles
+                    missing_elements = base_type_map.get(particle.type_short, [])
+                    if len(missing_elements) > 0:
                         particle.min_occurs_old = particle.min_occurs
                         particle.min_occurs = 0
                         list_with_missing.append(particle)
                         log_write(f'    Adding particle {particle.name} to missing list.')
 
-                        part.min_occurs_old = part.min_occurs
-                        part.min_occurs = 0
-                        list_with_missing.append(part)
-                        log_write(f'    Adding missing particle {part.name} to missing list.')
+                        for missing_element in missing_elements:
+                            part = self.__get_particle(missing_element)
+                            part.min_occurs_old = part.min_occurs
+                            part.min_occurs = 0
+                            list_with_missing.append(part)
+                            log_write(f'    Adding missing particle {part.name} to missing list.')
 
             if len(list_with_missing) > 0:
                 first = -1
