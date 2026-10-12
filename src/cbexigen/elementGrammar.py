@@ -38,7 +38,7 @@ class ElementGrammarDetail:
         if self.particle is None:
             return False
 
-        return self.particle.min_occurs == 0 and self.particle.max_occurs > 1
+        return self.particle.min_occurs == 0 and self.particle.is_array
 
     @property
     def is_mandatory(self):
