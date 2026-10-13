@@ -1,0 +1,22 @@
+# ISO 15118-20 EXI streams with one repeated particle at exactly its maxOccurs.
+#
+# Provenance. Each stream was coded by Exificient 0.9.6 from a hand-written XML
+# message, with a grammar built from the ISO 15118-20 CommonMessages schemas by
+# GrammarFactory.createGrammars and the default fidelity options, which are the
+# options V2G communication uses. Each stream decodes back with Exificient to
+# its XML message, and coding that XML again gives the same bytes. The same
+# path reproduces every ISO 15118-2 stream in array_breakout_iso2.txt byte for
+# byte. The streams are captured once and nothing in the repository
+# regenerates them.
+#
+# The messages. Every case is a full message with a header whose SessionID is
+# 0102030405060708 and whose TimeStamp is 0. Every field outside the array
+# under test is minimal:
+#
+#   servicediscoveryreq_serviceid_x16
+#                                ServiceDiscoveryReq with SupportedServiceIDs
+#                                at its maximum of 16 ServiceID, values 1 to
+#                                16 (an array of unsigned short).
+#
+# Format: <name> <TAB> <expected EXI hex>
+servicediscoveryreq_serviceid_x16	807C040081018202830384000200200400600800A00C00E01001201401601801A01C01E02000

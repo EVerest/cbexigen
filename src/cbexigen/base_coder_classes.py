@@ -71,6 +71,18 @@ class ExiBaseCoderCode:
             return detail.particle.max_occurs
         return detail.particle.max_occurs_old
 
+    @classmethod
+    def get_array_loop_breakout_args(cls, detail: ElementGrammarDetail, next_grammar_out_arg: str):
+        """
+        Template arguments that make an array of simple type leave its LOOP grammar at the
+        count from get_array_loop_breakout(). next_grammar_out_arg is the template's name
+        for the grammar it leaves to.
+        """
+        breakout_at = cls.get_array_loop_breakout(detail)
+        return {'type_loop_breakout': breakout_at is not None,
+                'type_array_len_schema': breakout_at,
+                next_grammar_out_arg: detail.next_grammar_out}
+
     def __init__(self, parameters, analyzer_data, enable_logging=True):
         self.generator = tools_generator.get_generator()
         self.config = CONFIG_PARAMS

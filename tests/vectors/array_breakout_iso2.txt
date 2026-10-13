@@ -45,6 +45,14 @@
 #                                Cost at its maximum of 3, all
 #                                relativePricePercentage, amounts 100, 90
 #                                and 80.
+#   energytransfermode_x6        ServiceDiscoveryRes as in service_x8, but
+#                                without a ServiceList and with the
+#                                SupportedEnergyTransferMode of the
+#                                ChargeService at its maximum of 6
+#                                EnergyTransferMode, one of each value
+#                                (AC_single_phase_core, AC_three_phase_core,
+#                                DC_core, DC_extended, DC_combo_core,
+#                                DC_unique), an array of a simple type.
 #
 # Josev always codes NumEPriceLevels and EPriceLevel, as 0 when unset, so the
 # tariff cases set them to 0 to keep the decoded message equal.
@@ -62,9 +70,16 @@
 # XML. Josev's from_exi still reports EPriceLevel 0 for it, from beans that
 # always hold the field.
 #
+# How energytransfermode_x6 was made. Exificient 0.9.6 coded a hand-written
+# XML message with a grammar built from the ISO 15118-2 schemas by
+# GrammarFactory.createGrammars and the default fidelity options. That path
+# reproduces every other stream in this file byte for byte when it decodes
+# one to XML and codes it again.
+#
 # Format: <name> <TAB> <expected EXI hex>
 service_x8	809802004080C1014181C211C0012004820120021650010B280085940042CA0021650010B280085940042CA000
 sascheduletuple_x3	809802004080C1014181C210A000000000002028C140C50F8550A00200002028C140C50F8550A00400002028C140C50F8550A0000000C40E601030C08000
 consumptioncost_x3_eprice	809802004080C1014181C210A000000000002028C140C50F855088008000002000062800000C8503143A01C00642818A1A01E00321490000000C40E601030C0800
 consumptioncost_x3_noeprice	809802004080C1014181C210A000000000002028C140C50F855088008000002862800000C8503143A01C00642818A1A01E00321490000000C40E601030C08000
 cost_x3	809802004080C1014181C210A000000000002028C140C50F855088008000002000062800000C8400B4400A04A4000000310398040C302000
+energytransfermode_x6	809802004080C1014181C211C0012004820002081840A100

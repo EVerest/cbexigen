@@ -37,7 +37,19 @@
 {%- if type_option == 1 %}
 {{ indent * (level + 3) }}{{ type_value }}_isUsed = 1u;
 {%- endif %}
+{%- if type_loop_breakout == 1 %}
+{{ indent * (level + 3) }}// LOOP breakout code for schema given maximum, regardless of ARRAY_SIZE definition
+{{ indent * (level + 3) }}if ({{ type_array_len }} < {{ type_array_len_schema }})
+{{ indent * (level + 3) }}{
+{{ indent * (level + 4) }}grammar_id = {{ next_grammar_id }};
+{{ indent * (level + 3) }}}
+{{ indent * (level + 3) }}else
+{{ indent * (level + 3) }}{
+{{ indent * (level + 4) }}grammar_id = {{ next_grammar_id_breakout }};
+{{ indent * (level + 3) }}}
+{%- else %}
 {{ indent * (level + 3) }}grammar_id = {{ next_grammar_id }};
+{%- endif %}
 {{ indent * (level + 2) }}}
 {{ indent * (level + 2) }}else
 {{ indent * (level + 2) }}{
