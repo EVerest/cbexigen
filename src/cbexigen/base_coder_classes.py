@@ -646,6 +646,13 @@ class ExiBaseCoderCode:
                     _max = part.max_occurs_old if part.max_occurs_old is not None else part.max_occurs
                     if part.max_occurs == 1:  # changed from array to 1
                         _max = 2  # only create the one subsequent grammar (START, END)
+                    if part.max_occurs_old is None and part.max_occurs == 2:
+                        # Unbounded in the schema, only the array size was reduced to 2. After the
+                        # 2nd occurrence EXI still offers SE and EE (EXI 1.0, 8.5.4.1.6), so this
+                        # needs the same LOOP grammar as larger sizes; an unrolled list ends in an
+                        # END-only grammar, which is only right for a schema maxOccurs of 2.
+                        # A 3rd occurrence then fails as array full.
+                        _max = 3
                     log_write(f'Handling {part.name} as arrays, _max = {_max}')
 
                     add_extra = (part.max_occurs >= 1 and part.max_occurs_was_changed)
