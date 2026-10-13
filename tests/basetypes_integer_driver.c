@@ -11,9 +11,10 @@
 
 enum operation {
     TO_SIGNED64, TO_SIGNED32, INTEGER64, INTEGER32, SIGNED_BYTES,
-    ENCODE_UINT8, ENCODE_UINT16, ENCODE_UINT32, ENCODE_UINT64,
+    TO_UNSIGNED64, TO_UNSIGNED32, ENCODE_UINT8, ENCODE_UINT16, ENCODE_UINT32, ENCODE_UINT64,
     FROM_SIGNED64, FROM_SIGNED32, DECODE_INTEGER64, DECODE_INTEGER32, PARTS,
-    UINT8, UINT16, UINT32, UINT64, FROM_UNSIGNED32, FROM_UNSIGNED64
+    UINT8, UINT16, UINT32, UINT64, FROM_UNSIGNED32, FROM_UNSIGNED64,
+    DECODE_UNSIGNED64, DECODE_UNSIGNED32, UNSIGNED_BYTES
 };
 
 static const struct {
@@ -21,6 +22,11 @@ static const struct {
     enum operation operation;
     int argc;
 } operations[] = {
+    {"to_unsigned64", TO_UNSIGNED64, 3},
+    {"to_unsigned32", TO_UNSIGNED32, 4},
+    {"decode_unsigned64", DECODE_UNSIGNED64, 3},
+    {"decode_unsigned32", DECODE_UNSIGNED32, 4},
+    {"unsigned_bytes", UNSIGNED_BYTES, 3},
     {"to_signed64", TO_SIGNED64, 3},
     {"to_signed32", TO_SIGNED32, 4},
     {"integer64", INTEGER64, 3},
@@ -106,7 +112,7 @@ int main(int argc, char** argv)
         } else {
             length = hex_length / 2;
         }
-    } else if (op >= ENCODE_UINT8 && op <= ENCODE_UINT64) {
+    } else if (op >= TO_UNSIGNED64 && op <= ENCODE_UINT64) {
         unsigned64 = strtoumax(argv[2], NULL, 10);
     } else {
         value64 = strtoimax(argv[2], NULL, 10);
@@ -123,6 +129,35 @@ int main(int argc, char** argv)
     }
 
     switch (op) {
+    case TO_UNSIGNED64:
+    case TO_UNSIGNED32:
+        rc = op == TO_UNSIGNED64 ?
+            exi_basetypes_convert_64_to_unsigned(&unsigned_value, unsigned64) :
+            exi_basetypes_convert_to_unsigned(&unsigned_value, (uint32_t)unsigned64, max_octets);
+        if (rc == 0) {
+            rc = exi_basetypes_encoder_unsigned(&stream, &unsigned_value);
+        }
+        print_wire(rc, &stream);
+        break;
+    case DECODE_UNSIGNED64:
+    case DECODE_UNSIGNED32:
+        rc = exi_basetypes_decoder_unsigned(&stream, &unsigned_value);
+        if (rc == 0) {
+            rc = op == DECODE_UNSIGNED64 ?
+                exi_basetypes_convert_64_from_unsigned(&unsigned_value, &unsigned64) :
+                exi_basetypes_convert_from_unsigned(&unsigned_value, &unsigned32, max_octets);
+        }
+        printf("rc=%d value=%" PRIu64 "\n", rc,
+               op == DECODE_UNSIGNED64 ? unsigned64 : (uint64_t)unsigned32);
+        break;
+    case UNSIGNED_BYTES:
+        rc = exi_basetypes_decoder_unsigned(&stream, &unsigned_value);
+        printf("rc=%d count=%zu bytes=", rc, unsigned_value.octets_count);
+        for (size_t i = 0; i < unsigned_value.octets_count; i++) {
+            printf("%02x", unsigned_value.octets[i]);
+        }
+        putchar('\n');
+        break;
     case ENCODE_UINT8:
         rc = exi_basetypes_encoder_uint_8(&stream, (uint8_t)unsigned64);
         print_wire(rc, &stream);
