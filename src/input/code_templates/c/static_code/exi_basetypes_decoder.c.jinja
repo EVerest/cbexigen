@@ -167,6 +167,11 @@ int exi_basetypes_decoder_uint_8(exi_bitstream_t* stream, uint8_t* value)
         return error;
     }
 
+    if (result > UINT8_MAX)
+    {
+        return EXI_ERROR__ENCODED_INTEGER_SIZE_LARGER_THAN_DESTINATION;
+    }
+
     *value = (uint8_t)result;
 {%- if add_debug_code == 1 %}
 
@@ -195,6 +200,11 @@ int exi_basetypes_decoder_uint_16(exi_bitstream_t* stream, uint16_t* value)
     if (error != EXI_ERROR__NO_ERROR)
     {
         return error;
+    }
+
+    if (result > UINT16_MAX)
+    {
+        return EXI_ERROR__ENCODED_INTEGER_SIZE_LARGER_THAN_DESTINATION;
     }
 
     *value = (uint16_t)result;

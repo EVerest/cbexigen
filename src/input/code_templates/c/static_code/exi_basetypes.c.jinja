@@ -121,21 +121,29 @@ int exi_basetypes_convert_64_to_signed(exi_signed_t* exi_signed, int64_t value)
 
 int exi_basetypes_convert_from_unsigned(const exi_unsigned_t* exi_unsigned, uint32_t* value, size_t max_octets)
 {
-    if (exi_unsigned->octets_count > max_octets)
+    if (exi_unsigned->octets_count > max_octets ||
+        exi_unsigned->octets_count > EXI_BASETYPES_UINT32_MAX_OCTETS)
     {
         return EXI_ERROR__OCTET_COUNT_LARGER_THAN_TYPE_SUPPORTS;
     }
 
+    if (exi_unsigned->octets_count == EXI_BASETYPES_UINT32_MAX_OCTETS &&
+        (exi_unsigned->octets[EXI_BASETYPES_UINT32_MAX_OCTETS - 1] & EXI_BASETYPES_OCTET_SEQ_VALUE_MASK) > 0x0F)
+    {
+        return EXI_ERROR__ENCODED_INTEGER_SIZE_LARGER_THAN_DESTINATION;
+    }
+
     const uint8_t* current_octet = exi_unsigned->octets;
-    *value = 0;
+    uint32_t result = 0;
 
     for (size_t n = 0; n < exi_unsigned->octets_count; n++)
     {
-        *value = *value + ((uint32_t)(*current_octet & EXI_BASETYPES_OCTET_SEQ_VALUE_MASK) << (n * 7));
+        result = result + ((uint32_t)(*current_octet & EXI_BASETYPES_OCTET_SEQ_VALUE_MASK) << (n * 7));
 
         current_octet++;
     }
 
+    *value = result;
     return EXI_ERROR__NO_ERROR;
 }
 
@@ -146,16 +154,23 @@ int exi_basetypes_convert_64_from_unsigned(const exi_unsigned_t* exi_unsigned, u
         return EXI_ERROR__OCTET_COUNT_LARGER_THAN_TYPE_SUPPORTS;
     }
 
+    if (exi_unsigned->octets_count == EXI_BASETYPES_UINT64_MAX_OCTETS &&
+        (exi_unsigned->octets[EXI_BASETYPES_UINT64_MAX_OCTETS - 1] & EXI_BASETYPES_OCTET_SEQ_VALUE_MASK) > 0x01)
+    {
+        return EXI_ERROR__ENCODED_INTEGER_SIZE_LARGER_THAN_DESTINATION;
+    }
+
     const uint8_t* current_octet = exi_unsigned->octets;
-    *value = 0;
+    uint64_t result = 0;
 
     for (size_t n = 0; n < exi_unsigned->octets_count; n++)
     {
-        *value = *value + ((uint64_t)(*current_octet & EXI_BASETYPES_OCTET_SEQ_VALUE_MASK) << (n * 7));
+        result = result + ((uint64_t)(*current_octet & EXI_BASETYPES_OCTET_SEQ_VALUE_MASK) << (n * 7));
 
         current_octet++;
     }
 
+    *value = result;
     return EXI_ERROR__NO_ERROR;
 }
 
