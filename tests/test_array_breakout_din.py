@@ -21,6 +21,9 @@ import unittest
 
 import exi_roundtrip
 
+# Vectors above the array size, each with the driver output it must give.
+ABOVE_LIMIT = {'pmaxscheduleentry_x13': 'decode=-110\n'}
+
 
 class DinArrayBreakoutTest(exi_roundtrip.RoundTripTest):
     standard = 'DIN 70121'
@@ -32,8 +35,13 @@ class DinArrayBreakoutTest(exi_roundtrip.RoundTripTest):
 
     def test_arrays_at_their_limit_round_trip(self):
         vectors = self.read_vectors()
-        self.assertEqual(len(vectors), 1, 'expected 1 pinned vector')
-        self.assert_round_trip(vectors)
+        self.assertEqual(len(vectors), 9, 'expected 9 pinned vectors')
+        self.assert_round_trip([v for v in vectors if v[0] not in ABOVE_LIMIT])
+
+    def test_arrays_above_their_limit_fail_to_decode(self):
+        streams = dict(self.read_vectors())
+        for name, output in ABOVE_LIMIT.items():
+            self.assertEqual(self.run_driver(streams[name]).stdout, output, name)
 
 
 if __name__ == '__main__':

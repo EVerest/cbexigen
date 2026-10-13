@@ -117,7 +117,7 @@ OCCURRENCE_LIMITS_CORRECTED: Dict[str, int] = {
     "Transform": 1,
     "SignatureProperty": 1,
     "Reference": 4,
-    "PMaxScheduleEntry": 5,
+    "PMaxScheduleEntry": 12,  # DIN schema uses unbounded, but restricts it to 12 [V2G-DC-329]
     "KeyName": 1,
     "KeyValue": 1,
     "RetrievalMethod": 1,
