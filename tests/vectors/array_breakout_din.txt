@@ -1,0 +1,25 @@
+# DIN 70121 EXI streams with one repeated particle at its occurrence limit.
+#
+# Provenance. Each stream was coded by Exificient 0.9.6 from a hand-written XML
+# message, with a grammar built from the DIN 70121 schemas (the copy published
+# in the SwitchEV iso15118 project) by GrammarFactory.createGrammars and the
+# default fidelity options, which are the options V2G communication uses.
+# Each stream decodes back with Exificient to its XML message, and coding that
+# XML again gives the same bytes. The same path reproduces every ISO 15118-2
+# stream in array_breakout_iso2.txt byte for byte. The streams are captured
+# once and nothing in the repository regenerates them.
+#
+# The messages. Every case is a full message with a header whose SessionID is
+# 0102030405060708. Every field outside the array under test is minimal:
+#
+#   paymentoption_x2             ServiceDiscoveryRes, ResponseCode OK,
+#                                PaymentOptions with Contract and
+#                                ExternalPayment, and a ChargeService
+#                                (ServiceID 1, EVCharging, not free,
+#                                DC_extended). PaymentOption is unbounded in
+#                                the schema and limited to 2 by the generator,
+#                                so the END after the 2nd occurrence is coded
+#                                with 2 bits.
+#
+# Format: <name> <TAB> <expected EXI hex>
+paymentoption_x2	809A02004080C1014181C211A000090012080620

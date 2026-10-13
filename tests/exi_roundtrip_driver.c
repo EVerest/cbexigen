@@ -7,8 +7,8 @@
 /*
  * Decodes one EXI document, encodes it again and prints the result.
  *
- * The codec is chosen when compiling: -DROUNDTRIP_ISO20 for ISO 15118-20
- * CommonMessages.
+ * The codec is chosen when compiling: -DROUNDTRIP_DIN for DIN 70121,
+ * -DROUNDTRIP_ISO20 for ISO 15118-20 CommonMessages.
  *
  * Prints decode=<rc>, then, when decoding succeeded, encode=<rc> and, when
  * encoding succeeded too, the re-encoded bytes as uppercase hex on their own
@@ -23,14 +23,20 @@
 
 #include "exi_bitstream.h"
 
-#if defined(ROUNDTRIP_ISO20)
+#if defined(ROUNDTRIP_DIN)
+#include "din_msgDefDecoder.h"
+#include "din_msgDefEncoder.h"
+#define EXI_DOCUMENT struct din_exiDocument
+#define DECODE_DOCUMENT decode_din_exiDocument
+#define ENCODE_DOCUMENT encode_din_exiDocument
+#elif defined(ROUNDTRIP_ISO20)
 #include "iso20_CommonMessages_Decoder.h"
 #include "iso20_CommonMessages_Encoder.h"
 #define EXI_DOCUMENT struct iso20_exiDocument
 #define DECODE_DOCUMENT decode_iso20_exiDocument
 #define ENCODE_DOCUMENT encode_iso20_exiDocument
 #else
-#error "select the codec with -DROUNDTRIP_ISO20"
+#error "select the codec with -DROUNDTRIP_DIN or -DROUNDTRIP_ISO20"
 #endif
 
 #define BUFFER_SIZE 4096
