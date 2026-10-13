@@ -84,8 +84,18 @@ static void exi_basetypes_write_magnitude(exi_unsigned_t* data, uint64_t magnitu
 
 static uint64_t exi_basetypes_read_magnitude(const exi_unsigned_t* data)
 {
+    size_t first = 0;
+    while (first < data->octets_count && data->octets[first] == 0)
+    {
+        first++;
+    }
+    if (data->octets_count - first > sizeof(uint64_t))
+    {
+        // Saturate to a magnitude that neither signed destination can hold.
+        return UINT64_MAX;
+    }
     uint64_t magnitude = 0;
-    for (size_t n = 0; n < data->octets_count; n++)
+    for (size_t n = first; n < data->octets_count; n++)
     {
         magnitude = (magnitude << 8u) | data->octets[n];
     }
@@ -156,6 +166,10 @@ int exi_basetypes_convert_from_signed(const exi_signed_t* exi_signed, int32_t* v
     {
         return EXI_ERROR__OCTET_COUNT_LARGER_THAN_TYPE_SUPPORTS;
     }
+    if (magnitude > INT32_MAX)
+    {
+        return EXI_ERROR__ENCODED_INTEGER_SIZE_LARGER_THAN_DESTINATION;
+    }
     *value = exi_signed->is_negative ? -1 - (int32_t)magnitude : (int32_t)magnitude;
     return EXI_ERROR__NO_ERROR;
 }
@@ -163,6 +177,10 @@ int exi_basetypes_convert_from_signed(const exi_signed_t* exi_signed, int32_t* v
 int exi_basetypes_convert_64_from_signed(const exi_signed_t* exi_signed, int64_t* value)
 {
     uint64_t magnitude = exi_basetypes_read_magnitude(&exi_signed->data);
+    if (magnitude > INT64_MAX)
+    {
+        return EXI_ERROR__ENCODED_INTEGER_SIZE_LARGER_THAN_DESTINATION;
+    }
     *value = exi_signed->is_negative ? -1 - (int64_t)magnitude : (int64_t)magnitude;
     return EXI_ERROR__NO_ERROR;
 }
