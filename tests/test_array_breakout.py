@@ -31,9 +31,6 @@ SCHEMA = SRC / 'input' / 'schemas' / 'ISO_15118-2' / 'FDIS' / 'V2G_CI_MsgDef.xsd
 VECTORS = Path(__file__).resolve().parent / 'vectors' / 'array_breakout_iso2.txt'
 DRIVER = Path(__file__).resolve().parent / 'iso2_roundtrip_driver.c'
 CONFIG = Path(__file__).resolve().parent / 'config_iso2_only.py'
-# Vectors the generated codec does not round trip yet, each covered by its own
-# expected failure below.
-KNOWN_FAILURES = {'consumptioncost_x3_noeprice'}
 
 
 def read_vectors():
@@ -120,24 +117,8 @@ class ArrayBreakoutTest(unittest.TestCase):
 
     def test_arrays_at_max_occurs_round_trip(self):
         vectors = read_vectors()
-        self.assertEqual(len(vectors), 6, 'expected 6 pinned vectors')
-        self.assert_round_trip([v for v in vectors if v[0] not in KNOWN_FAILURES])
-
-    # In the generated SalesTariffEntryType decoder, the ConsumptionCost loop
-    # reached without EPriceLevel breaks out at 3 to the grammar that still
-    # offers START (ConsumptionCost), so it reads a fourth one and fails with
-    # EXI_ERROR__ARRAY_OUT_OF_BOUNDS instead of reading END (issue #113).
-    @unittest.expectedFailure
-    def test_consumptioncost_x3_without_eprice_level_round_trips(self):
-        self.assert_round_trip([v for v in read_vectors() if v[0] in KNOWN_FAILURES])
-
-    # Pins how the vector above fails today, so a change that only moves the
-    # failure is caught.
-    def test_consumptioncost_x3_without_eprice_level_fails_to_decode(self):
-        stream = dict(read_vectors())['consumptioncost_x3_noeprice']
-        result = subprocess.run([str(self.binary), stream],
-                                capture_output=True, text=True)
-        self.assertEqual(result.stdout, 'decode=-110\n')
+        self.assertEqual(len(vectors), 7, 'expected 7 pinned vectors')
+        self.assert_round_trip(vectors)
 
 
 if __name__ == '__main__':
