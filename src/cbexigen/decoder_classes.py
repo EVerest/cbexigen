@@ -213,6 +213,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                      type_array_length=f'{element_typename}->{detail.particle.name}.arrayLen',
                                      type_array_define=detail.particle.prefixed_define_for_array,
                                      next_grammar_id=next_grammar_id,
+                                     **self.get_array_loop_breakout_args(detail, 'next_grammar_id_breakout'),
                                      indent=self.indent, level=level)
 
         return decode_content
@@ -320,6 +321,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                      type_value=type_array,
                                      type_option=detail.particle.is_optional,
                                      next_grammar_id=next_grammar_id,
+                                     **self.get_array_loop_breakout_args(detail, 'next_grammar_id_breakout'),
                                      indent=self.indent, level=level)
 
         return decode_content
@@ -412,6 +414,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                      type_array_length=f'{element_typename}->{detail.particle.name}.arrayLen',
                                      type_array_define=detail.particle.prefixed_define_for_array,
                                      next_grammar_id=next_grammar_id,
+                                     **self.get_array_loop_breakout_args(detail, 'next_grammar_id_breakout'),
                                      indent=self.indent, level=level)
 
         return decode_content
@@ -495,6 +498,7 @@ class ExiDecoderCode(ExiBaseCoderCode):
                                      type_value=type_value,
                                      type_enum=type_enum,
                                      next_grammar_id=next_grammar_id,
+                                     **self.get_array_loop_breakout_args(detail, 'next_grammar_id_breakout'),
                                      indent=self.indent, level=level)
 
         return decode_content

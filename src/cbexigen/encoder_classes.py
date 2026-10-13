@@ -185,6 +185,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                               type_array=detail.particle.is_array,
                               type_array_index=type_array_index,
                               next_grammar=detail.next_grammar,
+                              **self.get_array_loop_breakout_args(detail, 'next_grammar_breakout'),
                               indent=self.indent, level=level)
 
         return self.trim_lf(content)
@@ -251,6 +252,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
         content = temp.render(value_parameter=value_parameter,
                               index_parameter=index_parameter,
                               next_grammar=detail.next_grammar,
+                              **self.get_array_loop_breakout_args(detail, 'next_grammar_breakout'),
                               indent=self.indent, level=level)
 
         return content
@@ -313,6 +315,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                               type_array=detail.particle.is_array,
                               type_array_index=type_array_index,
                               next_grammar=detail.next_grammar,
+                              **self.get_array_loop_breakout_args(detail, 'next_grammar_breakout'),
                               indent=self.indent, level=level)
 
         return self.trim_lf(content)
@@ -372,6 +375,7 @@ class ExiEncoderCode(ExiBaseCoderCode):
                               bits_to_encode=bits_to_encode,
                               index_parameter=index_parameter,
                               next_grammar=detail.next_grammar,
+                              **self.get_array_loop_breakout_args(detail, 'next_grammar_breakout'),
                               indent=self.indent, level=level)
 
         return content

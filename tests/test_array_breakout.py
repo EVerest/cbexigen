@@ -120,7 +120,7 @@ class ArrayBreakoutTest(unittest.TestCase):
 
     def test_arrays_at_max_occurs_round_trip(self):
         vectors = read_vectors()
-        self.assertEqual(len(vectors), 5, 'expected 5 pinned vectors')
+        self.assertEqual(len(vectors), 6, 'expected 6 pinned vectors')
         self.assert_round_trip([v for v in vectors if v[0] not in KNOWN_FAILURES])
 
     # In the generated SalesTariffEntryType decoder, the ConsumptionCost loop
