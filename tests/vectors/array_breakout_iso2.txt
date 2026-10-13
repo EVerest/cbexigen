@@ -53,6 +53,14 @@
 #                                (AC_single_phase_core, AC_three_phase_core,
 #                                DC_core, DC_extended, DC_combo_core,
 #                                DC_unique), an array of a simple type.
+#   consumptioncost_x3_issue113  The ChargeParameterDiscoveryRes of issue #113:
+#                                SessionID AAAAAAAAAAAAAAAA, a
+#                                DC_EVSEChargeParameter, and one
+#                                SAScheduleTuple whose SalesTariff (with
+#                                SalesTariffDescription and NumEPriceLevels 3)
+#                                has one SalesTariffEntry with
+#                                RelativeTimeInterval, no EPriceLevel and
+#                                ConsumptionCost at its maximum of 3.
 #
 # Josev always codes NumEPriceLevels and EPriceLevel, as 0 when unset, so the
 # tariff cases set them to 0 to keep the decoded message equal.
@@ -75,6 +83,8 @@
 # GrammarFactory.createGrammars and the default fidelity options. That path
 # reproduces every other stream in this file byte for byte when it decodes
 # one to XML and codes it again.
+# consumptioncost_x3_issue113 is the stream posted in issue #113 unchanged;
+# the same path reproduces it too.
 #
 # Format: <name> <TAB> <expected EXI hex>
 service_x8	809802004080C1014181C211C0012004820120021650010B280085940042CA0021650010B280085940042CA000
@@ -83,3 +93,4 @@ consumptioncost_x3_eprice	809802004080C1014181C210A000000000002028C140C50F855088
 consumptioncost_x3_noeprice	809802004080C1014181C210A000000000002028C140C50F855088008000002862800000C8503143A01C00642818A1A01E00321490000000C40E601030C08000
 cost_x3	809802004080C1014181C210A000000000002028C140C50F855088008000002000062800000C8400B4400A04A4000000310398040C302000
 energytransfermode_x6	809802004080C1014181C211C0012004820002081840A100
+consumptioncost_x3_issue113	8098022AAAAAAAAAAAAAAA90A000001200003403C18501E088000454D85B195CC815185C9A5999880D4D400C0D8040141185014000CC18830A02A00051418501600024A4A000010081861E80608284C3A81081209C0018000008000200C0000430441380

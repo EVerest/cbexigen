@@ -839,7 +839,16 @@ class ExiBaseCoderCode:
                             # min_occurs + 1. next_grammar_out is where it leaves to once the
                             # schema maximum is reached.
                             grammar_detail.next_grammar = grammar.grammar_id
-                            grammar_detail.next_grammar_out = grammars[idx_grammar + 1].grammar_id
+                            if end_elem_detail_index >= 0 and len_details == 2:
+                                # The grammar holds only LOOP and END, so the repeated particle ends
+                                # the content here and only END is left after the maximum (EXI 1.0,
+                                # 8.5.4.1.6). The grammar following in the list is not always that
+                                # END-only grammar: when an optional particle precedes the array, it
+                                # can be the first grammar of another path, which still offers the
+                                # repeated particle.
+                                grammar_detail.next_grammar_out = self.grammar_end_element
+                            else:
+                                grammar_detail.next_grammar_out = grammars[idx_grammar + 1].grammar_id
 
                         elif end_elem_detail_index >= 0 and len_details == 2:
                             if grammar_detail.is_in_array_last:

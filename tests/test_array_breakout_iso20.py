@@ -34,7 +34,7 @@ class Iso20ArrayBreakoutTest(exi_roundtrip.RoundTripTest):
 
     def test_arrays_at_max_occurs_round_trip(self):
         vectors = self.read_vectors()
-        self.assertEqual(len(vectors), 1, 'expected 1 pinned vector')
+        self.assertEqual(len(vectors), 3, 'expected 3 pinned vectors')
         self.assert_round_trip(vectors)
 
 
