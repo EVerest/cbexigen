@@ -63,6 +63,52 @@ class BasetypesIntegerTest(unittest.TestCase):
         self.assertEqual(len(result.stdout.splitlines()), 1)
         return dict(part.split('=', 1) for part in result.stdout.split())
 
+    def test_uint8_range(self):
+        encoded = self.run_driver('encode_uint8', 255)
+        self.assertEqual(encoded, {'rc': '0', 'wire': 'ff01'})
+        self.assertEqual(self.run_driver('uint8', encoded['wire']),
+                         {'rc': '0', 'value': '255'})
+        self.assertEqual(self.run_driver('uint8', '8002'),
+                         {'rc': '-113', 'value': '123'})
+
+    def test_uint16_range(self):
+        encoded = self.run_driver('encode_uint16', 65535)
+        self.assertEqual(encoded, {'rc': '0', 'wire': 'ffff03'})
+        self.assertEqual(self.run_driver('uint16', encoded['wire']),
+                         {'rc': '0', 'value': '65535'})
+        self.assertEqual(self.run_driver('uint16', '808004'),
+                         {'rc': '-113', 'value': '12345'})
+
+    def test_uint32_range(self):
+        encoded = self.run_driver('encode_uint32', 2**32 - 1)
+        self.assertEqual(encoded, {'rc': '0', 'wire': 'ffffffff0f'})
+        for op, extra in (('uint32', ()), ('from_unsigned32', (5,))):
+            with self.subTest(op=op):
+                self.assertEqual(self.run_driver(op, encoded['wire'], *extra),
+                                 {'rc': '0', 'value': str(2**32 - 1)})
+                self.assertEqual(self.run_driver(op, '8080808010', *extra),
+                                 {'rc': '-113', 'value': str(SENTINEL)})
+        self.assertEqual(self.run_driver('from_unsigned32', '8080808010', 4),
+                         {'rc': '-31', 'value': str(SENTINEL)})
+        self.assertEqual(self.run_driver('from_unsigned32', '808080808001', 5),
+                         {'rc': '-31', 'value': str(SENTINEL)})
+
+    def test_unsigned32_rejects_octets_beyond_type_capacity(self):
+        self.assertEqual(self.run_driver('from_unsigned32', '808080808001', 6),
+                         {'rc': '-31', 'value': str(SENTINEL)})
+
+    def test_uint64_range(self):
+        encoded = self.run_driver('encode_uint64', 2**64 - 1)
+        self.assertEqual(encoded, {'rc': '0', 'wire': 'ff' * 9 + '01'})
+        for op in ('uint64', 'from_unsigned64'):
+            with self.subTest(op=op):
+                self.assertEqual(self.run_driver(op, encoded['wire']),
+                                 {'rc': '0', 'value': str(2**64 - 1)})
+                self.assertEqual(self.run_driver(op, '80' * 9 + '02'),
+                                 {'rc': '-113', 'value': str(SENTINEL)})
+        self.assertEqual(self.run_driver('from_unsigned64', '80' * 10 + '01'),
+                         {'rc': '-31', 'value': str(SENTINEL)})
+
     def test_signed_helpers_match_integer_codecs(self):
         for bits in (64, 32):
             extra = (5,) if bits == 32 else ()
