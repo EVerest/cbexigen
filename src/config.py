@@ -42,11 +42,11 @@ decode_function_prefix = 'decode_'
 choice_sequence_prefix = 'choice_'
 
 # Ambiguous element names are elements with the same name but different types.
-# Currently, this only seems to apply to the eMAID element from ISO 15118-2.
-# With the fragment coder, the type for the ambiguous element must be specified
-# here so that the correct decoder or encoder is called.
+# These are detected in the schema and coded with the EXI element fragment
+# grammar, so nothing has to be listed here. An entry still overrides the
+# detected type, which is only useful to pin a coder to one of the types on
+# purpose.
 iso2_ambiguous_element_names = {
-    'eMAID': 'EMAIDType',
 }
 
 # optimizations for arrays and structs
@@ -78,13 +78,13 @@ iso20_array_optimizations = {
 
 # if fragment de- and encoder should be generated, set this value to 1.
 # Currently only complex elements can be added to the fragment coders.
-# NOTE! There may be problems when comparing the signature of the eMAID.
-#       In the ISO 15118-2 schema there are two different types with problematic names, EMAIDType and eMAIDType.
-#       The fragment de- and encoder of e.g. openV2G considers this type as generic type
-#       EXISchemaInformedElementFragmentGrammar. We treat it as a complex type.
-#       We have not yet been able to determine why this particular type has to be coded as a generic type,
-#       and only for the fragment decoder and encoder.
-#       This is why we have not yet adapted our fragment coders, and it can lead to the problem mentioned.
+# An element whose qname is declared more than once, with declarations that do
+# not all agree on type name and {nillable}, is coded with the EXI element
+# fragment grammar instead of with a type grammar (EXI 1.0, 8.5.3). A fragment
+# carries no parent context, so there is nothing to pick one of the
+# declarations by. In ISO 15118-2 this is eMAID, declared as both EMAIDType and
+# eMAIDType, which is why its signed fragment used to disagree with other
+# implementations.
 generate_fragments = 1
 # fragment structure definitions
 fragment_struct_name = 'exiFragment'
@@ -120,6 +120,14 @@ iso20_ac_fragments = [
 iso20_dc_fragments = [
     'SignedInfo',
     'DC_ChargeParameterDiscoveryRes',
+]
+iso20_ac_der_iec_fragments = [
+    'SignedInfo',
+    "AC_ChargeParameterDiscoveryRes",
+]
+iso20_ac_der_sae_fragments = [
+    'SignedInfo',
+    "AC_ChargeParameterDiscoveryRes",
 ]
 
 # general C code style
@@ -725,6 +733,120 @@ c_files_to_generate = {
             'include_std_lib': ['stdint.h'],
             'include_other': ['exi_basetypes.h', 'exi_basetypes_encoder.h', 'exi_error_codes.h', 'exi_header.h',
                               'iso20_ACDP_Datatypes.h', 'iso20_ACDP_Encoder.h']
+        }
+    },
+    'iso20_AC_DER_IEC_Datatypes': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_AC_DER_IEC.xsd',
+        'prefix': 'iso20_ac_der_iec_',
+        'type': 'converter',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_AC_DER_IEC_Datatypes.h',
+            'identifier': 'ISO20_AC_DER_IEC_DATATYPES_H',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h']
+        },
+        'c': {
+            'filename': 'iso20_AC_DER_IEC_Datatypes.c',
+            'identifier': 'ISO20_AC_DER_IEC_DATATYPES_C',
+            'include_std_lib': [],
+            'include_other': ['iso20_AC_DER_IEC_Datatypes.h']
+        }
+    },
+    'iso20_AC_DER_IEC_Decoder': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_AC_DER_IEC.xsd',
+        'prefix': 'iso20_ac_der_iec_',
+        'type': 'decoder',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_AC_DER_IEC_Decoder.h',
+            'identifier': 'ISO20_AC_DER_IEC_DECODER_H',
+            'include_std_lib': [],
+            'include_other': ['exi_bitstream.h', 'iso20_AC_DER_IEC_Datatypes.h']
+        },
+        'c': {
+            'filename': 'iso20_AC_DER_IEC_Decoder.c',
+            'identifier': 'ISO20_AC_DER_IEC_DECODER_C',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h', 'exi_types_decoder.h', 'exi_basetypes_decoder.h',
+                              'exi_error_codes.h', 'exi_header.h', 'iso20_AC_DER_IEC_Datatypes.h',
+                              'iso20_AC_DER_IEC_Decoder.h']
+        }
+    },
+    'iso20_AC_DER_IEC_Encoder': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_AC_DER_IEC.xsd',
+        'prefix': 'iso20_ac_der_iec_',
+        'type': 'encoder',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_AC_DER_IEC_Encoder.h',
+            'identifier': 'ISO20_AC_DER_IEC_ENCODER_H',
+            'include_std_lib': [],
+            'include_other': ['exi_bitstream.h', 'iso20_AC_DER_IEC_Datatypes.h']
+        },
+        'c': {
+            'filename': 'iso20_AC_DER_IEC_Encoder.c',
+            'identifier': 'ISO20_AC_DER_IEC_ENCODER_C',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h', 'exi_basetypes_encoder.h', 'exi_error_codes.h', 'exi_header.h',
+                              'iso20_AC_DER_IEC_Datatypes.h', 'iso20_AC_DER_IEC_Encoder.h']
+        }
+    },
+    'iso20_AC_DER_SAE_Datatypes': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_AC_DER_SAE.xsd',
+        'prefix': 'iso20_ac_der_sae_',
+        'type': 'converter',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_AC_DER_SAE_Datatypes.h',
+            'identifier': 'ISO20_AC_DER_SAE_DATATYPES_H',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h']
+        },
+        'c': {
+            'filename': 'iso20_AC_DER_SAE_Datatypes.c',
+            'identifier': 'ISO20_AC_DER_SAE_DATATYPES_C',
+            'include_std_lib': [],
+            'include_other': ['iso20_AC_DER_SAE_Datatypes.h']
+        }
+    },
+    'iso20_AC_DER_SAE_Decoder': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_AC_DER_SAE.xsd',
+        'prefix': 'iso20_ac_der_sae_',
+        'type': 'decoder',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_AC_DER_SAE_Decoder.h',
+            'identifier': 'ISO20_AC_DER_SAE_DECODER_H',
+            'include_std_lib': [],
+            'include_other': ['exi_bitstream.h', 'iso20_AC_DER_SAE_Datatypes.h']
+        },
+        'c': {
+            'filename': 'iso20_AC_DER_SAE_Decoder.c',
+            'identifier': 'ISO20_AC_DER_SAE_DECODER_C',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h', 'exi_types_decoder.h', 'exi_basetypes_decoder.h',
+                              'exi_error_codes.h', 'exi_header.h', 'iso20_AC_DER_SAE_Datatypes.h',
+                              'iso20_AC_DER_SAE_Decoder.h']
+        }
+    },
+    'iso20_AC_DER_SAE_Encoder': {
+        'schema': 'ISO_15118-20/FDIS/V2G_CI_AC_DER_SAE.xsd',
+        'prefix': 'iso20_ac_der_sae_',
+        'type': 'encoder',
+        'folder': 'iso-20',
+        'h': {
+            'filename': 'iso20_AC_DER_SAE_Encoder.h',
+            'identifier': 'ISO20_AC_DER_SAE_ENCODER_H',
+            'include_std_lib': [],
+            'include_other': ['exi_bitstream.h', 'iso20_AC_DER_SAE_Datatypes.h']
+        },
+        'c': {
+            'filename': 'iso20_AC_DER_SAE_Encoder.c',
+            'identifier': 'ISO20_AC_DER_SAE_ENCODER_C',
+            'include_std_lib': ['stdint.h'],
+            'include_other': ['exi_basetypes.h', 'exi_basetypes_encoder.h', 'exi_error_codes.h', 'exi_header.h',
+                              'iso20_AC_DER_SAE_Datatypes.h', 'iso20_AC_DER_SAE_Encoder.h']
         }
     },
 }

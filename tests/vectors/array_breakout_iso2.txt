@@ -1,0 +1,96 @@
+# ISO 15118-2 EXI streams with one repeated particle at exactly its maxOccurs.
+#
+# At maxOccurs the grammar leaves the particle's loop without coding another
+# event, so an encoder or decoder that expects one more event at the maximum
+# fails on these streams. They were captured once and are kept as they are;
+# nothing in the repository regenerates them.
+#
+# Provenance. The bytes were produced by Exificient, the EXI codec Josev uses,
+# through Josev iso15118 0.31.2 on Python 3.11, with
+# iso15118.shared.exi_codec.EXI().to_exi(<message>, Namespace.ISO_V2_MSG_DEF).
+# Each stream except consumptioncost_x3_noeprice decodes back with Josev's
+# EXI().from_exi to the same message it was built from.
+#
+# The messages. Every case is a full V2G_Message with a MessageHeader whose
+# SessionID is 0102030405060708, as an EVSE sends it. Every field outside the
+# array under test is minimal:
+#
+#   service_x8                   ServiceDiscoveryRes, ResponseCode OK,
+#                                PaymentOptionList with ExternalPayment, a
+#                                ChargeService (ServiceID 1, EVCharging, not
+#                                free, AC_three_phase_core), and a ServiceList
+#                                at its maximum of 8 Service, each a free
+#                                OtherCustom service with ServiceID 4.
+#   sascheduletuple_x3           ChargeParameterDiscoveryRes, ResponseCode OK,
+#                                EVSEProcessing Finished, an
+#                                AC_EVSEChargeParameter (nominal voltage
+#                                230 V, max current 32 A, no notification,
+#                                RCD false), and an SAScheduleList at its
+#                                maximum of 3 SAScheduleTuple, IDs 1 to 3,
+#                                each with one PMaxScheduleEntry of 11000 W
+#                                from 0 for 86400 s and no SalesTariff.
+#   consumptioncost_x3_eprice    The same ChargeParameterDiscoveryRes with one
+#                                SAScheduleTuple whose SalesTariff (ID 1,
+#                                NumEPriceLevels 0) has one SalesTariffEntry:
+#                                RelativeTimeInterval start 0, EPriceLevel 0,
+#                                then ConsumptionCost at its maximum of 3,
+#                                with start values 0, 1000 and 2000 W, each
+#                                with one relativePricePercentage Cost of 100.
+#   consumptioncost_x3_noeprice  consumptioncost_x3_eprice without EPriceLevel,
+#                                so the 3 ConsumptionCost follow
+#                                RelativeTimeInterval, which is another chain
+#                                of the SalesTariffEntry grammar.
+#   cost_x3                      The tariff of consumptioncost_x3_eprice with
+#                                one ConsumptionCost, start value 0 W, holding
+#                                Cost at its maximum of 3, all
+#                                relativePricePercentage, amounts 100, 90
+#                                and 80.
+#   energytransfermode_x6        ServiceDiscoveryRes as in service_x8, but
+#                                without a ServiceList and with the
+#                                SupportedEnergyTransferMode of the
+#                                ChargeService at its maximum of 6
+#                                EnergyTransferMode, one of each value
+#                                (AC_single_phase_core, AC_three_phase_core,
+#                                DC_core, DC_extended, DC_combo_core,
+#                                DC_unique), an array of a simple type.
+#   consumptioncost_x3_issue113  The ChargeParameterDiscoveryRes of issue #113:
+#                                SessionID AAAAAAAAAAAAAAAA, a
+#                                DC_EVSEChargeParameter, and one
+#                                SAScheduleTuple whose SalesTariff (with
+#                                SalesTariffDescription and NumEPriceLevels 3)
+#                                has one SalesTariffEntry with
+#                                RelativeTimeInterval, no EPriceLevel and
+#                                ConsumptionCost at its maximum of 3.
+#
+# Josev always codes NumEPriceLevels and EPriceLevel, as 0 when unset, so the
+# tariff cases set them to 0 to keep the decoded message equal.
+#
+# How consumptioncost_x3_noeprice was made. to_exi cannot produce it, since
+# Josev always codes EPriceLevel. The consumptioncost_x3_eprice stream was
+# decoded to XML with Exificient, its EPriceLevel element removed, and the XML
+# coded again by Exificient with the EXIFactory and ISO 15118-2 grammars that
+# Josev's codec uses. That factory is the private exiFactory field of the
+# superclass of Josev's Java codec, read by reflection after an
+# ISO_V2_MSG_DEF to_exi call, since it holds the grammars of the codec's last
+# call; Exificient's SAX EXISource decoded to XML and its EXIResult coded the
+# XML back. That XML path reproduces the to_exi bytes of every other
+# vector, and the resulting stream decodes back with Exificient to the edited
+# XML. Josev's from_exi still reports EPriceLevel 0 for it, from beans that
+# always hold the field.
+#
+# How energytransfermode_x6 was made. Exificient 0.9.6 coded a hand-written
+# XML message with a grammar built from the ISO 15118-2 schemas by
+# GrammarFactory.createGrammars and the default fidelity options. That path
+# reproduces every other stream in this file byte for byte when it decodes
+# one to XML and codes it again.
+# consumptioncost_x3_issue113 is the stream posted in issue #113 unchanged;
+# the same path reproduces it too.
+#
+# Format: <name> <TAB> <expected EXI hex>
+service_x8	809802004080C1014181C211C0012004820120021650010B280085940042CA0021650010B280085940042CA000
+sascheduletuple_x3	809802004080C1014181C210A000000000002028C140C50F8550A00200002028C140C50F8550A00400002028C140C50F8550A0000000C40E601030C08000
+consumptioncost_x3_eprice	809802004080C1014181C210A000000000002028C140C50F855088008000002000062800000C8503143A01C00642818A1A01E00321490000000C40E601030C0800
+consumptioncost_x3_noeprice	809802004080C1014181C210A000000000002028C140C50F855088008000002862800000C8503143A01C00642818A1A01E00321490000000C40E601030C08000
+cost_x3	809802004080C1014181C210A000000000002028C140C50F855088008000002000062800000C8400B4400A04A4000000310398040C302000
+energytransfermode_x6	809802004080C1014181C211C0012004820002081840A100
+consumptioncost_x3_issue113	8098022AAAAAAAAAAAAAAA90A000001200003403C18501E088000454D85B195CC815185C9A5999880D4D400C0D8040141185014000CC18830A02A00051418501600024A4A000010081861E80608284C3A81081209C0018000008000200C0000430441380

@@ -8,11 +8,12 @@ from xmlschema.validators import (XsdSimpleType, XsdComplexType, XsdGroup, XsdAn
                                   Xsd11AtomicRestriction, Xsd11Element)
 
 from cbexigen import tools
-from cbexigen.typeDefinitions import AnalyzerData, OCCURRENCE_LIMITS_CORRECTED, FragmentData
+from cbexigen.typeDefinitions import (AnalyzerData, OCCURRENCE_LIMITS_CORRECTED, FragmentData,
+                                      ElementFragmentAttribute, ElementFragmentGrammar, ElementFragmentType)
 from cbexigen.elementData import Particle, Choice, ElementData
 from cbexigen.tools_logging import log_write, log_write_dict, log_write_element, msg_write, \
-    log_write_element_pos_data
-from cbexigen.tools_config import CONFIG_PARAMS, get_config_module
+    log_write_element_pos_data, log_write_error
+from cbexigen.tools_config import CONFIG_PARAMS, get_config_module, get_fragment_parameter_for_schema
 
 
 class SchemaAnalyzer(object):
@@ -32,6 +33,7 @@ class SchemaAnalyzer(object):
         self.__known_enums = analyzer_data.known_enums
         self.__known_prototypes = analyzer_data.known_prototypes
         self.__known_fragments = analyzer_data.known_fragments
+        self.__analyzer_data = analyzer_data
 
         self.__max_occurs_changed = analyzer_data.max_occurs_changed
         self.__namespace_elements = analyzer_data.namespace_elements
@@ -354,6 +356,12 @@ class SchemaAnalyzer(object):
 
         particle.name = attribute.local_name
 
+        ns = tools.extract_namespace_uri(getattr(attribute, 'name', ''))
+        if ns:
+            particle.namespace = ns
+        elif hasattr(attribute, 'default_namespace') and attribute.default_namespace:
+            particle.namespace = attribute.default_namespace
+
         particle.type = self.__get_type_name(attribute)
         particle.type_short = self.__get_type_name_short(attribute)
         particle.base_type = self.__get_base_type_name(attribute)
@@ -418,6 +426,12 @@ class SchemaAnalyzer(object):
 
         particle.name = element.local_name
 
+        ns = tools.extract_namespace_uri(element.name)
+        if ns:
+            particle.namespace = ns
+        elif hasattr(element, 'default_namespace') and element.default_namespace:
+            particle.namespace = element.default_namespace
+
         particle.type = self.__get_type_name(element)
         particle.type_short = self.__get_type_name_short(element)
         particle.base_type = self.__get_base_type_name(element)
@@ -480,6 +494,12 @@ class SchemaAnalyzer(object):
             particle.abstract = True
 
         particle.name = substitute.local_name
+
+        ns = tools.extract_namespace_uri(substitute.name)
+        if ns:
+            particle.namespace = ns
+        elif hasattr(substitute, 'default_namespace') and substitute.default_namespace:
+            particle.namespace = substitute.default_namespace
 
         particle.type = self.__get_type_name(substitute)
         particle.type_short = self.__get_type_name_short(substitute)
@@ -597,7 +617,7 @@ class SchemaAnalyzer(object):
             if self.__is_abstract(child):
                 # get substituted particles for child
                 qname = self.__get_name(child)
-                subst_group = self.__current_schema.substitution_groups._target_dict.get(qname)
+                subst_group = self.__current_schema.maps.substitution_groups.get(qname)
                 if subst_group:
                     for elem in self.__sorted_xsd_elements(subst_group):
                         particle = self.__get_abstract_particle(child, elem)
@@ -615,7 +635,7 @@ class SchemaAnalyzer(object):
         if self.__is_abstract_type(element):
             # get substituted particles for element
             qname = self.__get_name(element)
-            subst_group = self.__current_schema.substitution_groups._target_dict.get(qname)
+            subst_group = self.__current_schema.maps.substitution_groups.get(qname)
             if subst_group:
                 for elem in self.__sorted_xsd_elements(subst_group):
                     particle = self.__get_abstract_particle(element, elem)
@@ -875,7 +895,7 @@ class SchemaAnalyzer(object):
                     msg_write((level + 1) * "    " + "ABSTRACT TYPE is extension")
 
                 qname = self.__get_name(child)
-                sg = self.__current_schema.substitution_groups._target_dict.get(qname)
+                sg = self.__current_schema.maps.substitution_groups.get(qname)
                 if sg:
                     for substitute in self.__sorted_xsd_elements(sg):
                         substitute_type_name = self.__get_type_name(substitute)
@@ -950,7 +970,7 @@ class SchemaAnalyzer(object):
         self.__build_schema_builtin_types_list()
 
         if self.__is_iso20:
-            for element in self.__current_schema.elements._target_dict.values():
+            for element in self.__current_schema.maps.elements.values():
                 if element.prefixed_name.startswith('xs:'):
                     continue
 
@@ -1001,6 +1021,7 @@ class SchemaAnalyzer(object):
         # Build list of all elements and types if enabled in config
         if self.config['generate_fragments'] == 1:
             self.__build_schema_fragment_list()
+            self.__build_element_fragment_grammar()
 
         # Build list of generate elements types
         self.__build_generate_elements_types_list()
@@ -1035,7 +1056,7 @@ class SchemaAnalyzer(object):
 
     def __build_schema_builtin_types_list(self):
         xs_namespace = self.__current_schema.namespaces['xs']
-        for value in self.__current_schema.types._target_dict.values():
+        for value in self.__current_schema.maps.types.values():
             if value.target_namespace == xs_namespace:
                 if value.__class__.__name__ == 'XsdAtomicBuiltin':
                     if value.simple_type.base_type is not None:
@@ -1088,7 +1109,7 @@ class SchemaAnalyzer(object):
         self.__known_fragments.clear()
         fragments = {}
 
-        for element in self.__current_schema.elements._target_dict.values():
+        for element in self.__current_schema.maps.elements.values():
             if element.default_namespace:
                 if element.name not in fragments.keys():
                     fragments[element.name] = __get_fragment(element)
@@ -1124,6 +1145,216 @@ class SchemaAnalyzer(object):
         sorted_by_name = dict(sorted(fragments.items(), key=lambda item: (item[1].name, item[1].namespace)))
         self.__known_fragments.update(sorted_by_name)
 
+    # ------------------------------------------------------------------
+    # EXI 1.0, 8.5.3 Schema-informed Element Fragment Grammar
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def __split_qname(qname):
+        if qname is not None and qname.startswith('{') and qname.find('}') > 0:
+            return qname[1:qname.index('}')], qname[qname.index('}') + 1:]
+        return '', qname if qname is not None else ''
+
+    @classmethod
+    def __qname_sort_key(cls, qname):
+        # 8.5.3: sorted lexicographically, first by local-name, then by uri.
+        uri, local_name = cls.__split_qname(qname)
+        return local_name, uri
+
+    @classmethod
+    def __component_qname(cls, component):
+        if component.target_namespace:
+            return '{' + component.target_namespace + '}' + component.local_name
+        return component.local_name
+
+    def __iter_schema_closure(self):
+        """Yields every schema reachable through import or include.
+
+        Deliberately not schema.maps: that also carries the meta-schemas
+        xmlschema builds in, the XML namespace in particular. The ISO schemas
+        never import those, and counting their four attributes would shift the
+        EE and CH event codes of ElementFragment_0 by four.
+        """
+        pending = [self.__current_schema]
+        visited = set()
+
+        while pending:
+            schema = pending.pop()
+            if id(schema) in visited:
+                continue
+
+            visited.add(id(schema))
+            yield schema
+
+            for group in (getattr(schema, 'imports', {}), getattr(schema, 'includes', {})):
+                for child in group.values():
+                    if child is not None:
+                        pending.append(child)
+
+    def __collect_element_fragment_declarations(self):
+        """Groups every element declaration by qname, and collects attributes."""
+        declarations = {}
+        attributes = set()
+
+        for schema in self.__iter_schema_closure():
+            for component in schema.iter_components(xsd_classes=Xsd11Element):
+                qname = self.__component_qname(component)
+                declarations.setdefault(qname, []).append(component)
+
+            for component in schema.iter_components(xsd_classes=XsdAttribute):
+                attributes.add(self.__component_qname(component))
+
+        return declarations, attributes
+
+    @staticmethod
+    def __element_type_identity(element: XsdElement):
+        """The pair 8.5.3 compares declarations on: type name and {nillable}."""
+        type_name = element.type.name if element.type is not None else None
+        return type_name, bool(element.nillable)
+
+    def __get_element_fragment_type(self, qname, elements, grammar: ElementFragmentGrammar):
+        """Builds the union content model of one ambiguous element."""
+        namespace, name = self.__split_qname(qname)
+
+        fragment_type = ElementFragmentType()
+        fragment_type.name = name
+        fragment_type.namespace = namespace
+        fragment_type.type = f'{name}ElementFragment'
+        fragment_type.declared_types = sorted(
+            {identity[0] for identity in map(self.__element_type_identity, elements) if identity[0]})
+        fragment_type.attributes = []
+        fragment_type.has_characters = False
+        fragment_type.content_define = ''
+
+        attribute_qnames = set()
+        child_elements = set()
+
+        for element in elements:
+            element_type = element.type
+            if element_type is None:
+                continue
+
+            for attribute in getattr(element_type, 'attributes', {}).values():
+                if attribute is None or attribute.local_name is None:
+                    continue
+                attribute_qnames.add(self.__component_qname(attribute))
+
+            # A simple type has neither mixed content nor child elements.
+            is_simple = element_type.is_simple()
+            is_mixed = bool(getattr(element_type, 'mixed', False))
+
+            if is_simple or element_type.has_simple_content() or is_mixed:
+                fragment_type.has_characters = True
+
+            if not is_simple and (element_type.is_element_only() or is_mixed):
+                for child in element_type.iter_components(xsd_classes=Xsd11Element):
+                    if child is not element and child.local_name is not None:
+                        child_elements.add(self.__component_qname(child))
+
+        if child_elements:
+            # The relaxed grammar allows SE productions here. No schema in
+            # scope needs them, and generating them would mean generating a
+            # coder for every element in the schema, so refuse loudly rather
+            # than emit a coder that silently drops child elements.
+            log_write_error(
+                f'Element fragment grammar for {qname} would need START_ELEMENT productions '
+                f'({len(child_elements)} child elements). This is not implemented; '
+                f'the element will keep using its type grammar and its fragment bytes will be wrong.')
+            return None
+
+        used_names = {}
+        for attribute_qname in sorted(attribute_qnames, key=self.__qname_sort_key):
+            if attribute_qname not in grammar.attribute_qnames:
+                log_write_error(f'Attribute {attribute_qname} of element fragment {qname} '
+                                f'is not in the schema attribute list.')
+                return None
+
+            attribute = ElementFragmentAttribute()
+            _, attribute.name = self.__split_qname(attribute_qname)
+            attribute.qname = attribute_qname
+            attribute.event_code = grammar.attribute_qnames.index(attribute_qname)
+            attribute.define = f'{fragment_type.type}_{attribute.name}{self.config["char_define_addendum"]}'
+
+            if attribute.name in used_names:
+                log_write_error(f'Element fragment {qname} has two attributes named {attribute.name} '
+                                f'({used_names[attribute.name]} and {attribute_qname}).')
+                return None
+
+            used_names[attribute.name] = attribute_qname
+            fragment_type.attributes.append(attribute)
+
+        if fragment_type.has_characters:
+            fragment_type.content_define = f'{fragment_type.type}_CONTENT{self.config["char_define_addendum"]}'
+
+        return fragment_type
+
+    def __build_element_fragment_grammar(self):
+        """Derives the element fragment grammar described in EXI 1.0, 8.5.3.
+
+        An element whose qname is declared more than once, and whose
+        declarations do not all agree on type name and {nillable}, cannot be
+        resolved to one type grammar when it appears inside a fragment,
+        because a fragment carries no parent context to disambiguate it. Such
+        an element is coded with the relaxed element fragment grammar, whose
+        event codes are numbered over the attribute and element declarations
+        of the whole schema rather than over one type's content model.
+        """
+        grammar = ElementFragmentGrammar()
+        grammar.types = {}
+
+        declarations, attributes = self.__collect_element_fragment_declarations()
+
+        grammar.attribute_qnames = sorted(attributes, key=self.__qname_sort_key)
+        grammar.element_count = len(self.__known_fragments)
+
+        # The SE(F_j) codes are emitted by the fragment coder, which numbers
+        # them over known_fragments. If that list and the schema disagree the
+        # event codes would be off and every fragment would be misencoded.
+        if grammar.element_count != len(declarations):
+            log_write_error(f'Element fragment grammar: the fragment list holds {grammar.element_count} '
+                            f'elements but the schema declares {len(declarations)} unique element qnames.')
+
+        # Only the fragment coders use this grammar, and they code only the
+        # configured fragments.
+        configured_fragments = get_fragment_parameter_for_schema(self.__schema_prefix)
+
+        for qname in sorted(declarations, key=self.__qname_sort_key):
+            elements = declarations[qname]
+            identities = {self.__element_type_identity(element) for element in elements}
+            if len(identities) < 2:
+                continue
+
+            if self.__split_qname(qname)[1] not in configured_fragments:
+                continue
+
+            fragment_type = self.__get_element_fragment_type(qname, elements, grammar)
+            if fragment_type is None:
+                continue
+
+            grammar.types[fragment_type.name] = fragment_type
+
+            # Point the fragment coder at the element fragment grammar instead
+            # of at one of the conflicting types.
+            for fragment in self.__known_fragments.values():
+                if fragment.name == fragment_type.name and fragment.namespace == fragment_type.namespace:
+                    fragment.type = fragment_type.type
+
+        self.__analyzer_data.element_fragment_grammar = grammar
+
+        log_write('')
+        log_write('ELEMENT FRAGMENT GRAMMAR (EXI 1.0, 8.5.3)')
+        log_write(f'n (unique attribute qnames) = {grammar.attribute_count}')
+        log_write(f'm (unique element qnames)   = {grammar.element_count}')
+        log_write(f'ElementFragment_0: AT(*)={grammar.attribute_count}, '
+                  f'EE={grammar.first_end_element_code}, CH={grammar.first_characters_code}')
+        log_write(f'ElementFragment_1: SE(*)={grammar.element_count}, '
+                  f'EE={grammar.content_end_element_code}, CH={grammar.content_characters_code}')
+        for index, attribute_qname in enumerate(grammar.attribute_qnames):
+            log_write(f'    AT({attribute_qname}) = {index}')
+        for fragment_type in grammar.types.values():
+            log_write(f'  element {fragment_type.name} needs the element fragment grammar, declared as '
+                      f'{", ".join(fragment_type.declared_types)}')
+
     def __build_namespace_element_lists(self):
         """
             This function builds the lists needed to generate the root struct and root decoding function.
@@ -1134,7 +1365,7 @@ class SchemaAnalyzer(object):
         current_namespace = self.__current_schema.get_schema('')
         for ele in current_namespace.elements.values():
             items = []
-            for value in current_namespace.elements._target_dict.values():
+            for value in current_namespace.maps.elements.values():
                 if value.default_namespace:
                     name = self.__get_type_name_short(value)
                     if name == '' or name in ['AnonType', 'string']:
@@ -1168,6 +1399,10 @@ class SchemaAnalyzer(object):
 
             for gen_elem in self.__generate_elements:
                 if gen_elem.type == '{' + imp.default_namespace + '}' + name:
+                    # Skip substitution group heads – their particles come from
+                    # the substitution group expansion, not from namespace imports.
+                    if self.__current_schema.maps.substitution_groups.get(gen_elem.name):
+                        continue
                     gen_elem.particles = items
                     gen_elem.is_in_namespace_elements = True
                     self.__namespace_elements[name] = items
@@ -1176,7 +1411,7 @@ class SchemaAnalyzer(object):
     def __build_generate_elements_types_list(self):
         xs_namespace = self.__current_schema.namespaces['xs']
         type_list = []
-        for value in self.__current_schema.types._target_dict.values():
+        for value in self.__current_schema.maps.types.values():
             if value.target_namespace != xs_namespace and value.content_type_label == 'element-only':
                 type_list.append(value.local_name)
 
@@ -1269,7 +1504,7 @@ class SchemaAnalyzer(object):
         with the sorted particles from replacement_list.
         """
         # the replacements need to be sorted alphabetically
-        replacement_list.sort(key=lambda particle_key: particle_key.name)
+        replacement_list.sort(key=lambda p: (p.name or '', p.namespace or ''))
 
         # the particles need to be sorted by index, for proper removal
         particle_list.sort(key=lambda x: x[0])
@@ -1284,8 +1519,10 @@ class SchemaAnalyzer(object):
         # drop all the particles listed in particle_list
         p_index: int
         for p_index, p in reversed(particle_list):
-            if parent_element.particles[p_index] != p:
-                log_write(f"particle '{p.name}' not found in '{parent_element.name_short}'")
+            if p_index >= len(parent_element.particles) or parent_element.particles[p_index] is not p:
+                raise RuntimeError(
+                    f"particle '{p.name}' at index {p_index} does not match in "
+                    f"'{parent_element.name_short}' -- particle list is stale")
             del parent_element.particles[p_index]
 
         # insert the replacements at the original position, assuming the lowest original particle
@@ -1326,11 +1563,17 @@ class SchemaAnalyzer(object):
                 else:
                     log_write(f'    Add to list and remove particle {particle.name}.')
                     replacement_list.append(particle)
-                    if particle in parent.particles:
-                        particles_to_remove.append((parent.particles.index(particle), particle))
+                    # Use name-based lookup (not object identity) to find the
+                    # matching particle in parent for removal.
+                    for idx, pp in enumerate(parent.particles):
+                        if pp.name == particle.name and (idx, pp) not in particles_to_remove:
+                            particles_to_remove.append((idx, pp))
+                            break
 
-            for particle in parent.particles:
+            for idx, particle in enumerate(parent.particles):
                 if particle.name != element.name_short:
+                    continue
+                if (idx, particle) in particles_to_remove:
                     continue
 
                 log_write(f'    Add to list and remove particle {particle.name}.')
@@ -1338,7 +1581,7 @@ class SchemaAnalyzer(object):
                 p_max_occurs = particle.max_occurs
                 particle.min_occurs = 0
                 replacement_list.append(particle)
-                particles_to_remove.append((parent.particles.index(particle), particle))
+                particles_to_remove.append((idx, particle))
 
             if len(replacement_list) > 0:
                 self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list,
@@ -1380,6 +1623,9 @@ class SchemaAnalyzer(object):
                                 abstract=True,
                                 min_occurs=0,
                                 max_occurs=1)
+            ns = tools.extract_namespace_uri(element.name)
+            if ns:
+                part_new.namespace = ns
             replacement_list.append(part_new)
 
             self.__replace_particle_list_in_parent(parent, particles_to_remove, replacement_list,
@@ -1465,10 +1711,13 @@ class SchemaAnalyzer(object):
                                         type_short=element.type_short,
                                         min_occurs=0,
                                         max_occurs=1)
+                        ns = tools.extract_namespace_uri(element.name)
+                        if ns:
+                            part.namespace = ns
                         re_list.append(part)
 
                         if len(re_list) > 0:
-                            re_list.sort(key=lambda particle_key: particle_key.name)
+                            re_list.sort(key=lambda p: (p.name or '', p.namespace or ''))
                             abstract_seq = []
                             for part in re_list:
                                 log_write(f'    Add particle from list {part.name}.')
@@ -1482,19 +1731,15 @@ class SchemaAnalyzer(object):
         log_write('')
         log_write('Scan for derived and extended elements')
 
-        def find_base_type(base_type_name):
-            result = None
-            for item in self.__current_schema.elements._target_dict.values():
-                if item.prefixed_name.startswith('xs:'):
-                    continue
-                if item.type.base_type is None:
-                    continue
-
-                if item.type.base_type.local_name == base_type_name:
-                    result = item
-                    break
-
-            return result
+        # Pre-build lookup: base_type_name -> [elements derived from it]
+        base_type_map = {}
+        for item in self.__current_schema.maps.elements.values():
+            if item.prefixed_name.startswith('xs:'):
+                continue
+            if item.type.base_type is None:
+                continue
+            key = item.type.base_type.local_name
+            base_type_map.setdefault(key, []).append(item)
 
         element: ElementData
         particle: Particle
@@ -1508,20 +1753,20 @@ class SchemaAnalyzer(object):
                         list_with_missing.append(particle)
                         log_write(f'    Adding abstract particle {particle.name} to missing list.')
 
-                    # get the base type, add it as particle
-                    missing_element = find_base_type(particle.type_short)
-                    if missing_element is not None:
-                        part = self.__get_particle(missing_element)
-
+                    # get all elements derived from this type, add them as particles
+                    missing_elements = base_type_map.get(particle.type_short, [])
+                    if len(missing_elements) > 0:
                         particle.min_occurs_old = particle.min_occurs
                         particle.min_occurs = 0
                         list_with_missing.append(particle)
                         log_write(f'    Adding particle {particle.name} to missing list.')
 
-                        part.min_occurs_old = part.min_occurs
-                        part.min_occurs = 0
-                        list_with_missing.append(part)
-                        log_write(f'    Adding missing particle {part.name} to missing list.')
+                        for missing_element in missing_elements:
+                            part = self.__get_particle(missing_element)
+                            part.min_occurs_old = part.min_occurs
+                            part.min_occurs = 0
+                            list_with_missing.append(part)
+                            log_write(f'    Adding missing particle {part.name} to missing list.')
 
             if len(list_with_missing) > 0:
                 first = -1

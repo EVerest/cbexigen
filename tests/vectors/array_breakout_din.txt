@@ -1,0 +1,46 @@
+# DIN 70121 EXI streams with one repeated particle at its occurrence limit.
+#
+# Provenance. Each stream was coded by Exificient 0.9.6 from a hand-written XML
+# message, with a grammar built from the DIN 70121 schemas (the copy published
+# in the SwitchEV iso15118 project) by GrammarFactory.createGrammars and the
+# default fidelity options, which are the options V2G communication uses.
+# Each stream decodes back with Exificient to its XML message, and coding that
+# XML again gives the same bytes. The same path reproduces every ISO 15118-2
+# stream in array_breakout_iso2.txt byte for byte. The streams are captured
+# once and nothing in the repository regenerates them.
+#
+# The messages. Every case is a full message with a header whose SessionID is
+# 0102030405060708. Every field outside the array under test is minimal:
+#
+#   paymentoption_x2             ServiceDiscoveryRes, ResponseCode OK,
+#                                PaymentOptions with Contract and
+#                                ExternalPayment, and a ChargeService
+#                                (ServiceID 1, EVCharging, not free,
+#                                DC_extended). PaymentOption is unbounded in
+#                                the schema and limited to 2 by the generator,
+#                                so the END after the 2nd occurrence is coded
+#                                with 2 bits.
+#   pmaxscheduleentry_xN         ChargeParameterDiscoveryRes, ResponseCode OK,
+#                                EVSEProcessing Finished, an SAScheduleList with
+#                                one SAScheduleTuple (ID 1) whose PMaxSchedule
+#                                (ID 1) holds N PMaxScheduleEntry, entry i
+#                                (counted from 0) with start i * 1800 s and
+#                                PMax 100 * (i + 1), the last one also with a
+#                                duration of 1800 s, and a
+#                                DC_EVSEChargeParameter (EVSE_Ready, no
+#                                notification, current 0..200 A, voltage
+#                                50..500 V, ripple 1 A). DIN 70121 limits
+#                                PMaxScheduleEntry to 12 [V2G-DC-329], so x6 to
+#                                x12 round trip and x13 fails to decode with
+#                                EXI_ERROR__ARRAY_OUT_OF_BOUNDS.
+#
+# Format: <name> <TAB> <expected EXI hex>
+paymentoption_x2	809A02004080C1014181C211A000090012080620
+pmaxscheduleentry_x6	809A02004080C1014181C2108000000400200010C801101C4640080480E1158040130544480180501C11E80601508C1101C0D8041548400000C0C32004460A1E8060606000060A064230300110
+pmaxscheduleentry_x7	809A02004080C1014181C2108000000400200010C801101C4640080480E1158040130544480180501C11E80601508C46C0200582A0440702F0145521000003030C801118287A018181800018281908C0C00440
+pmaxscheduleentry_x8	809A02004080C1014181C2108000000400200010C801101C4640080480E1158040130544480180501C11E80601508C46C0200582A11780A0170C41101C0A0061548400000C0C32004460A1E8060606000060A0642303001100
+pmaxscheduleentry_x9	809A02004080C1014181C2108000000400200010C801101C4640080480E1158040130544480180501C11E80601508C46C0200582A11780A0170C4450030060380440702101C5521000003030C801118287A018181800018281908C0C004400
+pmaxscheduleentry_x10	809A02004080C1014181C2108000000400200010C801101C4640080480E1158040130544480180501C11E80601508C46C0200582A11780A0170C44500300603811080E0190FC1101C0E8071548400000C0C32004460A1E8060606000060A064230300110
+pmaxscheduleentry_x11	809A02004080C1014181C2108000000400200010C801101C4640080480E1158040130544480180501C11E80601508C46C0200582A11780A0170C44500300603811080E0190FC4740380684600844070330205521000003030C801118287A018181800018281908C0C00440
+pmaxscheduleentry_x12	809A02004080C1014181C2108000000400200010C801101C4640080480E1158040130544480180501C11E80601508C46C0200582A11780A0170C44500300603811080E0190FC474038068460091981001B134021101C0B0091548400000C0C32004460A1E8060606000060A0642303001100
+pmaxscheduleentry_x13	809A02004080C1014181C2108000000400200010C801101C4640080480E1158040130544480180501C11E80601508C46C0200582A11780A0170C44500300603811080E0190FC474038068460091981001B134024580480705400844070250285521000003030C801118287A018181800018281908C0C004400
