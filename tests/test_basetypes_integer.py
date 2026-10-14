@@ -95,10 +95,36 @@ class BasetypesIntegerTest(unittest.TestCase):
     def test_signed32_max_octets_counts_exi_octets(self):
         self.assertEqual(self.run_driver('to_signed32', 128, 1)['rc'], '-31')
 
+    def test_signed32_rejects_out_of_range_magnitude(self):
+        for value in (2**31, -(2**31) - 1):
+            with self.subTest(value=value):
+                encoded = self.run_driver('integer64', value)
+                self.assertEqual(encoded['rc'], '0')
+                self.assertEqual(self.run_driver('from_signed32', encoded['wire'], 5),
+                                 {'rc': '-113', 'value': str(SENTINEL)})
+                self.assertEqual(self.run_driver('from_signed32', encoded['wire'], 4),
+                                 {'rc': '-31', 'value': str(SENTINEL)})
+
     def test_signed32_max_octets_error_preserves_destination(self):
         wire = self.run_driver('integer32', 128)['wire']
         self.assertEqual(self.run_driver('from_signed32', wire, 1),
                          {'rc': '-31', 'value': str(SENTINEL)})
+
+    def test_signed64_rejects_out_of_range_magnitude(self):
+        for sign in (0, 1):
+            with self.subTest(sign=sign):
+                encoded = self.run_driver('signed_bytes', sign, '8000000000000000')
+                self.assertEqual(encoded['rc'], '0')
+                self.assertEqual(self.run_driver('from_signed64', encoded['wire']),
+                                 {'rc': '-113', 'value': str(SENTINEL)})
+
+    def test_signed64_rejects_nine_byte_magnitude(self):
+        for sign in (0, 1):
+            with self.subTest(sign=sign):
+                encoded = self.run_driver('signed_bytes', sign, '010000000000000000')
+                self.assertEqual(encoded['rc'], '0')
+                self.assertEqual(self.run_driver('from_signed64', encoded['wire']),
+                                 {'rc': '-113', 'value': str(SENTINEL)})
 
 
 if __name__ == '__main__':
