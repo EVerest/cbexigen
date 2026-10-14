@@ -12,6 +12,7 @@ of the source tree.
 """
 import os
 
+import config as _base
 from config import *  # noqa: F401,F403
 
 _out = os.environ['CBEXIGEN_TEST_OUT']
@@ -20,6 +21,6 @@ log_dir = os.path.join(_out, 'log')
 
 c_files_to_generate = {
     key: value
-    for key, value in c_files_to_generate.items()  # noqa: F405
+    for key, value in _base.c_files_to_generate.items()
     if key.startswith(('exi_', os.environ['CBEXIGEN_TEST_CODEC']))
 }

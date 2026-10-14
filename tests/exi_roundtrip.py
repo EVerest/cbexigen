@@ -15,7 +15,7 @@ when no C compiler is available.
 """
 import os
 import shutil
-import subprocess
+import subprocess  # nosec B404 - the tests run the generator, a C compiler and the built driver
 import sys
 import tempfile
 import unittest
@@ -48,7 +48,7 @@ def generate(codec, out_dir):
     shutil.copyfile(CONFIG, staged)
     try:
         env = dict(os.environ, CBEXIGEN_TEST_OUT=str(out_dir), CBEXIGEN_TEST_CODEC=codec)
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B603 - fixed argument list, no shell
             [sys.executable, str(SRC / 'main.py'), '--config_file', CONFIG.name],
             cwd=str(REPO), env=env, capture_output=True, text=True)
         if result.returncode != 0:
@@ -71,7 +71,7 @@ def compile_driver(code_root, out_dir, codec_dir, codec_sources, define):
     command = [compiler, '-std=c11', '-O1', f'-D{define}', '-o', str(binary), str(DRIVER)] + \
         [str(s) for s in sources] + \
         ['-I', str(code_root / 'common'), '-I', str(code_root / codec_dir)]
-    result = subprocess.run(command, capture_output=True, text=True)
+    result = subprocess.run(command, capture_output=True, text=True)  # nosec B603 - fixed argument list, no shell
     if result.returncode != 0:
         raise AssertionError(f'driver build failed\n{result.stderr[-4000:]}')
     return binary
@@ -79,6 +79,7 @@ def compile_driver(code_root, out_dir, codec_dir, codec_sources, define):
 
 class RoundTripTest(unittest.TestCase):
     """Builds the round trip driver for one codec once per test class."""
+
     standard = ''          # name of the standard, for messages
     schema = None          # a schema file of the codec; the tests skip without it
     schema_hint = ''       # how to get the schemas, added to the skip message
@@ -109,7 +110,8 @@ class RoundTripTest(unittest.TestCase):
         return read_vectors(self.vectors_file)
 
     def run_driver(self, stream):
-        return subprocess.run([str(self.binary), stream], capture_output=True, text=True)
+        return subprocess.run([str(self.binary), stream],  # nosec B603 - fixed argument list, no shell
+                              capture_output=True, text=True)
 
     def assert_round_trip(self, vectors):
         failures = []
