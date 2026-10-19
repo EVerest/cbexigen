@@ -10,7 +10,7 @@
 #include "exi_bitstream.h"
 
 enum operation {
-    TO_SIGNED64, TO_SIGNED32, INTEGER64, INTEGER32,
+    TO_SIGNED64, TO_SIGNED32, INTEGER64, INTEGER32, SIGNED_BYTES,
     FROM_SIGNED64, FROM_SIGNED32, DECODE_INTEGER64, DECODE_INTEGER32, PARTS
 };
 
@@ -23,6 +23,7 @@ static const struct {
     {"to_signed32", TO_SIGNED32, 4},
     {"integer64", INTEGER64, 3},
     {"integer32", INTEGER32, 3},
+    {"signed_bytes", SIGNED_BYTES, 4},
     {"from_signed64", FROM_SIGNED64, 3},
     {"from_signed32", FROM_SIGNED32, 4},
     {"decode_integer64", DECODE_INTEGER64, 3},
@@ -62,20 +63,31 @@ int main(int argc, char** argv)
     exi_bitstream_t stream;
     int rc = 0;
 
-    if (op >= FROM_SIGNED64) {
-        size_t hex_length = strlen(argv[2]);
-        if (hex_length % 2 != 0 || hex_length / 2 > sizeof(bytes)) {
+    if (op >= FROM_SIGNED64 || op == SIGNED_BYTES) {
+        const char* hex = argv[op == SIGNED_BYTES ? 3 : 2];
+        uint8_t* destination = op == SIGNED_BYTES ? signed_value.data.octets : bytes;
+        size_t capacity = op == SIGNED_BYTES ? sizeof(signed_value.data.octets) : sizeof(bytes);
+        size_t hex_length = strlen(hex);
+        if (hex_length % 2 != 0 || hex_length / 2 > capacity) {
             return 2;
         }
-        length = hex_length / 2;
-        for (size_t i = 0; i < length; i++) {
-            char pair[3] = {argv[2][2 * i], argv[2][2 * i + 1], 0};
+        for (size_t i = 0; i < hex_length / 2; i++) {
+            char pair[3] = {hex[2 * i], hex[2 * i + 1], 0};
             char* end;
             unsigned long byte = strtoul(pair, &end, 16);
             if (end != pair + 2 || byte > 255) {
                 return 2;
             }
-            bytes[i] = (uint8_t)byte;
+            destination[i] = (uint8_t)byte;
+        }
+        if (op == SIGNED_BYTES) {
+            if (strcmp(argv[2], "0") != 0 && strcmp(argv[2], "1") != 0) {
+                return 2;
+            }
+            signed_value.is_negative = argv[2][0] == '1';
+            signed_value.data.octets_count = hex_length / 2;
+        } else {
+            length = hex_length / 2;
         }
     } else {
         value64 = strtoimax(argv[2], NULL, 10);
@@ -84,6 +96,10 @@ int main(int argc, char** argv)
     exi_bitstream_init(&stream, bytes, length, 0, NULL);
 
     switch (op) {
+    case SIGNED_BYTES:
+        rc = exi_basetypes_encoder_signed(&stream, &signed_value);
+        print_wire(rc, &stream);
+        break;
     case TO_SIGNED64:
         rc = exi_basetypes_convert_64_to_signed(&signed_value, value64);
         if (rc == 0) {
