@@ -76,6 +76,13 @@ def get_indent(level: int = 1):
     return level * (' ' * CONFIG_PARAMS['c_code_indent_chars'])
 
 
+def extract_namespace_uri(qualified_name: str) -> str:
+    """Extract namespace URI from XSD qualified name like '{uri}localName'."""
+    if qualified_name and qualified_name.startswith('{') and '}' in qualified_name:
+        return qualified_name[1:qualified_name.index('}')]
+    return ''
+
+
 ''' generator tools '''
 
 
