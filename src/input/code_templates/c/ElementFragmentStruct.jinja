@@ -1,0 +1,28 @@
+// Element fragment: name={{ '{' }}{{ fragment.namespace }}{{ '}' }}{{ fragment.name }}
+//          EXI 1.0, 8.5.3 Schema-informed Element Fragment Grammar
+//          declared with more than one type: {{ fragment.declared_types | join(', ') }}
+struct {{ struct_name }} {
+{% for attribute in fragment.attributes -%}
+{% with level=1,
+        variable_comment='// AT(' ~ attribute.qname ~ '); event code ' ~ attribute.event_code,
+        type_array=0,
+        struct_type='char',
+        type_def=prefix ~ attribute.define,
+        struct_name=attribute.name -%}
+{% include 'SubStructChar.jinja' -%}
+{% endwith -%}
+{% endfor -%}
+{% if fragment.has_characters -%}
+{% with level=1,
+        variable_comment='// CH [untyped value]',
+        type_array=0,
+        struct_type='char',
+        type_def=prefix ~ fragment.content_define,
+        struct_name='CONTENT' -%}
+{% include 'SubStructChar.jinja' -%}
+{% endwith -%}
+{% endif %}
+{% for name in members -%}
+{{ indent }}unsigned int {{ name }}_isUsed:1;
+{% endfor -%}
+};
