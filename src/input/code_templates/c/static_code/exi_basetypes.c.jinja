@@ -58,24 +58,55 @@ int exi_basetypes_convert_64_to_unsigned(exi_unsigned_t* exi_unsigned, uint64_t 
     return (exi_unsigned->octets_count <= EXI_BASETYPES_UINT64_MAX_OCTETS) ? EXI_ERROR__NO_ERROR : EXI_ERROR__OCTET_COUNT_LARGER_THAN_TYPE_SUPPORTS;
 }
 
+static size_t exi_basetypes_magnitude_octets(uint64_t magnitude)
+{
+    size_t count = 1;
+    while ((magnitude >>= 7u) != 0)
+    {
+        count++;
+    }
+    return count;
+}
+
+static void exi_basetypes_write_magnitude(exi_unsigned_t* data, uint64_t magnitude)
+{
+    data->octets_count = 0;
+    for (uint64_t remaining = magnitude; remaining != 0; remaining >>= 8u)
+    {
+        data->octets_count++;
+    }
+    for (size_t n = data->octets_count; n > 0; n--)
+    {
+        data->octets[n - 1] = (uint8_t)magnitude;
+        magnitude >>= 8u;
+    }
+}
+
+static uint64_t exi_basetypes_read_magnitude(const exi_unsigned_t* data)
+{
+    uint64_t magnitude = 0;
+    for (size_t n = 0; n < data->octets_count; n++)
+    {
+        magnitude = (magnitude << 8u) | data->octets[n];
+    }
+    return magnitude;
+}
+
 int exi_basetypes_convert_to_signed(exi_signed_t* exi_signed, int32_t value, size_t max_octets)
 {
-    if (value < 0) {
-        exi_signed->is_negative = 1;
-        return exi_basetypes_convert_to_unsigned(&exi_signed->data, -value, max_octets);
-    }
-    exi_signed->is_negative = 0;
-    return exi_basetypes_convert_to_unsigned(&exi_signed->data, value, max_octets);
+    uint64_t magnitude = value < 0 ? (uint64_t)(-(value + 1)) : (uint64_t)value;
+    exi_signed->is_negative = value < 0;
+    exi_basetypes_write_magnitude(&exi_signed->data, magnitude);
+    return (exi_basetypes_magnitude_octets(magnitude) <= max_octets) ?
+        EXI_ERROR__NO_ERROR : EXI_ERROR__OCTET_COUNT_LARGER_THAN_TYPE_SUPPORTS;
 }
 
 int exi_basetypes_convert_64_to_signed(exi_signed_t* exi_signed, int64_t value)
 {
-    if (value < 0) {
-        exi_signed->is_negative = 1;
-        return exi_basetypes_convert_64_to_unsigned(&exi_signed->data, -value);
-    }
-    exi_signed->is_negative = 0;
-    return exi_basetypes_convert_64_to_unsigned(&exi_signed->data, value);
+    uint64_t magnitude = value < 0 ? (uint64_t)(-(value + 1)) : (uint64_t)value;
+    exi_signed->is_negative = value < 0;
+    exi_basetypes_write_magnitude(&exi_signed->data, magnitude);
+    return EXI_ERROR__NO_ERROR;
 }
 
 int exi_basetypes_convert_from_unsigned(const exi_unsigned_t* exi_unsigned, uint32_t* value, size_t max_octets)
@@ -120,18 +151,20 @@ int exi_basetypes_convert_64_from_unsigned(const exi_unsigned_t* exi_unsigned, u
 
 int exi_basetypes_convert_from_signed(const exi_signed_t* exi_signed, int32_t* value, size_t max_octets)
 {
-    uint32_t u_value = 0;
-    int res = exi_basetypes_convert_from_unsigned(&exi_signed->data, &u_value, max_octets);
-    *value = (exi_signed->is_negative == 0) ? u_value : -u_value;
-    return res;
+    uint64_t magnitude = exi_basetypes_read_magnitude(&exi_signed->data);
+    if (exi_basetypes_magnitude_octets(magnitude) > max_octets)
+    {
+        return EXI_ERROR__OCTET_COUNT_LARGER_THAN_TYPE_SUPPORTS;
+    }
+    *value = exi_signed->is_negative ? -1 - (int32_t)magnitude : (int32_t)magnitude;
+    return EXI_ERROR__NO_ERROR;
 }
 
 int exi_basetypes_convert_64_from_signed(const exi_signed_t* exi_signed, int64_t* value)
 {
-    uint64_t u_value = 0;
-    int res = exi_basetypes_convert_64_from_unsigned(&exi_signed->data, &u_value);
-    *value = (exi_signed->is_negative == 0) ? u_value : -u_value;
-    return res;
+    uint64_t magnitude = exi_basetypes_read_magnitude(&exi_signed->data);
+    *value = exi_signed->is_negative ? -1 - (int64_t)magnitude : (int64_t)magnitude;
+    return EXI_ERROR__NO_ERROR;
 }
 
 static void _reverse_array(uint8_t* data, size_t data_size)
