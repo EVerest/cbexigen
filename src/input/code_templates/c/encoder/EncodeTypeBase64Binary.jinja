@@ -14,7 +14,19 @@
 {{ indent * (level + 3) }}error = exi_basetypes_encoder_nbit_uint(stream, 1, 0);
 {{ indent * (level + 3) }}if (error == EXI_ERROR__NO_ERROR)
 {{ indent * (level + 3) }}{
+{%- if type_loop_breakout == 1 %}
+{{ indent * (level + 4) }}// LOOP breakout code for schema given maximum, regardless of ARRAY_SIZE definition
+{{ indent * (level + 4) }}if ({{ type_array_index }} < {{ type_array_len_schema }})
+{{ indent * (level + 4) }}{
+{{ indent * (level + 5) }}grammar_id = {{ next_grammar }};
+{{ indent * (level + 4) }}}
+{{ indent * (level + 4) }}else
+{{ indent * (level + 4) }}{
+{{ indent * (level + 5) }}grammar_id = {{ next_grammar_breakout }};
+{{ indent * (level + 4) }}}
+{%- else %}
 {{ indent * (level + 4) }}grammar_id = {{ next_grammar }};
+{%- endif %}
 {{ indent * (level + 3) }}}
 {{ indent * (level + 2) }}}
 {{ indent * (level + 1) }}}

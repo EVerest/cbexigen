@@ -1,0 +1,38 @@
+# ISO 15118-20 EXI streams with one repeated particle at exactly its maxOccurs.
+#
+# Provenance. Each stream was coded by Exificient 0.9.6 from a hand-written XML
+# message, with a grammar built from the ISO 15118-20 CommonMessages schemas by
+# GrammarFactory.createGrammars and the default fidelity options, which are the
+# options V2G communication uses. Each stream decodes back with Exificient to
+# its XML message, and coding that XML again gives the same bytes. The same
+# path reproduces every ISO 15118-2 stream in array_breakout_iso2.txt byte for
+# byte. The streams are captured once and nothing in the repository
+# regenerates them.
+#
+# The messages. Every case is a full message with a header whose SessionID is
+# 0102030405060708 and whose TimeStamp is 0. Every field outside the array
+# under test is minimal:
+#
+#   servicediscoveryreq_serviceid_x16
+#                                ServiceDiscoveryReq with SupportedServiceIDs
+#                                at its maximum of 16 ServiceID, values 1 to
+#                                16 (an array of unsigned short).
+#   meteringconfirmationreq_taxcosts_x10
+#                                MeteringConfirmationReq whose
+#                                SignedMeteringData (Id "id1", SessionID as in
+#                                the header, MeterInfo with MeterID "M1" and 0
+#                                Wh, Dynamic_SMDTControlMode) carries a Receipt
+#                                with TimeAnchor 0 and TaxCosts at its maximum
+#                                of 10, TaxRuleID i and Amount i (exponent 0)
+#                                for i = 1 to 10, and none of the optional
+#                                cost elements before TaxCosts.
+#   meteringconfirmationreq_overstay_taxcosts_x10
+#                                The same with OverstayCosts (Amount 1,
+#                                CostPerUnit 1) before the 10 TaxCosts, which
+#                                reaches the TaxCosts loop on another chain of
+#                                the ReceiptType grammar.
+#
+# Format: <name> <TAB> <expected EXI hex>
+servicediscoveryreq_serviceid_x16	807C040081018202830384000200200400600800A00C00E01001201401601801A01C01E02000
+meteringconfirmationreq_taxcosts_x10	8040040081018202830384000202B4B218810020406080A0C0E100089A6200180010010800010004100004000C20000C0020400020005080005000C10000C001C20001C0040400040009080009001410001400
+meteringconfirmationreq_overstay_taxcosts_x10	8040040081018202830384000202B4B218810020406080A0C0E100089A620018000C4000082000040008400008002080002000610000600102000100028400028006080006000E10000E0020200020004840004800A08000A000
