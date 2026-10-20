@@ -2,7 +2,8 @@
 # Copyright (c) 2022 - 2026 chargebyte GmbH
 # Copyright (c) 2022 - 2026 Contributors to EVerest
 
-"""Generator config for the round trip tests built on exi_roundtrip.py.
+"""
+Generator config for the round trip tests built on exi_roundtrip.py.
 
 Same as the default config, restricted to the common runtime and the codec
 files whose names start with CBEXIGEN_TEST_CODEC, so a test only needs the

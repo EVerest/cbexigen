@@ -2,7 +2,8 @@
 # Copyright (c) 2022 - 2026 chargebyte GmbH
 # Copyright (c) 2022 - 2026 Contributors to EVerest
 
-"""End to end check of DIN 70121 arrays at their occurrence limits.
+"""
+End to end check of DIN 70121 arrays at their occurrence limits.
 
 Generates the DIN 70121 codec, compiles it together with a small driver,
 decodes reference streams produced by Exificient, encodes them again and

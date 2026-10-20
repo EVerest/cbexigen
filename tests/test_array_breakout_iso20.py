@@ -2,7 +2,8 @@
 # Copyright (c) 2022 - 2026 chargebyte GmbH
 # Copyright (c) 2022 - 2026 Contributors to EVerest
 
-"""End to end check of ISO 15118-20 arrays filled to their maxOccurs.
+"""
+End to end check of ISO 15118-20 arrays filled to their maxOccurs.
 
 Generates the ISO 15118-20 CommonMessages codec, compiles it together with a
 small driver, decodes reference streams produced by Exificient, encodes them

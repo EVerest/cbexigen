@@ -2,7 +2,8 @@
 # Copyright (c) 2022 - 2026 chargebyte GmbH
 # Copyright (c) 2022 - 2026 Contributors to EVerest
 
-"""Shared code of the round trip tests for one generated codec.
+"""
+Shared code of the round trip tests for one generated codec.
 
 A test class derived from RoundTripTest names its codec and vector file.
 setUpClass generates the codec into a scratch directory with
